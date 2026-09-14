@@ -81,6 +81,9 @@ pd.read_csv('data.csv')
 
 # HDF5
 # !pip install tables
-df.to_hdf('data.h5', key='df')
-pd.read_hdf('data.h5','df')
+df.to_hdf('data.h5',key='df')
+pd.read_hdf('data.h5',key='df')
 
+# Excel
+df.to_excel('data.xlsx',sheet_name='Sheet1')
+pd.read_excel('data.xlsx','Sheet1',na_values=['NA'])
