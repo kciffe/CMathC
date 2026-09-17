@@ -8,3 +8,6 @@ wheels/
 
 # Virtual environments
 .venv
+
+data/
+src/test/q1/outputs/
