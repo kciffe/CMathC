@@ -8,9 +8,9 @@ import matplotlib.pyplot as plt
 import pandas as pd
 
 try:
-    from .color_palettes import get_sci_height_colors, SCI_HEIGHT_COLORS
+    from .color_palettes import get_sci_height_colors, SCI_HEIGHT_COLORS,get_sci_deep_colors,SCI_DEEP_COLORS
 except ImportError:
-    from color_palettes import get_sci_height_colors, SCI_HEIGHT_COLORS
+    from color_palettes import get_sci_height_colors, SCI_HEIGHT_COLORS,get_sci_deep_colors,SCI_DEEP_COLORS
 
 
 def set_chinese_font() -> None:
@@ -27,7 +27,7 @@ def set_chinese_font() -> None:
 
 set_chinese_font()
 
-
+# 阔线图
 def plot_profile(
     data: pd.DataFrame,
     x: str,
@@ -79,7 +79,7 @@ def plot_profile(
 
     return ax
 
-
+# 箱线图
 def plot_box(
     data: pd.DataFrame,
     value: str,
@@ -146,8 +146,8 @@ def plot_box(
 
     return ax
 
-
-def plot_time_height_section(
+# 剖面图
+def plot_section(
     data: pd.DataFrame,
     time: str,
     height: str,
@@ -160,7 +160,9 @@ def plot_time_height_section(
     height_scale: float = 1000.0,
     levels: int = 18,
     contour_levels: int = 8,
-    cmap: str = "turbo",
+    cmap: str = "Spectral_r",
+    vmin: float | None = None,
+    vmax: float | None = None,
     ax: plt.Axes | None = None,
     save_path: str | Path | None = None,
 ) -> plt.Axes:
@@ -177,7 +179,7 @@ def plot_time_height_section(
     if ax is None:
         _, ax = plt.subplots(figsize=(8, 5))
 
-    cf = ax.contourf(x, y, z, levels=levels, cmap=cmap, extend="both")
+    cf = ax.contourf(x, y, z, levels=levels, cmap=cmap, vmin=vmin, vmax=vmax, extend="both")
     cs = ax.contour(x, y, z, levels=contour_levels, colors="black", linewidths=0.7, alpha=0.8)
     ax.clabel(cs, inline=True, fontsize=8, fmt="%.4g")
 
@@ -213,11 +215,24 @@ if __name__ == "__main__":
         x="temperature",
         height="height",
         group="station",
-        legend="\u6d4b\u7ad9",
-        title="\u6d4b\u7ad9\u6e29\u5ea6\u9ad8\u5ea6\u5ed3\u7ebf\u56fe",
-        xlabel="温度 (°C)",
-        ylabel="高度 (m)",
-        colors=[SCI_HEIGHT_COLORS[5], SCI_HEIGHT_COLORS[11]],
+        legend="station",
+        title="Temperature profile",
+        xlabel="Temperature (C)",
+        ylabel="Height (m)",
+        colors=get_sci_deep_colors(df["station"].nunique()),
         save_path=r"D:\8\Desktop\CMathc\src\test\q1\output\profile_temperature_height.png",
     )
-    plt.close()
+
+    plot_section(
+        df,
+        time="time",
+        height="height",
+        value="temperature",
+        title="Temperature time-height section",
+        xlabel="Time",
+        ylabel="Height (km)",
+        colorbar_label="Temperature (C)",
+        cmap="turbo",
+        save_path=r"D:\8\Desktop\CMathc\src\test\q1\output\section.png",
+    )
+    plt.close("all")

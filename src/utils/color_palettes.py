@@ -21,9 +21,30 @@ SCI_HEIGHT_COLORS = [
 ]
 
 
+SCI_DEEP_COLORS = [
+    "#1F77B4",  # blue
+    "#D95F02",  # orange
+    "#E6AB02",  # golden
+    "#6A3D9A",  # purple
+    "#1B9E77",  # teal green
+    "#17A9D6",  # cyan blue
+    "#E7298A",  # magenta
+    "#66A61E",  # green
+    "#A6761D",  # brown gold
+    "#7570B3",  # indigo
+    "#E64B35",  # red
+    "#4DBBD5",  # sky blue
+]
+
+
 def get_sci_height_colors(n: int | None = None) -> list[str]:
     """Return a muted ordered palette for height-layer boxplots."""
     return _take_colors(SCI_HEIGHT_COLORS, n)
+
+
+def get_sci_deep_colors(n: int | None = None) -> list[str]:
+    """Return a deeper scientific palette for line/profile plots."""
+    return _take_colors(SCI_DEEP_COLORS, n)
 
 
 def _take_colors(colors: list[str], n: int | None = None) -> list[str]:
