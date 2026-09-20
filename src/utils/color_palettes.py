@@ -1,31 +1,35 @@
 from __future__ import annotations
 
 
-SCI_SOFT_COLORS = [
-    "#DEECF6",
-    "#AFC8E2",
-    "#E2F2CD",
-    "#B6DAA7",
-    "#F9D5D5",
-    "#EF98A1",
-    "#FBE3C0",
-    "#FBC99A",
-    "#E8E0EF",
-    "#C2B1D7",
-    "#CFE8E0",
-    "#8FC7BD",
-    "#F6E6A8",
-    "#D9C27F",
-    "#D6E4F0",
-    "#89A8C9",
+SCI_HEIGHT_COLORS = [
+    "#D7EEF4",
+    "#C9E8DB",
+    "#D7EAC2",
+    "#EFE6B5",
+    "#F4D2A8",
+    "#F0B8A8",
+    "#E6B1BD",
+    "#D3B5D8",
+    "#BFC0E3",
+    "#A9CBE4",
+    "#90C8D2",
+    "#78BEB8",
+    "#6DB3A7",
+    "#6DA6C8",
+    "#6E93BD",
+    "#747EB0",
 ]
 
 
-def get_sci_soft_colors(n: int | None = None) -> list[str]:
-    """Return the soft scientific color palette."""
+def get_sci_height_colors(n: int | None = None) -> list[str]:
+    """Return a muted ordered palette for height-layer boxplots."""
+    return _take_colors(SCI_HEIGHT_COLORS, n)
+
+
+def _take_colors(colors: list[str], n: int | None = None) -> list[str]:
     if n is None:
-        return SCI_SOFT_COLORS.copy()
+        return colors.copy()
     if n <= 0:
         return []
-    repeats = (n + len(SCI_SOFT_COLORS) - 1) // len(SCI_SOFT_COLORS)
-    return (SCI_SOFT_COLORS * repeats)[:n]
+    repeats = (n + len(colors) - 1) // len(colors)
+    return (colors * repeats)[:n]
