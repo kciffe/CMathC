@@ -13,7 +13,7 @@ from utils.plot_utils import *
 from utils.color_palettes import get_sci_height_colors, get_sci_deep_colors
 ```
 
-这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist`、`plot_joint_hist`、`plot_kde` 和 `plot_residual` 分别用于变量关系、方案比较、单变量分布、联合分布、分组密度比较和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
+这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist`、`plot_joint_hist`、`plot_kde` 和 `plot_residual` 分别用于变量关系、方案比较、单变量分布、联合分布、分组密度比较和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图；`plot_3d_route` 用于三维湍流场上的最优航路展示。
 
 ## 廓线图
 
@@ -66,6 +66,7 @@ plot_line(
     xlabel="高度 (m)",
     ylabel="速度 (m/s)",
     colors=get_sci_deep_colors(4),
+    linestyles=["-", "--", "-.", ":"],
     save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-多指标.png",
 )
 ```
@@ -105,6 +106,7 @@ plot_line(
     x="index",
     y=["actual", "predicted"],
     labels=["实际值", "预测值"],
+    linestyles=["-", "--"],
     xlabel="样本索引",
     ylabel="TKE值",
 )
@@ -522,8 +524,6 @@ plot_3d_scatter(
     colorbar_label="湍流指标",
 )
 ```
-
-
 
 ## 地图热力图
 

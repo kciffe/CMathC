@@ -99,6 +99,7 @@ def plot_line(
     colors: Iterable[str] | None = None,
     marker: str | None = None,
     linestyle: str = "-",
+    linestyles: Iterable[str] | None = None,
     save_path: str | Path | None = None,
 ) -> plt.Axes:
     """画普通折线图，支持单指标、多指标和分组曲线。"""
@@ -106,12 +107,14 @@ def plot_line(
         _, ax = plt.subplots(figsize=(8, 5))
 
     color_list = list(colors) if colors is not None else []
+    style_list = list(linestyles) if linestyles is not None else []
 
     if group:
         for i, (name, part) in enumerate(data.groupby(group, sort=True)):
             part = part[[x, y]].dropna().sort_values(x)
             color = color_list[i % len(color_list)] if color_list else None
-            ax.plot(part[x], part[y], marker=marker, linestyle=linestyle, label=str(name), color=color)
+            style = style_list[i % len(style_list)] if style_list else linestyle
+            ax.plot(part[x], part[y], marker=marker, linestyle=style, label=str(name), color=color)
         ax.legend(title=legend or group)
     else:
         ys = [y] if isinstance(y, str) else list(y)
@@ -120,7 +123,8 @@ def plot_line(
         for i, col in enumerate(ys):
             part = data[[x, col]].dropna().sort_values(x)
             color = color_list[i % len(color_list)] if color_list else None
-            ax.plot(part[x], part[col], marker=marker, linestyle=linestyle, label=label_list[i], color=color)
+            style = style_list[i % len(style_list)] if style_list else linestyle
+            ax.plot(part[x], part[col], marker=marker, linestyle=style, label=label_list[i], color=color)
 
         if len(ys) > 1 or labels is not None:
             ax.legend()
@@ -924,7 +928,6 @@ def plot_3d_scatter(
     if save_path:
         _save_figure(ax.figure, save_path)
     return ax
-
 def _set_3d_labels(ax: plt.Axes, title, xlabel, ylabel, zlabel) -> None:
     ax.set_xlabel(xlabel, labelpad=10)
     ax.set_ylabel(ylabel, labelpad=10)
@@ -950,6 +953,26 @@ if __name__ == "__main__":
     df["time"] = pd.to_datetime(df["time"])
 
     output = r"D:\8\Desktop\CMathc\src\utils\output"
+
+    # 多指标折线图：不同风场变量使用不同线型
+    line_data = df[
+        (df["station"] == "a")
+        & (df["time"] == df["time"].min())
+        & (df["height"] <= 1500)
+    ].copy()
+
+    plot_line(
+        line_data,
+        x="height",
+        y=["wind_speed", "u", "v", "vertical_velocity"],
+        labels=["风速", "u风分量", "v风分量", "垂直速度"],
+        title="不同风场指标随高度变化",
+        xlabel="高度 (m)",
+        ylabel="速度 (m/s)",
+        colors=get_sci_deep_colors(4),
+        linestyles=["-", "--", "-.", ":"],
+        save_path=rf"{output}\折线图-多指标不同线型.png",
+    )
 
     # 散点图：温度与相对湿度关系，不同站点分别显示
     plot_scatter(
