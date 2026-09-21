@@ -533,6 +533,7 @@ def plot_3d_scatter(
         _save_figure(ax.figure, save_path)
     return ax
 
+
 def _set_3d_labels(ax: plt.Axes, title, xlabel, ylabel, zlabel) -> None:
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
