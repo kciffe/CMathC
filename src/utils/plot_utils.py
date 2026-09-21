@@ -3,8 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Iterable
 
+from matplotlib import cm, colors as mcolors
+
 import matplotlib.dates as mdates
 import matplotlib.pyplot as plt
+import numpy as np
 import pandas as pd
 
 try:
@@ -241,6 +244,161 @@ def plot_heatmap(
         _save_figure(ax.figure, save_path)
 
     return ax
+
+def _prepare_grid(data: pd.DataFrame, x: str, y: str, value: str):
+    df = data[[x, y, value]].dropna().copy()
+
+    if np.issubdtype(df[x].dtype, np.datetime64):
+        df[x] = (df[x] - df[x].min()).dt.total_seconds() / 60
+    else:
+        df[x] = pd.to_numeric(df[x], errors="coerce")
+
+    df[y] = pd.to_numeric(df[y], errors="coerce")
+    table = df.pivot_table(index=y, columns=x, values=value, aggfunc="mean").sort_index().sort_index(axis=1)
+    X, Y = np.meshgrid(table.columns.to_numpy(), table.index.to_numpy())
+    Z = table.to_numpy()
+    return df, X, Y, Z
+
+
+# 3D 曲面图
+def plot_3d_surface(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    value: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    zlabel: str | None = None,
+    cmap: str = "jet",
+    elev: float = 25,
+    azim: float = -135,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    _, X, Y, Z = _prepare_grid(data, x, y, value)
+    if ax is None:
+        fig = plt.figure(figsize=(7, 5))
+        ax = fig.add_subplot(111, projection="3d")
+
+    surf = ax.plot_surface(X, Y, Z, cmap=cmap, linewidth=0, antialiased=True)
+    ax.figure.colorbar(surf, ax=ax, shrink=0.7, pad=0.08)
+    _set_3d_labels(ax, title, xlabel or x, ylabel or y, zlabel or value)
+    ax.view_init(elev=elev, azim=azim)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+    return ax
+
+
+# 3D 网格图
+def plot_3d_wireframe(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    value: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    zlabel: str | None = None,
+    cmap: str = "jet",
+    elev: float = 25,
+    azim: float = -135,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    _, X, Y, Z = _prepare_grid(data, x, y, value)
+    if ax is None:
+        fig = plt.figure(figsize=(7, 5))
+        ax = fig.add_subplot(111, projection="3d")
+
+    norm = mcolors.Normalize(vmin=np.nanmin(Z), vmax=np.nanmax(Z))
+    mapper = cm.ScalarMappable(norm=norm, cmap=cmap)
+
+    for i in range(Z.shape[0]):
+        ax.plot(X[i, :], Y[i, :], Z[i, :], color=mapper.to_rgba(np.nanmean(Z[i, :])), linewidth=0.9)
+    for j in range(Z.shape[1]):
+        ax.plot(X[:, j], Y[:, j], Z[:, j], color=mapper.to_rgba(np.nanmean(Z[:, j])), linewidth=0.9)
+
+    ax.figure.colorbar(mapper, ax=ax, shrink=0.7, pad=0.08)
+    _set_3d_labels(ax, title, xlabel or x, ylabel or y, zlabel or value)
+    ax.view_init(elev=elev, azim=azim)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+    return ax
+
+
+# 等高线图
+def plot_contour(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    value: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    cmap: str = "jet",
+    levels: int = 16,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    _, X, Y, Z = _prepare_grid(data, x, y, value)
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    cs = ax.contourf(X, Y, Z, levels=levels, cmap=cmap)
+    ax.figure.colorbar(cs, ax=ax)
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+    return ax
+
+
+# 3D散点图
+def plot_3d_scatter(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    value: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    zlabel: str | None = None,
+    cmap: str = "jet",
+    elev: float = 25,
+    azim: float = -135,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    df, _, _, _ = _prepare_grid(data, x, y, value)
+    if ax is None:
+        fig = plt.figure(figsize=(7, 5))
+        ax = fig.add_subplot(111, projection="3d")
+
+    sc = ax.scatter(df[x], df[y], df[value], c=df[value], cmap=cmap, s=28)
+    ax.figure.colorbar(sc, ax=ax, shrink=0.7, pad=0.08)
+    _set_3d_labels(ax, title, xlabel or x, ylabel or y, zlabel or value)
+    ax.view_init(elev=elev, azim=azim)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+    return ax
+
+def _set_3d_labels(ax: plt.Axes, title, xlabel, ylabel, zlabel) -> None:
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.set_zlabel(zlabel)
+    if title:
+        ax.set_title(title)
 
 
 # 保存图片
