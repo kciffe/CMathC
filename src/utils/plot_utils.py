@@ -385,6 +385,67 @@ def plot_wind_polar(
 
     return ax
 
+
+# 地图热力图
+def plot_map_heatmap(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    value: str | None = None,
+    *,
+    background: str | Path | None = None,
+    extent: tuple[float, float, float, float] | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    cmap: str = "jet",
+    alpha: float = 0.55,
+    radius: float = 0.04,
+    grid_size: int = 300,
+    ax: plt.Axes | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画地图底图上的空间热力图。"""
+    cols = [x, y] + ([value] if value else [])
+    df = data[cols].dropna().copy()
+
+    if extent is None:
+        pad_x = (df[x].max() - df[x].min()) * 0.08
+        pad_y = (df[y].max() - df[y].min()) * 0.08
+        extent = (df[x].min() - pad_x, df[x].max() + pad_x, df[y].min() - pad_y, df[y].max() + pad_y)
+
+    xs = np.linspace(extent[0], extent[1], grid_size)
+    ys = np.linspace(extent[2], extent[3], grid_size)
+    X, Y = np.meshgrid(xs, ys)
+    Z = np.zeros_like(X, dtype=float)
+
+    weights = df[value].to_numpy() if value else np.ones(len(df))
+    for xi, yi, wi in zip(df[x], df[y], weights):
+        Z += wi * np.exp(-((X - xi) ** 2 + (Y - yi) ** 2) / (2 * radius ** 2))
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(9, 6))
+
+    if background:
+        img = plt.imread(background)
+        ax.imshow(img, extent=extent, origin="upper")
+
+    im = ax.imshow(Z, extent=extent, origin="lower", cmap=cmap, alpha=alpha)
+    ax.scatter(df[x], df[y], s=8, c="white", alpha=0.5, linewidths=0)
+    ax.set_xlim(extent[0], extent[1])
+    ax.set_ylim(extent[2], extent[3])
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+    ax.figure.colorbar(im, ax=ax, pad=0.025)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
 def _prepare_grid(data: pd.DataFrame, x: str, y: str, value: str):
     df = data[[x, y, value]].dropna().copy()
 

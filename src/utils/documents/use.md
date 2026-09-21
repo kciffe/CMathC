@@ -258,3 +258,39 @@ plot_3d_scatter(
 ```
 
 ![三维散点图](../output/三维散点图-风速切变分布.png)
+
+
+## 地图热力图
+
+```python
+import numpy as np
+import pandas as pd
+
+# 示例数据：lon 为经度，lat 为纬度，risk 为空间风险值
+# 实际比赛中可替换为雷达站点、航路采样点或网格点的经纬度和风险值
+np.random.seed(1)
+df_map = pd.DataFrame({
+    "lon": np.r_[np.random.normal(118.72, 0.03, 80), np.random.normal(118.82, 0.02, 50)],
+    "lat": np.r_[np.random.normal(32.08, 0.025, 80), np.random.normal(32.02, 0.02, 50)],
+    "risk": np.r_[np.random.uniform(0.4, 1.0, 80), np.random.uniform(0.2, 0.8, 50)],
+})
+
+plot_map_heatmap(
+    df_map,
+    x="lon",                         # 横坐标列，通常填经度
+    y="lat",                         # 纵坐标列，通常填纬度
+    value="risk",                    # 热力值列，例如风险值、湍流强度、反射率等
+    background=None,                  # 地图底图图片路径；没有底图时可设为 None
+    extent=None,                      # 底图坐标范围：(最小经度, 最大经度, 最小纬度, 最大纬度)
+    title="地图热力图示例",           # 图标题
+    xlabel="经度",                   # x 轴名称
+    ylabel="纬度",                   # y 轴名称
+    cmap="jet",                      # 热力图颜色映射
+    alpha=0.65,                       # 热力图透明度，越小越能看到底图
+    radius=0.015,                     # 热力扩散半径，越大越平滑
+    grid_size=300,                    # 热力图网格精度，越大越细但越慢
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\地图热力图-空间风险分布.png",
+)
+```
+
+![地图热力图](../output/地图热力图-空间风险分布.png)
