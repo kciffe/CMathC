@@ -200,6 +200,50 @@ def plot_section(
     return ax
 
 
+# 热力图
+def plot_heatmap(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    value: str,
+    *,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    colorbar_label: str | None = None,
+    cmap: str = "viridis",
+    vmin: float | None = None,
+    vmax: float | None = None,
+    ax: plt.Axes | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    df = data[[x, y, value]].dropna().copy()
+    table = df.pivot_table(index=y, columns=x, values=value, aggfunc="mean")
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    im = ax.imshow(table.values, aspect="auto", cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.set_xticks(range(len(table.columns)))
+    ax.set_yticks(range(len(table.index)))
+    ax.set_xticklabels(table.columns, rotation=45)
+    ax.set_yticklabels(table.index)
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+
+    cbar = ax.figure.colorbar(im, ax=ax, pad=0.025)
+    cbar.set_label(colorbar_label or value)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 保存图片
 def _save_figure(fig: plt.Figure, save_path: str | Path) -> None:
     save_path = Path(save_path)
     save_path.parent.mkdir(parents=True, exist_ok=True)
@@ -209,20 +253,6 @@ def _save_figure(fig: plt.Figure, save_path: str | Path) -> None:
 
 if __name__ == "__main__":
     df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset.csv")
-
-    plot_profile(
-        df,
-        x="temperature",
-        height="height",
-        group="station",
-        legend="station",
-        title="Temperature profile",
-        xlabel="Temperature (C)",
-        ylabel="Height (m)",
-        colors=get_sci_deep_colors(df["station"].nunique()),
-        save_path=r"D:\8\Desktop\CMathc\src\test\q1\output\profile_temperature_height.png",
-    )
-
     plot_section(
         df,
         time="time",
@@ -232,7 +262,6 @@ if __name__ == "__main__":
         xlabel="Time",
         ylabel="Height (km)",
         colorbar_label="Temperature (C)",
-        cmap="turbo",
         save_path=r"D:\8\Desktop\CMathc\src\test\q1\output\section.png",
     )
     plt.close("all")

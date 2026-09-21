@@ -13,7 +13,7 @@ def add_features(df):
     df = df.copy()
     df["time"] = pd.to_datetime(df["time"])
 
-    # ????-??-??????? beam/mode????????????
+    #beam/model
     keep = [
         "station", "time", "height",
         "wind_direction", "wind_speed", "vertical_velocity", "cn2",
