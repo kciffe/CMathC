@@ -1376,40 +1376,98 @@ if __name__ == "__main__":
         colors=get_sci_deep_colors(2),
         save_path=rf"{output}\Pareto前沿图-组件测试.png",
     )
-    styles = {
+
+
+    # =========================
+    # GIS 地图底图 + 热力图
+    # =========================
+    gis_root = r"D:\8\Desktop\CMathc\data\D题\题目数据及检验\随题数据\地理信息数据"
+
+    # 测试数据：模拟江苏区域内的空间风险点
+    np.random.seed(1)
+    df_map = pd.DataFrame({
+        "lon": np.r_[
+            np.random.normal(118.8, 0.25, 100),
+            np.random.normal(120.5, 0.25, 80),
+            np.random.normal(119.5, 0.20, 60),
+        ],
+        "lat": np.r_[
+            np.random.normal(32.1, 0.20, 100),
+            np.random.normal(31.6, 0.18, 80),
+            np.random.normal(33.2, 0.20, 60),
+        ],
+        "risk": np.r_[
+            np.random.uniform(0.6, 1.0, 100),
+            np.random.uniform(0.4, 0.9, 80),
+            np.random.uniform(0.3, 0.8, 60),
+        ],
+    })
+
+    # 江苏附近显示范围
+    map_extent = (116, 122.3, 30.4, 35.5)
+
+    # 各 GIS 图层样式
+    gis_styles = {
         "省": {
             "facecolor": "none",
             "edgecolor": "black",
             "linewidth": 1.2,
+            "zorder": 4,
         },
         "市": {
             "facecolor": "none",
             "edgecolor": "gray",
             "linewidth": 0.7,
+            "zorder": 3,
         },
         "县": {
             "facecolor": "none",
             "edgecolor": "lightgray",
             "linewidth": 0.4,
+            "zorder": 2,
         },
         "江苏湖泊水库": {
             "facecolor": "lightskyblue",
             "edgecolor": "dodgerblue",
+            "linewidth": 0.5,
             "alpha": 0.6,
+            "zorder": 5,
         },
         "江苏长江等大型河流_面": {
             "facecolor": "skyblue",
             "edgecolor": "dodgerblue",
+            "linewidth": 0.5,
             "alpha": 0.7,
+            "zorder": 5,
         },
     }
 
+    fig, ax = plt.subplots(figsize=(10, 8))
+
+    # 先画 GIS 地理底图
     plot_gis_layers(
-        data_root=r"D:\8\Desktop\CMathc\data\D题\题目数据及检验\随题数据\地理信息数据",
-        title="地理信息组合图（江苏区域）",
-        styles=styles,
-        extent=(116, 122.3, 30.4, 35.5),
-        preview_dir=r"D:\8\Desktop\CMathc\src\utils\output\GIS图层预览",
-        save_path=r"D:\8\Desktop\CMathc\src\utils\output\地理信息组合图.png",
+        data_root=gis_root,
+        ax=ax,
+        extent=map_extent,
+        styles=gis_styles,
     )
+
+    # 再把热力图叠加到 GIS 底图上
+    plot_map_heatmap(
+        df_map,
+        x="lon",
+        y="lat",
+        value="risk",
+        ax=ax,
+        extent=map_extent,
+        title="江苏区域空间风险热力图",
+        xlabel="经度",
+        ylabel="纬度",
+        cmap="jet",
+        alpha=0.45,
+        radius=0.10,
+        grid_size=350,
+        save_path=rf"{output}\地图热力图-GIS底图.png",
+    )
+
     plt.close("all")

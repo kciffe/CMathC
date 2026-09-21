@@ -650,4 +650,4 @@ plot_map_heatmap(
 )
 ```
 
-![地图热力图](../output/地图热力图-空间风险分布.png)
+![地图热力图](../output/地图热力图-GIS底图.png)
