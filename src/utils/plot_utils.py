@@ -535,9 +535,10 @@ def plot_3d_scatter(
 
 
 def _set_3d_labels(ax: plt.Axes, title, xlabel, ylabel, zlabel) -> None:
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    ax.set_zlabel(zlabel)
+    ax.set_xlabel(xlabel, labelpad=10)
+    ax.set_ylabel(ylabel, labelpad=10)
+    ax.zaxis.set_rotate_label(False)
+    ax.set_zlabel(zlabel, labelpad=14, rotation=90)
     if title:
         ax.set_title(title)
 
