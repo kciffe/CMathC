@@ -846,6 +846,113 @@ def plot_wind_polar(
     return ax
 
 
+
+
+# GIS 多图层组合图
+def plot_gis_layers(
+    data_root: str | Path,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str = "经度",
+    ylabel: str = "纬度",
+    target_crs: str = "EPSG:4326",
+    extent: tuple[float, float, float, float] | None = None,
+    styles: dict[str, dict] | None = None,
+    preview_dir: str | Path | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """
+    递归读取目录下全部 shp 文件并叠加绘制。
+
+    styles 可按图层名设置样式，例如：
+    {
+        "省": {"facecolor": "none", "edgecolor": "black", "linewidth": 1.2},
+        "市": {"facecolor": "none", "edgecolor": "gray", "linewidth": 0.7},
+    }
+
+    preview_dir 不为 None 时，同时单独保存每个图层的预览图。
+    """
+    import geopandas as gpd
+
+    data_root = Path(data_root)
+    shp_files = list(data_root.rglob("*.shp"))
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(10, 8))
+
+    for i, shp in enumerate(shp_files):
+        layer_name = shp.stem
+        gdf = gpd.read_file(shp)
+
+        if gdf.crs is not None and target_crs:
+            gdf = gdf.to_crs(target_crs)
+
+        geom_types = set(gdf.geometry.geom_type.dropna())
+        style = (styles or {}).get(layer_name)
+
+        # 未指定样式时，根据几何类型给出简单默认样式
+        if style is None:
+            color = f"C{i % 10}"
+
+            if geom_types & {"Polygon", "MultiPolygon"}:
+                style = {
+                    "facecolor": "none",
+                    "edgecolor": color,
+                    "linewidth": 0.8,
+                    "alpha": 0.9,
+                }
+            elif geom_types & {"LineString", "MultiLineString"}:
+                style = {
+                    "color": color,
+                    "linewidth": 1.0,
+                    "alpha": 0.9,
+                }
+            else:
+                style = {
+                    "color": color,
+                    "markersize": 12,
+                    "alpha": 0.9,
+                }
+
+        gdf.plot(ax=ax, **style)
+
+        # 单独预览每个图层
+        if preview_dir is not None:
+            preview_dir = Path(preview_dir)
+            preview_dir.mkdir(parents=True, exist_ok=True)
+
+            fig_one, ax_one = plt.subplots(figsize=(8, 6))
+            gdf.plot(ax=ax_one, **style)
+            ax_one.set_title(layer_name)
+            ax_one.set_xlabel(xlabel)
+            ax_one.set_ylabel(ylabel)
+            ax_one.grid(True, linestyle="--", alpha=0.25)
+
+            _save_figure(
+                fig_one,
+                preview_dir / f"{layer_name}.png"
+            )
+            plt.close(fig_one)
+
+    if extent is not None:
+        xmin, xmax, ymin, ymax = extent
+        ax.set_xlim(xmin, xmax)
+        ax.set_ylim(ymin, ymax)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    ax.grid(True, linestyle="--", alpha=0.25)
+
+    if title:
+        ax.set_title(title)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
 # 地图热力图
 def plot_map_heatmap(
     data: pd.DataFrame,
@@ -1269,5 +1376,40 @@ if __name__ == "__main__":
         colors=get_sci_deep_colors(2),
         save_path=rf"{output}\Pareto前沿图-组件测试.png",
     )
+    styles = {
+        "省": {
+            "facecolor": "none",
+            "edgecolor": "black",
+            "linewidth": 1.2,
+        },
+        "市": {
+            "facecolor": "none",
+            "edgecolor": "gray",
+            "linewidth": 0.7,
+        },
+        "县": {
+            "facecolor": "none",
+            "edgecolor": "lightgray",
+            "linewidth": 0.4,
+        },
+        "江苏湖泊水库": {
+            "facecolor": "lightskyblue",
+            "edgecolor": "dodgerblue",
+            "alpha": 0.6,
+        },
+        "江苏长江等大型河流_面": {
+            "facecolor": "skyblue",
+            "edgecolor": "dodgerblue",
+            "alpha": 0.7,
+        },
+    }
 
+    plot_gis_layers(
+        data_root=r"D:\8\Desktop\CMathc\data\D题\题目数据及检验\随题数据\地理信息数据",
+        title="地理信息组合图（江苏区域）",
+        styles=styles,
+        extent=(116, 122.3, 30.4, 35.5),
+        preview_dir=r"D:\8\Desktop\CMathc\src\utils\output\GIS图层预览",
+        save_path=r"D:\8\Desktop\CMathc\src\utils\output\地理信息组合图.png",
+    )
     plt.close("all")
