@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from statistics import NormalDist
 from typing import Iterable
 
 from matplotlib import cm, colors as mcolors
@@ -400,6 +401,139 @@ def plot_residual(
     ax.set_ylabel(ylabel)
     if title:
         ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 置信区间带图
+def plot_band(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    lower: str,
+    upper: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    colors: Iterable[str] | None = None,
+    alpha: float = 0.2,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画均值曲线和上下界阴影带，可用于均值±标准差或置信区间。"""
+    df = data[[x, y, lower, upper]].dropna().sort_values(x).copy()
+    color_list = list(colors) if colors is not None else []
+    color = color_list[0] if color_list else None
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 5))
+
+    line, = ax.plot(df[x], df[y], linewidth=1.6, color=color)
+    ax.fill_between(df[x], df[lower], df[upper], color=line.get_color(), alpha=alpha)
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# Q-Q图
+def plot_qq(
+    data: pd.DataFrame,
+    value: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str = "理论分位数",
+    ylabel: str = "样本分位数",
+    colors: Iterable[str] | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画正态 Q-Q 图，用于观察样本或残差是否近似正态分布。"""
+    values = np.sort(data[value].dropna().to_numpy(dtype=float))
+    n = len(values)
+    p = (np.arange(n) + 0.5) / n
+    theoretical = np.array([NormalDist().inv_cdf(i) for i in p])
+
+    color_list = list(colors) if colors is not None else []
+    color = color_list[0] if color_list else None
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(6, 6))
+
+    ax.scatter(theoretical, values, s=28, alpha=0.75, color=color)
+    k, b = np.polyfit(theoretical, values, 1)
+    ax.plot(theoretical, k * theoretical + b, color="black", linestyle="--", linewidth=1)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# Pareto前沿图
+def plot_pareto(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    *,
+    minimize_x: bool = True,
+    minimize_y: bool = True,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    colors: Iterable[str] | None = None,
+    alpha: float = 0.65,
+    size: float = 32,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画双目标散点图并标出 Pareto 前沿。"""
+    df = data[[x, y]].dropna().copy()
+    df = df.sort_values(x, ascending=minimize_x)
+
+    frontier = []
+    best_y = np.inf if minimize_y else -np.inf
+
+    for idx, row in df.iterrows():
+        better = row[y] < best_y if minimize_y else row[y] > best_y
+        if better:
+            frontier.append(idx)
+            best_y = row[y]
+
+    front = df.loc[frontier]
+    color_list = list(colors) if colors is not None else []
+    point_color = color_list[0] if len(color_list) > 0 else None
+    front_color = color_list[1] if len(color_list) > 1 else None
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    ax.scatter(df[x], df[y], s=size, alpha=alpha, color=point_color, label="可行解")
+    ax.plot(front[x], front[y], marker="o", linewidth=1.8, color=front_color, label="Pareto前沿")
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+    ax.legend()
     ax.grid(True, linestyle="--", alpha=0.35)
 
     if save_path:
@@ -1079,6 +1213,61 @@ if __name__ == "__main__":
         ylabel="残差 (m/s)",
         colors=get_sci_deep_colors(1),
         save_path=rf"{output}\残差图-风速二次拟合.png",
+    )
+
+
+    # 置信区间带图：A站不同高度的平均风速 ± 1个标准差
+    band_data = df[
+        (df["station"] == "a")
+        & (df["height"] <= 1500)
+    ].groupby("height", as_index=False)["wind_speed"].agg(["mean", "std"]).reset_index()
+
+    band_data["lower"] = band_data["mean"] - band_data["std"]
+    band_data["upper"] = band_data["mean"] + band_data["std"]
+
+    plot_band(
+        band_data,
+        x="height",
+        y="mean",
+        lower="lower",
+        upper="upper",
+        title="A站风速均值及波动范围",
+        xlabel="高度 (m)",
+        ylabel="风速 (m/s)",
+        colors=get_sci_deep_colors(1),
+        save_path=rf"{output}\置信区间带图-A站风速.png",
+    )
+
+    # Q-Q图：继续使用前面的风速二次拟合残差进行组件测试
+    fit_data["residual"] = fit_data["wind_speed"] - fit_data["predicted_wind_speed"]
+
+    plot_qq(
+        fit_data,
+        value="residual",
+        title="风速拟合残差Q-Q图",
+        xlabel="理论正态分位数",
+        ylabel="残差分位数",
+        colors=get_sci_deep_colors(1),
+        save_path=rf"{output}\QQ图-风速拟合残差.png",
+    )
+
+    # Pareto前沿图：用现有风速和风切变演示组件，不代表正式优化目标
+    pareto_data = df[
+        (df["station"] == "a")
+        & (df["height"] <= 1500)
+    ][["wind_speed", "wind_shear"]].dropna().copy()
+
+    plot_pareto(
+        pareto_data,
+        x="wind_speed",
+        y="wind_shear",
+        minimize_x=True,
+        minimize_y=True,
+        title="风速-风切变 Pareto 前沿（组件测试）",
+        xlabel="风速 (m/s)",
+        ylabel="风切变",
+        colors=get_sci_deep_colors(2),
+        save_path=rf"{output}\Pareto前沿图-组件测试.png",
     )
 
     plt.close("all")

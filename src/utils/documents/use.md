@@ -13,7 +13,7 @@ from utils.plot_utils import *
 from utils.color_palettes import get_sci_height_colors, get_sci_deep_colors
 ```
 
-这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist`、`plot_joint_hist`、`plot_kde` 和 `plot_residual` 分别用于变量关系、方案比较、单变量分布、联合分布、分组密度比较和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图；`plot_3d_route` 用于三维湍流场上的最优航路展示。
+这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist`、`plot_joint_hist`、`plot_kde` 和 `plot_residual` 分别用于变量关系、方案比较、单变量分布、联合分布、分组密度比较和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
 
 ## 廓线图
 
@@ -283,6 +283,98 @@ plot_residual(
 ```
 
 ![残差图](../output/残差图-风速二次拟合.png)
+
+
+## 置信区间带图
+
+`plot_band` 用于绘制中心曲线及其上下界阴影带，适合表示“均值 ± 标准差”、置信区间或预测区间。下面按高度统计 A 站风速均值和标准差：
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+
+band_data = df[
+    (df["station"] == "a")
+    & (df["height"] <= 1500)
+].groupby("height", as_index=False)["wind_speed"].agg(["mean", "std"]).reset_index()
+
+band_data["lower"] = band_data["mean"] - band_data["std"]
+band_data["upper"] = band_data["mean"] + band_data["std"]
+
+plot_band(
+    band_data,
+    x="height",
+    y="mean",
+    lower="lower",
+    upper="upper",
+    title="A站风速均值及波动范围",
+    xlabel="高度 (m)",
+    ylabel="风速 (m/s)",
+    colors=get_sci_deep_colors(1),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\置信区间带图-A站风速.png",
+)
+```
+
+适用场景：多次实验均值与波动、模型预测置信区间、参数敏感性结果等。
+
+## Q-Q图
+
+`plot_qq` 用于比较样本分位数与理论正态分位数。回归模型中常用于检查残差是否近似正态分布。下面继续使用风速-高度二次拟合得到的残差进行演示：
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+df["time"] = pd.to_datetime(df["time"])
+
+fit_data = df[
+    (df["station"] == "a")
+    & (df["time"] == df["time"].min())
+    & (df["height"] <= 1500)
+][["height", "wind_speed"]].dropna().copy()
+
+coef = np.polyfit(fit_data["height"], fit_data["wind_speed"], 2)
+fit_data["predicted_wind_speed"] = np.polyval(coef, fit_data["height"])
+fit_data["residual"] = fit_data["wind_speed"] - fit_data["predicted_wind_speed"]
+
+plot_qq(
+    fit_data,
+    value="residual",
+    title="风速拟合残差Q-Q图",
+    xlabel="理论正态分位数",
+    ylabel="残差分位数",
+    colors=get_sci_deep_colors(1),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\QQ图-风速拟合残差.png",
+)
+```
+
+若散点大致沿参考直线分布，说明该变量或残差与正态分布较接近；若两端明显偏离，则可能存在厚尾、偏态或异常值。
+
+## Pareto前沿图
+
+`plot_pareto` 用于双目标优化结果展示。散点表示可行解，连线标出非支配的 Pareto 前沿。下面仅使用现有风速和风切变数据演示组件调用，不表示正式优化模型中的目标函数：
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+
+pareto_data = df[
+    (df["station"] == "a")
+    & (df["height"] <= 1500)
+][["wind_speed", "wind_shear"]].dropna().copy()
+
+plot_pareto(
+    pareto_data,
+    x="wind_speed",
+    y="wind_shear",
+    minimize_x=True,
+    minimize_y=True,
+    title="风速-风切变 Pareto 前沿（组件测试）",
+    xlabel="风速 (m/s)",
+    ylabel="风切变",
+    colors=get_sci_deep_colors(2),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\Pareto前沿图-组件测试.png",
+)
+```
+
+`minimize_x=True` 和 `minimize_y=True` 表示两个目标都希望越小越好；若某个目标是最大化，将对应参数改为 `False` 即可。正式建模时应把 `x`、`y` 换成实际的两个优化目标，例如成本-风险、误差-复杂度或收益-能耗。
+
 
 ## 箱线图
 
