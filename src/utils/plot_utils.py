@@ -257,6 +257,113 @@ def plot_hist(
     return ax
 
 
+# 联合直方图
+def plot_joint_hist(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    bins: int = 20,
+    *,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    cmap: str = "Blues",
+    colors: Iterable[str] | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画二维联合直方图，并显示 x、y 的边缘直方图。"""
+    df = data[[x, y]].dropna().copy()
+    color_list = list(colors) if colors is not None else []
+    hist_color = color_list[0] if color_list else None
+
+    fig = plt.figure(figsize=(7, 7))
+    gs = fig.add_gridspec(4, 4, hspace=0.05, wspace=0.05)
+
+    ax_top = fig.add_subplot(gs[0, :3])
+    ax_main = fig.add_subplot(gs[1:, :3])
+    ax_right = fig.add_subplot(gs[1:, 3], sharey=ax_main)
+
+    ax_main.hist2d(df[x], df[y], bins=bins, cmap=cmap)
+    ax_top.hist(df[x], bins=bins, color=hist_color, edgecolor="black", alpha=0.85)
+    ax_right.hist(df[y], bins=bins, orientation="horizontal", color=hist_color, edgecolor="black", alpha=0.85)
+
+    ax_top.tick_params(labelbottom=False)
+    ax_right.tick_params(labelleft=False)
+
+    ax_main.set_xlabel(xlabel or x)
+    ax_main.set_ylabel(ylabel or y)
+    if title:
+        ax_top.set_title(title)
+
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(save_path, dpi=300, bbox_inches="tight")
+
+    return ax_main
+
+
+# 核密度图
+def plot_kde(
+    data: pd.DataFrame,
+    value: str,
+    group: str | None = None,
+    legend: str | None = None,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str = "密度",
+    colors: Iterable[str] | None = None,
+    fill: bool = True,
+    alpha: float = 0.2,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画核密度曲线，可用于比较不同分组的分布形态。"""
+    df = data[[value] + ([group] if group else [])].dropna().copy()
+    values_all = df[value].to_numpy(dtype=float)
+
+    xmin, xmax = values_all.min(), values_all.max()
+    pad = (xmax - xmin) * 0.08 + 1e-9
+    x_grid = np.linspace(xmin - pad, xmax + pad, 400)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 5))
+
+    color_list = list(colors) if colors is not None else []
+    groups = df.groupby(group, sort=True, observed=True) if group else [(value, df)]
+
+    for i, (name, part) in enumerate(groups):
+        values = part[value].to_numpy(dtype=float)
+        std = values.std(ddof=1) if len(values) > 1 else 0.0
+        bandwidth = 1.06 * std * len(values) ** (-1 / 5) + 1e-6
+
+        diff = (x_grid[:, None] - values[None, :]) / bandwidth
+        density = np.exp(-0.5 * diff ** 2).sum(axis=1)
+        density /= len(values) * bandwidth * np.sqrt(2 * np.pi)
+
+        color = color_list[i % len(color_list)] if color_list else None
+        label = str(name) if group else value
+
+        ax.plot(x_grid, density, linewidth=1.5, label=label, color=color)
+        if fill:
+            ax.fill_between(x_grid, density, alpha=alpha, color=color)
+
+    if group:
+        ax.legend(title=legend or group)
+
+    ax.set_xlabel(xlabel or value)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.25)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
 # 残差图
 def plot_residual(
     data: pd.DataFrame,
@@ -885,6 +992,49 @@ if __name__ == "__main__":
         ylabel="频数",
         colors=get_sci_deep_colors(1),
         save_path=rf"{output}\直方图-A站风速分布.png",
+    )
+
+    # 联合直方图：观察温度和相对湿度的联合分布及各自边缘分布
+    joint_data = df[
+        (df["station"] == "a")
+        & (df["height"] <= 1500)
+    ].copy()
+
+    plot_joint_hist(
+        joint_data,
+        x="temperature",
+        y="relative_humidity",
+        bins=18,
+        title="A站温度与相对湿度联合分布",
+        xlabel="温度 (°C)",
+        ylabel="相对湿度 (%)",
+        cmap="Blues",
+        colors=get_sci_deep_colors(1),
+        save_path=rf"{output}\联合直方图-温度与湿度.png",
+    )
+
+    # 核密度图：比较不同高度层垂直速度的分布形态
+    kde_data = df[
+        (df["station"] == "a")
+        & (df["height"] <= 2500)
+    ].copy()
+
+    kde_data["height_group"] = pd.cut(
+        kde_data["height"],
+        bins=[0, 500, 1000, 1500, 2000, 2500],
+        labels=["0-500", "500-1000", "1000-1500", "1500-2000", "2000-2500"],
+    )
+
+    plot_kde(
+        kde_data,
+        value="vertical_velocity",
+        group="height_group",
+        legend="高度层 (m)",
+        title="不同高度层垂直速度核密度图",
+        xlabel="垂直速度 (m/s)",
+        ylabel="密度",
+        colors=get_sci_deep_colors(5),
+        save_path=rf"{output}\核密度图-不同高度层垂直速度.png",
     )
 
     # 残差图：用一个时刻的风速-高度二次拟合作为组件测试

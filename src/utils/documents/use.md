@@ -13,7 +13,7 @@ from utils.plot_utils import *
 from utils.color_palettes import get_sci_height_colors, get_sci_deep_colors
 ```
 
-这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist` 和 `plot_residual` 分别用于变量关系、方案比较、分布检查和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
+这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist`、`plot_joint_hist`、`plot_kde` 和 `plot_residual` 分别用于变量关系、方案比较、单变量分布、联合分布、分组密度比较和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
 
 ## 廓线图
 
@@ -181,6 +181,69 @@ plot_hist(
 ```
 
 ![直方图](../output/直方图-A站风速分布.png)
+
+## 联合直方图
+
+`plot_joint_hist` 同时展示两个连续变量的二维联合分布，以及横轴、纵轴变量各自的边缘直方图。适合观察两个变量之间的关系和样本密集区域。
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+
+df_plot = df[
+    (df["station"] == "a")
+    & (df["height"] <= 1500)
+].copy()
+
+plot_joint_hist(
+    df_plot,
+    x="temperature",
+    y="relative_humidity",
+    bins=18,
+    title="A站温度与相对湿度联合分布",
+    xlabel="温度 (°C)",
+    ylabel="相对湿度 (%)",
+    cmap="Blues",
+    colors=get_sci_deep_colors(1),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\联合直方图-温度与湿度.png",
+)
+```
+
+![联合直方图](../output/联合直方图-温度与湿度.png)
+
+## 核密度图
+
+`plot_kde` 用平滑密度曲线比较变量的分布形态。它不是每道题都必须使用，但当需要比较不同站点、不同高度层或不同方案的分布差异时，比普通直方图更直观。
+
+下面把 A 站 2500 m 以下划分为 5 个高度层，比较垂直速度的分布：
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+
+df_plot = df[
+    (df["station"] == "a")
+    & (df["height"] <= 2500)
+].copy()
+
+df_plot["height_group"] = pd.cut(
+    df_plot["height"],
+    bins=[0, 500, 1000, 1500, 2000, 2500],
+    labels=["0-500", "500-1000", "1000-1500", "1500-2000", "2000-2500"],
+)
+
+plot_kde(
+    df_plot,
+    value="vertical_velocity",
+    group="height_group",
+    legend="高度层 (m)",
+    title="不同高度层垂直速度核密度图",
+    xlabel="垂直速度 (m/s)",
+    ylabel="密度",
+    colors=get_sci_deep_colors(5),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\核密度图-不同高度层垂直速度.png",
+)
+```
+
+![核密度图](../output/核密度图-不同高度层垂直速度.png)
 
 ## 残差图
 
