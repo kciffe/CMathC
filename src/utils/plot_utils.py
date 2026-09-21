@@ -344,6 +344,47 @@ def plot_bubble(
 
     return ax
 
+
+# 风向风速极坐标图
+def plot_wind_polar(
+    data: pd.DataFrame,
+    direction: str,
+    speed: str,
+    *,
+    title: str | None = None,
+    colorbar_label: str | None = None,
+    cmap: str = "plasma",
+    alpha: float = 0.75,
+    size: float = 45,
+    ax: plt.Axes | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画风向风速极坐标散点图。"""
+    df = data[[direction, speed]].dropna().copy()
+    theta = np.deg2rad(df[direction])
+    r = df[speed]
+
+    if ax is None:
+        fig = plt.figure(figsize=(7, 6))
+        ax = fig.add_subplot(111, projection="polar")
+
+    sc = ax.scatter(theta, r, c=r, s=size, cmap=cmap, alpha=alpha)
+    ax.set_theta_zero_location("N")
+    ax.set_theta_direction(-1)
+    ax.set_rlabel_position(22.5)
+    ax.grid(True, linestyle="-", alpha=0.45)
+
+    if title:
+        ax.set_title(title)
+
+    cbar = ax.figure.colorbar(sc, ax=ax, pad=0.08)
+    cbar.set_label(colorbar_label or speed)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
 def _prepare_grid(data: pd.DataFrame, x: str, y: str, value: str):
     df = data[[x, y, value]].dropna().copy()
 
