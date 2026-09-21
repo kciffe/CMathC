@@ -245,6 +245,105 @@ def plot_heatmap(
 
     return ax
 
+
+# 相关性热力图
+def plot_corr_heatmap(
+    data: pd.DataFrame,
+    cols: list[str],
+    *,
+    labels: list[str] | None = None,
+    title: str | None = None,
+    cmap: str = "coolwarm",
+    vmin: float = -1,
+    vmax: float = 1,
+    ax: plt.Axes | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    corr = data[cols].corr()
+    names = labels or cols
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 6))
+
+    im = ax.imshow(corr.values, cmap=cmap, vmin=vmin, vmax=vmax)
+    ax.set_xticks(range(len(names)))
+    ax.set_yticks(range(len(names)))
+    ax.set_xticklabels(names, rotation=90)
+    ax.set_yticklabels(names)
+
+    for i in range(len(names)):
+        for j in range(len(names)):
+            value = corr.iloc[i, j]
+            color = "white" if abs(value) > 0.5 else "black"
+            ax.text(j, i, f"{value:.2g}", ha="center", va="center", color=color)
+
+    if title:
+        ax.set_title(title)
+    ax.figure.colorbar(im, ax=ax, pad=0.025)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 气泡散点图
+def plot_bubble(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    size: str,
+    color: str | None = None,
+    *,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    colorbar_label: str | None = None,
+    cmap: str = "viridis",
+    min_size: float = 30,
+    max_size: float = 500,
+    alpha: float = 0.75,
+    ax: plt.Axes | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画气泡散点图，点大小和颜色可表示额外变量。"""
+    color = color or size
+    cols = list(dict.fromkeys([x, y, size, color]))
+    df = data[cols].dropna().copy()
+
+    # 把数值缩放到合适的点大小
+    s = df[size].astype(float)
+    s = (s - s.min()) / (s.max() - s.min() + 1e-9)
+    s = min_size + s * (max_size - min_size)
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 5))
+
+    sc = ax.scatter(
+        df[x],
+        df[y],
+        s=s,
+        c=df[color],
+        cmap=cmap,
+        alpha=alpha,
+        edgecolors="white",
+        linewidths=0.6,
+    )
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    cbar = ax.figure.colorbar(sc, ax=ax, pad=0.025)
+    cbar.set_label(colorbar_label or color)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
 def _prepare_grid(data: pd.DataFrame, x: str, y: str, value: str):
     df = data[[x, y, value]].dropna().copy()
 
