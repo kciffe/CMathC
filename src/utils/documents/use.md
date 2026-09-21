@@ -4,6 +4,7 @@
 
 ```python
 import sys
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, r"D:\8\Desktop\CMathc\src")
@@ -12,7 +13,7 @@ from utils.plot_utils import *
 from utils.color_palettes import get_sci_height_colors, get_sci_deep_colors
 ```
 
-这套组件中，`plot_line` 可以覆盖普通折线类结果图，例如指标随高度变化、时间趋势、LSTM 损失、预测值与实际值对比、未来趋势预测和 PSO 收敛曲线。`plot_3d_scatter` 现在把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
+这套组件中，`plot_line` 可覆盖普通折线类结果图；`plot_scatter`、`plot_bar`、`plot_hist` 和 `plot_residual` 分别用于变量关系、方案比较、分布检查和模型残差诊断。`plot_3d_scatter` 把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
 
 ## 廓线图
 
@@ -47,17 +48,25 @@ plot_profile(
 
 ```python
 df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
-df_plot = df[(df["station"] == "a") & (df["height"] >= 100) & (df["height"] <= 1000)].copy()
+df["time"] = pd.to_datetime(df["time"])
+
+df_plot = df[
+    (df["station"] == "a")
+    & (df["time"] == df["time"].min())
+    & (df["height"] >= 100)
+    & (df["height"] <= 1500)
+].copy()
 
 plot_line(
     df_plot,
     x="height",
-    y=["wind_speed", "vertical_velocity", "spectral_width"],
-    labels=["水平风速", "垂直速度", "速度谱宽"],
-    title="各指标随采样高度的变化",
-    xlabel="采样高度 (m)",
-    ylabel="数值",
-    save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-各指标随高度变化.png",
+    y=["wind_speed", "u", "v", "vertical_velocity"],
+    labels=["风速", "u风分量", "v风分量", "垂直速度"],
+    title="不同风场指标随高度变化",
+    xlabel="高度 (m)",
+    ylabel="速度 (m/s)",
+    colors=get_sci_deep_colors(4),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-多指标.png",
 )
 ```
 ![折线图](../output/折线图-多指标.png)
@@ -102,6 +111,113 @@ plot_line(
 
 plot_line(pso, x="iteration", y="best_cost", xlabel="迭代次数", ylabel="最优代价 J")
 ```
+
+
+## 散点图
+
+`plot_scatter` 用于观察两个变量之间的关系，也可以通过 `group` 按类别分别绘制。
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+
+plot_scatter(
+    df,
+    x="temperature",
+    y="relative_humidity",
+    group="station",
+    legend="站点",
+    title="温度与相对湿度关系",
+    xlabel="温度 (°C)",
+    ylabel="相对湿度 (%)",
+    colors=get_sci_deep_colors(df["station"].nunique()),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\散点图-温度与湿度关系.png",
+)
+```
+
+![散点图](../output/散点图-温度与湿度关系.png)
+
+## 柱状图
+
+`plot_bar` 适合比较不同站点、模型或方案的统计指标。下面先按站点计算平均风速，再调用绘图组件。
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+
+bar_data = df.groupby("station", as_index=False)["wind_speed"].mean()
+
+plot_bar(
+    bar_data,
+    x="station",
+    y="wind_speed",
+    labels=["A站", "B站"],
+    title="不同站点平均风速对比",
+    xlabel="站点",
+    ylabel="平均风速 (m/s)",
+    colors=get_sci_deep_colors(len(bar_data)),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\柱状图-站点平均风速.png",
+)
+```
+
+![柱状图](../output/柱状图-站点平均风速.png)
+
+## 直方图
+
+`plot_hist` 用于查看单个变量的分布。下面绘制 A 站全部观测的风速分布。
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+df_a = df[df["station"] == "a"].copy()
+
+plot_hist(
+    df_a,
+    value="wind_speed",
+    bins=20,
+    title="A站风速分布",
+    xlabel="风速 (m/s)",
+    ylabel="频数",
+    colors=get_sci_deep_colors(1),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\直方图-A站风速分布.png",
+)
+```
+
+![直方图](../output/直方图-A站风速分布.png)
+
+## 残差图
+
+`plot_residual` 接收真实值列和预测值列，并绘制
+
+\[
+e = y - \hat y
+\]
+
+相对于预测值的分布。现有特征数据还没有正式模型预测值，因此下面仅用某一时刻的风速-高度二次拟合来验证组件。正式建模后，把 `actual` 和 `predicted` 换成模型真实值列与预测值列即可。
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+df["time"] = pd.to_datetime(df["time"])
+
+fit_data = df[
+    (df["station"] == "a")
+    & (df["time"] == df["time"].min())
+    & (df["height"] <= 1500)
+][["height", "wind_speed"]].dropna().copy()
+
+coef = np.polyfit(fit_data["height"], fit_data["wind_speed"], 2)
+fit_data["predicted_wind_speed"] = np.polyval(coef, fit_data["height"])
+
+plot_residual(
+    fit_data,
+    actual="wind_speed",
+    predicted="predicted_wind_speed",
+    title="风速二次拟合残差图",
+    xlabel="预测风速 (m/s)",
+    ylabel="残差 (m/s)",
+    colors=get_sci_deep_colors(1),
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\残差图-风速二次拟合.png",
+)
+```
+
+![残差图](../output/残差图-风速二次拟合.png)
 
 ## 箱线图
 

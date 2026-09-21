@@ -136,6 +136,167 @@ def plot_line(
 
     return ax
 
+
+# 散点图
+def plot_scatter(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    group: str | None = None,
+    legend: str | None = None,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    colors: Iterable[str] | None = None,
+    alpha: float = 0.75,
+    size: float = 35,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画普通散点图，可按类别分组。"""
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    color_list = list(colors) if colors is not None else []
+
+    if group:
+        for i, (name, part) in enumerate(data.groupby(group, sort=True)):
+            part = part[[x, y]].dropna()
+            color = color_list[i % len(color_list)] if color_list else None
+            ax.scatter(part[x], part[y], s=size, alpha=alpha, label=str(name), color=color)
+        ax.legend(title=legend or group)
+    else:
+        df = data[[x, y]].dropna()
+        color = color_list[0] if color_list else None
+        ax.scatter(df[x], df[y], s=size, alpha=alpha, color=color)
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 柱状图
+def plot_bar(
+    data: pd.DataFrame,
+    x: str,
+    y: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    labels: Iterable[str] | None = None,
+    colors: Iterable[str] | None = None,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画分类柱状图。"""
+    df = data[[x, y]].dropna().copy()
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    pos = np.arange(len(df))
+    color_list = list(colors) if colors is not None else None
+
+    ax.bar(pos, df[y], color=color_list)
+    ax.set_xticks(pos)
+    ax.set_xticklabels(list(labels) if labels is not None else df[x].astype(str))
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or y)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 直方图
+def plot_hist(
+    data: pd.DataFrame,
+    value: str,
+    bins: int = 20,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str = "频数",
+    colors: Iterable[str] | None = None,
+    alpha: float = 0.8,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画单变量分布直方图。"""
+    values = data[value].dropna()
+    color_list = list(colors) if colors is not None else []
+    color = color_list[0] if color_list else None
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    ax.hist(values, bins=bins, color=color, alpha=alpha, edgecolor="white")
+    ax.set_xlabel(xlabel or value)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, axis="y", linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 残差图
+def plot_residual(
+    data: pd.DataFrame,
+    actual: str,
+    predicted: str,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str = "预测值",
+    ylabel: str = "残差",
+    colors: Iterable[str] | None = None,
+    alpha: float = 0.75,
+    size: float = 35,
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画预测值与残差散点图，残差 = 实际值 - 预测值。"""
+    df = data[[actual, predicted]].dropna().copy()
+    residual = df[actual] - df[predicted]
+
+    color_list = list(colors) if colors is not None else []
+    color = color_list[0] if color_list else None
+
+    if ax is None:
+        _, ax = plt.subplots(figsize=(7, 5))
+
+    ax.scatter(df[predicted], residual, s=size, alpha=alpha, color=color)
+    ax.axhline(0, color="black", linestyle="--", linewidth=1)
+
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    if title:
+        ax.set_title(title)
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
 # 箱线图
 def plot_box(
     data: pd.DataFrame,
@@ -679,41 +840,72 @@ if __name__ == "__main__":
     df = pd.read_csv(
         r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv"
     )
-
-    # CSV读取后time是字符串，先转datetime
     df["time"] = pd.to_datetime(df["time"])
 
+    output = r"D:\8\Desktop\CMathc\src\utils\output"
 
-    # =========================
-    # 多指标折线图
-    # =========================
+    # 散点图：温度与相对湿度关系，不同站点分别显示
+    plot_scatter(
+        df,
+        x="temperature",
+        y="relative_humidity",
+        group="station",
+        legend="站点",
+        title="温度与相对湿度关系",
+        xlabel="温度 (°C)",
+        ylabel="相对湿度 (%)",
+        colors=get_sci_deep_colors(df["station"].nunique()),
+        save_path=rf"{output}\散点图-温度与湿度关系.png",
+    )
 
-    df_plot = df[
+    # 柱状图：比较两个站点的平均风速
+    bar_data = df.groupby("station", as_index=False)["wind_speed"].mean()
+
+    plot_bar(
+        bar_data,
+        x="station",
+        y="wind_speed",
+        labels=["A站", "B站"],
+        title="不同站点平均风速对比",
+        xlabel="站点",
+        ylabel="平均风速 (m/s)",
+        colors=get_sci_deep_colors(len(bar_data)),
+        save_path=rf"{output}\柱状图-站点平均风速.png",
+    )
+
+    # 直方图：A站风速分布
+    df_a = df[df["station"] == "a"].copy()
+
+    plot_hist(
+        df_a,
+        value="wind_speed",
+        bins=20,
+        title="A站风速分布",
+        xlabel="风速 (m/s)",
+        ylabel="频数",
+        colors=get_sci_deep_colors(1),
+        save_path=rf"{output}\直方图-A站风速分布.png",
+    )
+
+    # 残差图：用一个时刻的风速-高度二次拟合作为组件测试
+    fit_data = df[
         (df["station"] == "a")
         & (df["time"] == df["time"].min())
         & (df["height"] <= 1500)
-    ].copy()
-    df_plot = df[
-        (df["station"] == "a")
-        & (df["height"] <= 1500)
-    ].copy()
+    ][["height", "wind_speed"]].dropna().copy()
 
-    df_plot["time_label"] = df_plot["time"].dt.strftime("%H:%M")
+    coef = np.polyfit(fit_data["height"], fit_data["wind_speed"], 2)
+    fit_data["predicted_wind_speed"] = np.polyval(coef, fit_data["height"])
 
-    plot_line(
-        df_plot,
-        x="height",
-        y="wind_speed",
-        group="time_label",
-        legend="时间",
-        title="不同时刻风速随高度变化",
-        xlabel="高度 (m)",
-        ylabel="风速 (m/s)",
-        marker="o",
-        colors=get_sci_deep_colors(
-            df_plot["time_label"].nunique()
-        ),
-        save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-分组.png",
+    plot_residual(
+        fit_data,
+        actual="wind_speed",
+        predicted="predicted_wind_speed",
+        title="风速二次拟合残差图",
+        xlabel="预测风速 (m/s)",
+        ylabel="残差 (m/s)",
+        colors=get_sci_deep_colors(1),
+        save_path=rf"{output}\残差图-风速二次拟合.png",
     )
 
     plt.close("all")
