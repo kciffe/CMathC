@@ -30,7 +30,7 @@ def set_chinese_font() -> None:
 
 set_chinese_font()
 
-# 阔线图
+# 廓线图
 def plot_profile(
     data: pd.DataFrame,
     x: str,
@@ -75,6 +75,60 @@ def plot_profile(
         ax.set_title(title)
     if invert_y:
         ax.invert_yaxis()
+    ax.grid(True, linestyle="--", alpha=0.35)
+
+    if save_path:
+        _save_figure(ax.figure, save_path)
+
+    return ax
+
+
+# 折线图
+def plot_line(
+    data: pd.DataFrame,
+    x: str,
+    y: str | Iterable[str],
+    group: str | None = None,
+    legend: str | None = None,
+    *,
+    ax: plt.Axes | None = None,
+    title: str | None = None,
+    xlabel: str | None = None,
+    ylabel: str | None = None,
+    labels: Iterable[str] | None = None,
+    colors: Iterable[str] | None = None,
+    marker: str | None = None,
+    linestyle: str = "-",
+    save_path: str | Path | None = None,
+) -> plt.Axes:
+    """画普通折线图，支持单指标、多指标和分组曲线。"""
+    if ax is None:
+        _, ax = plt.subplots(figsize=(8, 5))
+
+    color_list = list(colors) if colors is not None else []
+
+    if group:
+        for i, (name, part) in enumerate(data.groupby(group, sort=True)):
+            part = part[[x, y]].dropna().sort_values(x)
+            color = color_list[i % len(color_list)] if color_list else None
+            ax.plot(part[x], part[y], marker=marker, linestyle=linestyle, label=str(name), color=color)
+        ax.legend(title=legend or group)
+    else:
+        ys = [y] if isinstance(y, str) else list(y)
+        label_list = list(labels) if labels is not None else ys
+
+        for i, col in enumerate(ys):
+            part = data[[x, col]].dropna().sort_values(x)
+            color = color_list[i % len(color_list)] if color_list else None
+            ax.plot(part[x], part[col], marker=marker, linestyle=linestyle, label=label_list[i], color=color)
+
+        if len(ys) > 1 or labels is not None:
+            ax.legend()
+
+    ax.set_xlabel(xlabel or x)
+    ax.set_ylabel(ylabel or "")
+    if title:
+        ax.set_title(title)
     ax.grid(True, linestyle="--", alpha=0.35)
 
     if save_path:
@@ -568,32 +622,40 @@ def plot_3d_scatter(
     data: pd.DataFrame,
     x: str,
     y: str,
-    value: str,
+    z: str,
+    color: str | None = None,
     *,
     ax: plt.Axes | None = None,
     title: str | None = None,
     xlabel: str | None = None,
     ylabel: str | None = None,
     zlabel: str | None = None,
+    colorbar_label: str | None = None,
     cmap: str = "jet",
     elev: float = 25,
     azim: float = -135,
     save_path: str | Path | None = None,
 ) -> plt.Axes:
-    df, _, _, _ = _prepare_grid(data, x, y, value)
+    color = color or z
+    cols = list(dict.fromkeys([x, y, z, color]))
+    df = data[cols].dropna().copy()
+
+    if np.issubdtype(df[x].dtype, np.datetime64):
+        df[x] = (df[x] - df[x].min()).dt.total_seconds() / 60
+
     if ax is None:
         fig = plt.figure(figsize=(7, 5))
         ax = fig.add_subplot(111, projection="3d")
 
-    sc = ax.scatter(df[x], df[y], df[value], c=df[value], cmap=cmap, s=28)
-    ax.figure.colorbar(sc, ax=ax, shrink=0.7, pad=0.08)
-    _set_3d_labels(ax, title, xlabel or x, ylabel or y, zlabel or value)
+    sc = ax.scatter(df[x], df[y], df[z], c=df[color], cmap=cmap, s=28)
+    cbar = ax.figure.colorbar(sc, ax=ax, shrink=0.7, pad=0.08)
+    cbar.set_label(colorbar_label or color)
+    _set_3d_labels(ax, title, xlabel or x, ylabel or y, zlabel or z)
     ax.view_init(elev=elev, azim=azim)
 
     if save_path:
         _save_figure(ax.figure, save_path)
     return ax
-
 
 def _set_3d_labels(ax: plt.Axes, title, xlabel, ylabel, zlabel) -> None:
     ax.set_xlabel(xlabel, labelpad=10)
@@ -613,16 +675,45 @@ def _save_figure(fig: plt.Figure, save_path: str | Path) -> None:
 
 
 if __name__ == "__main__":
-    df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset.csv")
-    plot_section(
-        df,
-        time="time",
-        height="height",
-        value="temperature",
-        title="Temperature time-height section",
-        xlabel="Time",
-        ylabel="Height (km)",
-        colorbar_label="Temperature (C)",
-        save_path=r"D:\8\Desktop\CMathc\src\test\q1\output\section.png",
+
+    df = pd.read_csv(
+        r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv"
     )
+
+    # CSV读取后time是字符串，先转datetime
+    df["time"] = pd.to_datetime(df["time"])
+
+
+    # =========================
+    # 多指标折线图
+    # =========================
+
+    df_plot = df[
+        (df["station"] == "a")
+        & (df["time"] == df["time"].min())
+        & (df["height"] <= 1500)
+    ].copy()
+    df_plot = df[
+        (df["station"] == "a")
+        & (df["height"] <= 1500)
+    ].copy()
+
+    df_plot["time_label"] = df_plot["time"].dt.strftime("%H:%M")
+
+    plot_line(
+        df_plot,
+        x="height",
+        y="wind_speed",
+        group="time_label",
+        legend="时间",
+        title="不同时刻风速随高度变化",
+        xlabel="高度 (m)",
+        ylabel="风速 (m/s)",
+        marker="o",
+        colors=get_sci_deep_colors(
+            df_plot["time_label"].nunique()
+        ),
+        save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-分组.png",
+    )
+
     plt.close("all")

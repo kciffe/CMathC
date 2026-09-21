@@ -12,6 +12,8 @@ from utils.plot_utils import *
 from utils.color_palettes import get_sci_height_colors, get_sci_deep_colors
 ```
 
+这套组件中，`plot_line` 可以覆盖普通折线类结果图，例如指标随高度变化、时间趋势、LSTM 损失、预测值与实际值对比、未来趋势预测和 PSO 收敛曲线。`plot_3d_scatter` 现在把三维坐标 `z` 和颜色变量 `color` 分开，可用于“经度-纬度-高度 + 指标颜色”的三维散点图。
+
 ## 廓线图
 
 ```python
@@ -35,6 +37,71 @@ plot_profile(
 ```
 
 ![廓线图](../output/廓线图-风速垂直分布.png)
+
+
+## 折线图
+
+`plot_line` 可用于普通时间序列、多个指标对比、训练损失曲线、预测值与实际值对比，以及按高度或类别分组的多条曲线。
+
+### 多指标折线图
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+df_plot = df[(df["station"] == "a") & (df["height"] >= 100) & (df["height"] <= 1000)].copy()
+
+plot_line(
+    df_plot,
+    x="height",
+    y=["wind_speed", "vertical_velocity", "spectral_width"],
+    labels=["水平风速", "垂直速度", "速度谱宽"],
+    title="各指标随采样高度的变化",
+    xlabel="采样高度 (m)",
+    ylabel="数值",
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-各指标随高度变化.png",
+)
+```
+![折线图](../output/折线图-多指标.png)
+
+### 分组折线图
+
+```python
+df = pd.read_csv(r"D:\8\Desktop\CMathc\src\test\q1\output\q1_dataset_features.csv")
+df["time"] = pd.to_datetime(df["time"])
+df["time_label"] = df["time"].dt.strftime("%H:%M")
+df_plot = df[(df["station"] == "a") & (df["height"] >= 100) & (df["height"] <= 1000)].copy()
+
+df_plot["height_group"] = (df_plot["height"] // 100).astype(int)
+
+plot_line(
+    df_plot,
+    x="time_label",
+    y="relative_humidity",
+    group="height_group",
+    legend="高度层",
+    title="不同高度层相对湿度时间变化",
+    xlabel="时间",
+    ylabel="相对湿度 (%)",
+    save_path=r"D:\8\Desktop\CMathc\src\utils\output\折线图-湿度时间变化.png",
+)
+```
+![折线图](../output/折线图-分组.png)
+
+对于 LSTM 损失、预测值与实际值对比、PSO 收敛曲线，只需要更换 `x` 和 `y`：
+
+```python
+plot_line(history, x="epoch", y="loss", xlabel="Epoch", ylabel="MSE损失")
+
+plot_line(
+    result,
+    x="index",
+    y=["actual", "predicted"],
+    labels=["实际值", "预测值"],
+    xlabel="样本索引",
+    ylabel="TKE值",
+)
+
+plot_line(pso, x="iteration", y="best_cost", xlabel="迭代次数", ylabel="最优代价 J")
+```
 
 ## 箱线图
 
@@ -247,17 +314,36 @@ plot_3d_scatter(
     df_plot,
     x="time",
     y="height",
-    value="wind_shear",
+    z="wind_shear",
+    color="wind_shear",
     title="三维散点图",
     xlabel="时间 (min)",
     ylabel="采样高度 (m)",
     zlabel="风速切变",
+    colorbar_label="风速切变",
     cmap="jet",
     save_path=r"D:\8\Desktop\CMathc\src\utils\output\三维散点图-风速切变分布.png",
 )
 ```
 
 ![三维散点图](../output/三维散点图-风速切变分布.png)
+
+若三维坐标和颜色表示不同变量，例如“经度-纬度-高度”三维散点，颜色表示湍流指标，可写为：
+
+```python
+plot_3d_scatter(
+    df,
+    x="lon",
+    y="lat",
+    z="height",
+    color="turbulence_index",
+    xlabel="经度",
+    ylabel="纬度",
+    zlabel="高度 (m)",
+    colorbar_label="湍流指标",
+)
+```
+
 
 
 ## 地图热力图
