@@ -12,11 +12,17 @@ from scipy.signal import butter, sosfiltfilt
 # 路径
 # ============================================================
 
-input_path = Path(
+input_dir = Path(
     r"D:\8\Desktop\CMathc\data"
     r"\第二十三届中国研究生数学建模竞赛+-+中文题目"
     r"\中文题目\C题"
-    r"\VisualCogA_Task-1.mat"
+)
+
+DATASET_NAMES = (
+    "VisualCogA_Task-1",
+    "VisualCogA_Task-2",
+    "VisualCogB_Task-1",
+    "VisualCogB_Task-2",
 )
 
 output_dir = Path(
@@ -27,17 +33,6 @@ output_dir.mkdir(
     parents=True,
     exist_ok=True
 )
-
-clean_mat_path = (
-    output_dir
-    / "VisualCogA_Task-1_clean.mat"
-)
-
-qc_csv_path = (
-    output_dir
-    / "VisualCogA_Task-1_clean_QC.csv"
-)
-
 
 # ============================================================
 # 参数
@@ -568,355 +563,100 @@ def clean_channel(
 # 读取MAT
 # ============================================================
 
-mat = loadmat(
-    input_path
-)
+def process_dataset(dataset_name):
+    input_path = input_dir / f"{dataset_name}.mat"
+    clean_mat_path = output_dir / f"{dataset_name}_clean.mat"
+    qc_csv_path = output_dir / f"{dataset_name}_clean_QC.csv"
 
-fs = int(
-    np.asarray(
-        mat["SampleRate"]
-    ).squeeze()
-)
+    mat = loadmat(input_path)
+    fs = int(np.asarray(mat["SampleRate"]).squeeze())
+    data = np.asarray(mat["data"], dtype=float)
 
-data = np.asarray(
-    mat["data"],
-    dtype=float
-)
+    print(f"\n{'=' * 60}")
+    print(f"处理数据集: {dataset_name}")
+    print(f"采样率: {fs} Hz")
+    print(f"数据维度: {data.shape}")
 
+    data_clean = data.copy()
+    mask_shape = (len(EEG_CHANNELS), data.shape[1])
+    clip_mask_all = np.zeros(mask_shape, dtype=np.uint8)
+    clip_repaired_all = np.zeros(mask_shape, dtype=np.uint8)
+    long_clip_all = np.zeros(mask_shape, dtype=np.uint8)
+    jump_mask_all = np.zeros(mask_shape, dtype=np.uint8)
+    jump_repaired_all = np.zeros(mask_shape, dtype=np.uint8)
+    qc_records = []
 
-print(
-    f"采样率: {fs} Hz"
-)
+    for mask_row, (channel, channel_idx) in enumerate(EEG_CHANNELS.items()):
+        print(f"处理 {channel} ...")
+        result = clean_channel(data[channel_idx], fs)
+        data_clean[channel_idx] = result["clean"]
 
-print(
-    f"数据维度: {data.shape}"
-)
+        clip_mask_all[mask_row] = result["clip_mask"].astype(np.uint8)
+        clip_repaired_all[mask_row] = result["clip_repaired_mask"].astype(np.uint8)
+        long_clip_all[mask_row] = result["long_clip_mask"].astype(np.uint8)
+        jump_mask_all[mask_row] = result["jump_mask"].astype(np.uint8)
+        jump_repaired_all[mask_row] = result["jump_repaired_mask"].astype(np.uint8)
 
-
-# ============================================================
-# 创建新的清洗数据
-#
-# 注意：
-# data本身没有任何修改
-# data_clean是全新的副本
-# ============================================================
-
-data_clean = data.copy()
-
-
-# 三个EEG通道的掩码
-clip_mask_all = np.zeros(
-    (3, data.shape[1]),
-    dtype=np.uint8
-)
-
-clip_repaired_all = np.zeros_like(
-    clip_mask_all
-)
-
-long_clip_all = np.zeros_like(
-    clip_mask_all
-)
-
-jump_mask_all = np.zeros_like(
-    clip_mask_all
-)
-
-jump_repaired_all = np.zeros_like(
-    clip_mask_all
-)
-
-
-# ============================================================
-# 清洗三个原始EEG通道
-# ============================================================
-
-qc_records = []
-
-
-for mask_row, (
-    channel,
-    channel_idx
-) in enumerate(
-    EEG_CHANNELS.items()
-):
-
-    print(
-        f"\n处理 {channel} ..."
-    )
-
-    result = clean_channel(
-        data[channel_idx],
-        fs,
-    )
-
-
-    data_clean[
-        channel_idx
-    ] = result[
-        "clean"
-    ]
-
-
-    clip_mask_all[
-        mask_row
-    ] = result[
-        "clip_mask"
-    ].astype(
-        np.uint8
-    )
-
-
-    clip_repaired_all[
-        mask_row
-    ] = result[
-        "clip_repaired_mask"
-    ].astype(
-        np.uint8
-    )
-
-
-    long_clip_all[
-        mask_row
-    ] = result[
-        "long_clip_mask"
-    ].astype(
-        np.uint8
-    )
-
-
-    jump_mask_all[
-        mask_row
-    ] = result[
-        "jump_mask"
-    ].astype(
-        np.uint8
-    )
-
-
-    jump_repaired_all[
-        mask_row
-    ] = result[
-        "jump_repaired_mask"
-    ].astype(
-        np.uint8
-    )
-
-
-    # --------------------------------------------------------
-    # QC统计
-    # --------------------------------------------------------
-
-    clip_runs = find_runs(
-        result[
-            "clip_mask"
-        ]
-    )
-
-    long_clip_runs = find_runs(
-        result[
-            "long_clip_mask"
-        ]
-    )
-
-    jump_runs = find_runs(
-        result[
-            "jump_mask"
-        ]
-    )
-
-
-    qc_records.append(
-        {
-            "channel":
-                channel,
-
-            "clip_samples":
-                int(
-                    result[
-                        "clip_mask"
-                    ].sum()
+        qc_records.append(
+            {
+                "channel": channel,
+                "clip_samples": int(result["clip_mask"].sum()),
+                "clip_seconds": result["clip_mask"].sum() / fs,
+                "clip_runs": len(find_runs(result["clip_mask"])),
+                "short_clip_repaired_samples": int(
+                    result["clip_repaired_mask"].sum()
                 ),
-
-            "clip_seconds":
-                result[
-                    "clip_mask"
-                ].sum()
-                /
-                fs,
-
-            "clip_runs":
-                len(
-                    clip_runs
+                "long_clip_runs": len(find_runs(result["long_clip_mask"])),
+                "long_clip_invalid_seconds": result["long_clip_mask"].sum() / fs,
+                "jump_runs": len(find_runs(result["jump_mask"])),
+                "jump_detected_samples": int(result["jump_mask"].sum()),
+                "jump_repaired_samples": int(
+                    result["jump_repaired_mask"].sum()
                 ),
+                "highpass_hz": HIGH_PASS_HZ,
+            }
+        )
 
-            "short_clip_repaired_samples":
-                int(
-                    result[
-                        "clip_repaired_mask"
-                    ].sum()
-                ),
+    qc_df = pd.DataFrame(qc_records)
+    print("\n清洗结果:")
+    print(qc_df.to_string(index=False))
+    qc_df.to_csv(qc_csv_path, index=False, encoding="utf-8-sig")
 
-            "long_clip_runs":
-                len(
-                    long_clip_runs
-                ),
-
-            "long_clip_invalid_seconds":
-                result[
-                    "long_clip_mask"
-                ].sum()
-                /
-                fs,
-
-            "jump_runs":
-                len(
-                    jump_runs
-                ),
-
-            "jump_detected_samples":
-                int(
-                    result[
-                        "jump_mask"
-                    ].sum()
-                ),
-
-            "jump_repaired_samples":
-                int(
-                    result[
-                        "jump_repaired_mask"
-                    ].sum()
-                ),
-
-            "highpass_hz":
-                HIGH_PASS_HZ,
-        }
-    )
-
-
-# ============================================================
-# QC表
-# ============================================================
-
-qc_df = pd.DataFrame(
-    qc_records
-)
-
-print(
-    "\n清洗结果："
-)
-
-print(
-    qc_df.to_string(
-        index=False
-    )
-)
-
-
-qc_df.to_csv(
-    qc_csv_path,
-    index=False,
-    encoding="utf-8-sig",
-)
-
-
-# ============================================================
-# 保存新MAT文件
-#
-# 原始文件不会被修改
-# ============================================================
-
-output_mat = {
-
-    # 原有信息
-    "SampleRate":
-        mat["SampleRate"],
-
-    "DataLabel":
-        mat["DataLabel"],
-
-
-    # 清洗后的完整10通道数据
-    #
-    # 其中：
-    # 1-3 为清洗后的 Fz/F3/F4
-    # 4-10 保持原文件内容
-    "data_clean":
-        data_clean,
-
-
-    # 清洗掩码
-    "clean_channel_labels":
-        np.array(
-            ["Fz", "F3", "F4"],
-            dtype=object
+    output_mat = {
+        "SampleRate": mat["SampleRate"],
+        "DataLabel": mat["DataLabel"],
+        "data_clean": data_clean,
+        "clean_channel_labels": np.array(
+            list(EEG_CHANNELS),
+            dtype=object,
         ),
-
-    "clip_mask":
-        clip_mask_all,
-
-    "clip_repaired_mask":
-        clip_repaired_all,
-
-    "long_clip_invalid_mask":
-        long_clip_all,
-
-    "jump_mask":
-        jump_mask_all,
-
-    "jump_repaired_mask":
-        jump_repaired_all,
-
-
-    # 参数记录
-    "processing_highpass_hz":
-        np.array(
-            [[HIGH_PASS_HZ]]
-        ),
-
-    "processing_clip_threshold":
-        np.array(
-            [[CLIP_THRESHOLD]]
-        ),
-
-    "processing_max_short_clip_s":
-        np.array(
-            [[MAX_SHORT_CLIP_S]]
-        ),
-
-    "processing_max_jump_repair_s":
-        np.array(
+        "clip_mask": clip_mask_all,
+        "clip_repaired_mask": clip_repaired_all,
+        "long_clip_invalid_mask": long_clip_all,
+        "jump_mask": jump_mask_all,
+        "jump_repaired_mask": jump_repaired_all,
+        "processing_highpass_hz": np.array([[HIGH_PASS_HZ]]),
+        "processing_clip_threshold": np.array([[CLIP_THRESHOLD]]),
+        "processing_max_short_clip_s": np.array([[MAX_SHORT_CLIP_S]]),
+        "processing_max_jump_repair_s": np.array(
             [[MAX_JUMP_REPAIR_S]]
         ),
-}
+    }
+
+    savemat(clean_mat_path, output_mat, do_compression=True)
+
+    print("处理完成:")
+    print("原始文件:", input_path)
+    print("清洗文件:", clean_mat_path)
+    print("QC统计:", qc_csv_path)
+
+    return clean_mat_path, qc_csv_path
 
 
-savemat(
-    clean_mat_path,
-    output_mat,
-    do_compression=True,
-)
+def main():
+    for dataset_name in DATASET_NAMES:
+        process_dataset(dataset_name)
 
 
-# ============================================================
-# 完成
-# ============================================================
-
-print(
-    "\n处理完成。"
-)
-
-print(
-    "原始文件：",
-    input_path
-)
-
-print(
-    "清洗文件：",
-    clean_mat_path
-)
-
-print(
-    "QC统计：",
-    qc_csv_path
-)
+if __name__ == "__main__":
+    main()
