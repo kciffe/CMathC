@@ -13,26 +13,21 @@ data_dir = Path(
     r"\中文题目\C题"
 )
 
-
-output_dir = data_dir / "output"
-
-output_dir.mkdir(
-    exist_ok=True
+output_dir = Path(
+    r"D:\8\Desktop\CMathc\src\C\q1\output"
 )
+output_dir.mkdir(exist_ok=True)
 
 
-# 四个数据文件
+# ============================================================
+# 数据文件
+# ============================================================
 
 mat_files = [
-
     "VisualCogA_Task-1.mat",
-
     "VisualCogA_Task-2.mat",
-
     "VisualCogB_Task-1.mat",
-
     "VisualCogB_Task-2.mat",
-
 ]
 
 
@@ -41,16 +36,10 @@ mat_files = [
 # ============================================================
 
 PRE_TIME = 1.0
-
 POST_TIME = 3.0
 
 
-
-# ============================================================
-# 通道
-# ============================================================
-
-labels = [
+CHANNEL_LABELS = [
     "Fz",
     "F3",
     "F4",
@@ -64,48 +53,29 @@ labels = [
 ]
 
 
-
 # ============================================================
-# 批量处理
+# Trial切片
 # ============================================================
 
 for file_name in mat_files:
 
+    print("\n============================")
+    print("处理:", file_name)
 
-    print("\n====================")
-    print(
-        "正在处理:",
-        file_name
+
+    clean_path = output_dir / file_name.replace(
+        ".mat",
+        "_clean.mat"
     )
 
 
-    clean_path = (
-        output_dir
-        /
-        file_name.replace(
-            ".mat",
-            "_clean.mat"
-        )
+    trial_path = output_dir / file_name.replace(
+        ".mat",
+        "_trials.mat"
     )
 
 
-    trial_path = (
-        output_dir
-        /
-        file_name.replace(
-            ".mat",
-            "_trials.mat"
-        )
-    )
-
-
-    # ----------------------------------
-    # 读取clean数据
-    # ----------------------------------
-
-    mat = loadmat(
-        clean_path
-    )
+    mat = loadmat(clean_path)
 
 
     data = np.asarray(
@@ -121,70 +91,56 @@ for file_name in mat_files:
     )
 
 
-    print(
-        "采样率:",
-        fs
-    )
-
-    print(
-        "数据:",
-        data.shape
+    expected_length = int(
+        (PRE_TIME + POST_TIME) * fs
     )
 
 
-
-    # ----------------------------------
+    # --------------------------------------------------------
     # VisCue检测
-    # ----------------------------------
+    # --------------------------------------------------------
 
     viscue = data[7]
-
 
     cue_onsets = np.where(
         (viscue != 0)
         &
-        (np.r_[0,viscue[:-1]]==0)
+        (np.r_[0, viscue[:-1]] == 0)
     )[0]
 
 
     print(
-        "检测Trial:",
+        "Trial数量:",
         len(cue_onsets)
     )
 
 
+    # 保存矩阵
+    trial_data_list = []
+    relative_time_list = []
+    timestamp_list = []
 
-    # ----------------------------------
-    # Trial切分
-    # ----------------------------------
+    cue_type_list = []
+    action_exist_list = []
 
-    trials = []
+    nan_ratio_list = []
+    length_warning_list = []
 
+
+    # --------------------------------------------------------
+    # Trial循环
+    # --------------------------------------------------------
 
     for trial_id, idx in enumerate(
         cue_onsets,
         start=1
     ):
 
-
-        t0 = data[
-            9,
-            idx
-        ]
+        t0 = data[9, idx]
 
 
-        start_time = (
-            t0
-            -
-            PRE_TIME
-        )
-
-
-        end_time = (
-            t0
-            +
-            POST_TIME
-        )
+        start_time = t0 - PRE_TIME
+        end_time = t0 + POST_TIME
 
 
         start_idx = np.searchsorted(
@@ -192,97 +148,154 @@ for file_name in mat_files:
             start_time
         )
 
-
         end_idx = np.searchsorted(
             data[9],
             end_time
         )
 
 
-        start_idx = max(
-            start_idx,
-            0
-        )
-
-        end_idx = min(
-            end_idx,
-            data.shape[1]
-        )
+        trial_data = data[
+            :,
+            start_idx:end_idx
+        ].copy()
 
 
+        # -----------------------------
+        # 统一长度
+        # -----------------------------
 
-        trial_data = (
-            data[:,start_idx:end_idx]
-            .copy()
-        )
+        if trial_data.shape[1] < expected_length:
 
-
-        relative_time = (
-            trial_data[9]
-            -
-            t0
-        )
-
-
-        trial = {
-
-
-            "trial_id":
-                trial_id,
-
-
-            "data":
-                trial_data,
-
-
-            "relative_time":
-                relative_time,
-
-
-            "cue_type":
-                int(
-                    data[7,idx]
+            pad = np.full(
+                (
+                    trial_data.shape[0],
+                    expected_length - trial_data.shape[1]
                 ),
+                np.nan
+            )
+
+            trial_data = np.hstack(
+                [
+                    trial_data,
+                    pad
+                ]
+            )
+
+        else:
+
+            trial_data = trial_data[
+                :,
+                :expected_length
+            ]
 
 
-            "channel_labels":
-                labels,
+        relative_time = np.arange(
+            expected_length
+        ) / fs - PRE_TIME
 
 
-            "action_exist":
-                bool(
-                    np.any(
-                        trial_data[8]!=0
-                    )
-                )
+        timestamp = np.full(
+            expected_length,
+            np.nan
+        )
 
-        }
+        valid_len = min(
+            len(data[9, start_idx:end_idx]),
+            expected_length
+        )
 
-
-        trials.append(
-            trial
+        timestamp[:valid_len] = (
+            data[9,start_idx:start_idx+valid_len]
         )
 
 
+        eeg_data = trial_data[:3]
 
-    # ----------------------------------
-    # 保存
-    # ----------------------------------
+
+        nan_ratio = (
+            np.isnan(eeg_data).sum()
+            /
+            eeg_data.size
+        )
+
+
+        trial_data_list.append(
+            trial_data
+        )
+
+        relative_time_list.append(
+            relative_time
+        )
+
+        timestamp_list.append(
+            timestamp
+        )
+
+        cue_type_list.append(
+            data[7, idx]
+        )
+
+        action_exist_list.append(
+            np.any(
+                trial_data[8] != 0
+            )
+        )
+
+        nan_ratio_list.append(
+            nan_ratio
+        )
+
+        length_warning_list.append(
+            nan_ratio > 0
+        )
+
+
+    # --------------------------------------------------------
+    # 保存矩阵结构
+    # --------------------------------------------------------
 
     savemat(
         trial_path,
         {
 
-            "trials":
-                np.array(
-                    trials,
-                    dtype=object
+            "trial_data":
+                np.asarray(
+                    trial_data_list,
+                    dtype=float
                 ),
 
+            "relative_time":
+                np.asarray(
+                    relative_time_list
+                ),
+
+            "timestamp":
+                np.asarray(
+                    timestamp_list
+                ),
+
+            "cue_type":
+                np.asarray(
+                    cue_type_list
+                ),
+
+            "action_exist":
+                np.asarray(
+                    action_exist_list
+                ),
+
+            "nan_ratio":
+                np.asarray(
+                    nan_ratio_list
+                ),
+
+            "length_warning":
+                np.asarray(
+                    length_warning_list
+                ),
 
             "fs":
                 fs,
-
 
             "window":
                 np.array(
@@ -292,9 +305,8 @@ for file_name in mat_files:
                     ]
                 ),
 
-
-            "source_file":
-                file_name
+            "channel_labels":
+                CHANNEL_LABELS,
 
         },
 
@@ -306,6 +318,5 @@ for file_name in mat_files:
         "保存:",
         trial_path.name
     )
-
 
 print("\n全部Trial切片完成")
