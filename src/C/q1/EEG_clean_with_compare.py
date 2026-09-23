@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 
 from pathlib import Path
 from scipy.io import loadmat, savemat
-from scipy.signal import butter, sosfiltfilt
 from scipy.interpolate import PchipInterpolator
 
 
@@ -40,9 +39,6 @@ CLIP_THRESHOLD = 999
 MAX_CLIP_LENGTH = 10
 
 JUMP_SIGMA = 6
-
-HIGH_PASS_FREQ = 0.1
-FILTER_ORDER = 4
 
 PRE_TIME = 1.0
 POST_TIME = 3.0
@@ -114,18 +110,6 @@ def repair_jump(x):
     return y, jump_mask
 
 
-def repair_drift(x, fs):
-    sos = butter(
-        FILTER_ORDER,
-        HIGH_PASS_FREQ,
-        btype="highpass",
-        fs=fs,
-        output="sos"
-    )
-    y = sosfiltfilt(sos, x)
-    return y
-
-
 # ============================================================
 # 选代表片段
 # ============================================================
@@ -155,32 +139,6 @@ def pick_top_jump_cases(x, jump_mask, top_k=2):
         if all(abs(i - u) > 256 for u in used):
             centers.append(i)
             used.append(i)
-        if len(centers) >= top_k:
-            break
-    return centers
-
-
-def pick_drift_cases(x, fs, top_k=2, win_sec=30):
-    win = int(fs * win_sec)
-    step = int(fs * 10)
-
-    scores = []
-    for start in range(0, len(x) - win, step):
-        seg = x[start:start+win]
-        slope = np.abs(np.mean(seg[-fs:]) - np.mean(seg[:fs]))
-        scores.append((start + win//2, slope))
-
-    if len(scores) == 0:
-        return []
-
-    scores = sorted(scores, key=lambda t: t[1], reverse=True)
-
-    centers = []
-    used = []
-    for c, _ in scores:
-        if all(abs(c - u) > win for u in used):
-            centers.append(c)
-            used.append(c)
         if len(centers) >= top_k:
             break
     return centers
@@ -218,56 +176,6 @@ def plot_before_after_cases(
 
         axes[0].legend()
         axes[-1].set_xlabel(xlabel)
-        fig.suptitle(f"{prefix} case {k}")
-
-        plt.tight_layout()
-        plt.savefig(save_dir / f"{prefix.lower()}_case_{k}_before_after.png", dpi=300, bbox_inches="tight")
-        plt.close()
-
-
-def moving_average(x, w):
-    if w <= 1:
-        return x.copy()
-    kernel = np.ones(w) / w
-    return np.convolve(x, kernel, mode="same")
-
-
-def plot_drift_cases(
-    before_3ch,
-    after_3ch,
-    centers,
-    fs,
-    save_dir,
-    prefix="drift",
-    window_sec=15
-):
-    save_dir.mkdir(parents=True, exist_ok=True)
-
-    for k, center in enumerate(centers, start=1):
-        start = max(0, center - int(window_sec * fs))
-        end = min(before_3ch.shape[1], center + int(window_sec * fs))
-
-        t = (np.arange(start, end) - center) / fs
-
-        fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True)
-
-        for i, ch in enumerate(CHANNELS):
-            raw = before_3ch[i, start:end]
-            clean = after_3ch[i, start:end]
-
-            raw_trend = moving_average(raw, fs * 2)
-            clean_trend = moving_average(clean, fs * 2)
-
-            axes[i].plot(t, raw, label="Before", linewidth=0.8, alpha=0.8)
-            axes[i].plot(t, clean, label="After", linewidth=0.8, alpha=0.8)
-            axes[i].plot(t, raw_trend, linestyle="--", linewidth=1.5, label="Before trend")
-            axes[i].plot(t, clean_trend, linestyle="--", linewidth=1.5, label="After trend")
-
-            axes[i].set_ylabel(ch)
-            axes[i].grid(alpha=0.3)
-
-        axes[0].legend(ncol=2, fontsize=8)
-        axes[-1].set_xlabel("Relative time (s)")
         fig.suptitle(f"{prefix} case {k}")
 
         plt.tight_layout()
@@ -359,16 +267,9 @@ for dataset_name in DATASETS:
 
     jump_masks = np.asarray(jump_masks)
 
-    # ---------- Drift ----------
-    drift_before = jump_after.copy()
-    drift_after = drift_before.copy()
-
-    for i in range(3):
-        drift_after[i] = repair_drift(drift_after[i], fs)
-
     # ---------- 保存clean ----------
     data_clean = data.copy()
-    data_clean[:3] = drift_after
+    data_clean[:3] = jump_after
 
     savemat(
         output_dir / f"{dataset_name}_clean.mat",
@@ -437,19 +338,6 @@ for dataset_name in DATASETS:
             fig_root,
             prefix="jump",
             window_sec=1
-        )
-
-    # Drift 图
-    drift_centers = pick_drift_cases(drift_before[1], fs, top_k=2, win_sec=30)
-    if len(drift_centers) > 0:
-        plot_drift_cases(
-            drift_before,
-            drift_after,
-            drift_centers,
-            fs,
-            fig_root,
-            prefix="drift",
-            window_sec=15
         )
 
     # ---------- Trial切片 ----------
