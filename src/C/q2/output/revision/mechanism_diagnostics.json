@@ -1,0 +1,53 @@
+{
+  "lead_field_rank": 2,
+  "lead_field_singular_values": [
+    2.0158869015894716,
+    0.20099751242241778,
+    1.7736080671423674e-16
+  ],
+  "observable_modes": [
+    "common=(F3+Fz+F4)/3",
+    "lateral=(F4-F3)/2"
+  ],
+  "unmodelled_topology": "F3-2*Fz+F4",
+  "v1_mirror_relative_error": 4.304244782815658e-08,
+  "cue_v1_joint_feature_relative_difference": 0.9053217172622681,
+  "cue_it_joint_feature_relative_difference": 0.7067660093307495,
+  "cue_it_configuration_feature_relative_difference": 0.6740807294845581,
+  "cue_eeg_relative_difference": 0.06136043013264305,
+  "cue_global_orientation_relative_difference": 0.004355640150606632,
+  "layout_v1_joint_feature_relative_difference": 0.9085202813148499,
+  "layout_it_joint_feature_relative_difference": 0.7552162408828735,
+  "layout_it_configuration_feature_relative_difference": 0.6953026652336121,
+  "layout_eeg_relative_difference": 0.05928866037071157,
+  "layout_global_orientation_relative_difference": 0.005737017840147018,
+  "shuffle_global_energy_max_error": 3.469446951953614e-17,
+  "shuffle_configuration_relative_difference": 1.5690785646438599,
+  "shuffle_position_pooled_configuration_difference": 1.340388536453247,
+  "dt_half_eeg_relative_error": 0.017822350390274688,
+  "offset_ablation_eeg_relative_difference": 0.446217514639922,
+  "stage2_drive_final_mean": 0.002085883232610879,
+  "parameter_sensitivity": [
+    {
+      "tau_it_ms": 30,
+      "cue_configuration_difference": 0.6594046950340271,
+      "eeg_change_from_40": 0.04741094459430186
+    },
+    {
+      "tau_it_ms": 40,
+      "cue_configuration_difference": 0.6740807294845581,
+      "eeg_change_from_40": 0.0
+    },
+    {
+      "tau_it_ms": 50,
+      "cue_configuration_difference": 0.6868350505828857,
+      "eeg_change_from_40": 0.04113732151787018
+    },
+    {
+      "tau_it_ms": 60,
+      "cue_configuration_difference": 0.6977320909500122,
+      "eeg_change_from_40": 0.07703807283101766
+    }
+  ],
+  "structural_pass": true
+}
