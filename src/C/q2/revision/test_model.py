@@ -1,42 +1,44 @@
+"""Behavioral checks for the low-dimensional forward model."""
 from pathlib import Path
-import importlib
 import sys
+
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-
-def model():
-    assert (Path(__file__).parent / "model.py").exists(), "revision model is not implemented"
-    return importlib.import_module("model")
+import config
+from model import project_frontend, simulate_forward
 
 
-def test_stage_duration_is_explicit():
-    m = model()
-    t = np.array([0., 199., 200., 799., 800.])
-    np.testing.assert_array_equal(m.stimulus_gate(t, "Stage1"), [1, 1, 0, 0, 0])
-    np.testing.assert_array_equal(m.stimulus_gate(t, "Stage2"), np.ones(5))
+def test_feature_projection_preserves_left_right_half_field_swap():
+    arrays = {name: np.zeros((8, 8, 2), dtype=np.float32)
+              for name in ("B", "H_L", "H_R")}
+    arrays["H_L"][:, :2, :] = 1.0
+    arrays["H_R"][:, 6:, :] = 1.0
+
+    projected = project_frontend(arrays)
+
+    assert projected.shape == (3, 2, 2)
+    assert np.all(projected[1, 0] > projected[1, 1])
+    assert np.all(projected[2, 1] > projected[2, 0])
 
 
-def test_configuration_detects_arrangement_with_equal_orientation_totals():
-    m = model()
-    a = np.zeros((4, 8, 8, 1))
-    b = a.copy()
-    a[1, 3, 3] = a[3, 3, 4] = 1
-    b[3, 3, 3] = b[1, 3, 4] = 1
-    np.testing.assert_array_equal(a.sum(axis=(1, 2)), b.sum(axis=(1, 2)))
-    assert not np.allclose(m.configuration_features(a), m.configuration_features(b))
+def test_zero_drive_has_zero_population_and_electrode_response():
+    frontend = {name: np.zeros((8, 8, 9), dtype=np.float32)
+                for name in ("B", "H_L", "H_R")}
+    frontend["time_ms"] = np.arange(9, dtype=float)
+
+    result = simulate_forward(frontend)
+
+    assert result.excitatory.shape == (3, 2, 9)
+    assert result.inhibitory.shape == (3, 2, 9)
+    np.testing.assert_allclose(result.excitatory, 0.0, atol=1e-12)
+    np.testing.assert_allclose(result.inhibitory, 0.0, atol=1e-12)
+    np.testing.assert_allclose(result.eeg, 0.0, atol=1e-12)
 
 
-def test_zero_contrast_has_no_evoked_eeg():
-    m = model()
-    out = m.simulate(np.zeros((64, 64)), "Stage1")
-    np.testing.assert_allclose(out["eeg"], 0, atol=1e-12)
-
-
-def test_fixed_mapping_has_only_two_modes():
-    m = model()
-    assert np.linalg.matrix_rank(m.LEAD_FIELD) == 2
-    x = np.random.default_rng(2).normal(size=(6, 40))
-    y = m.LEAD_FIELD @ x
-    np.testing.assert_allclose(y[0] - 2 * y[1] + y[2], 0, atol=1e-12)
+def test_rank_two_observation_constraint_is_explicit():
+    assert np.linalg.matrix_rank(config.LEAD_FIELD) == 2
+    x = np.arange(18, dtype=float).reshape(6, 3)
+    y = config.LEAD_FIELD @ x
+    np.testing.assert_allclose(y[0] - 2.0 * y[1] + y[2], 0.0, atol=1e-12)

@@ -15,17 +15,21 @@ import matplotlib.pyplot as plt
 try:
     from . import config
     from .evaluate import (classification_leave_one_record, erp_metrics,
-                           estimate_shared_amplitude, mechanism_control_rows)
+                           estimate_shared_amplitude, mechanism_control_rows,
+                           run_forward_condition)
     from .fit import _interpolate_prediction, fit_model
-    from .frontend import choose_resolution, load_stimulus, simulate_frontend, template_manifest
+    from .frontend import (choose_resolution, load_stimulus, mirror_stage1_frontend,
+                           simulate_frontend, template_manifest)
     from .model import ModelParams, simulate_forward
     from .real_data import load_cases_with_audit
 except ImportError:
     import config
     from evaluate import (classification_leave_one_record, erp_metrics,
-                          estimate_shared_amplitude, mechanism_control_rows)
+                          estimate_shared_amplitude, mechanism_control_rows,
+                          run_forward_condition)
     from fit import _interpolate_prediction, fit_model
-    from frontend import choose_resolution, load_stimulus, simulate_frontend, template_manifest
+    from frontend import (choose_resolution, load_stimulus, mirror_stage1_frontend,
+                          simulate_frontend, template_manifest)
     from model import ModelParams, simulate_forward
     from real_data import load_cases_with_audit
 
@@ -140,8 +144,12 @@ def _canonical_models(resolution):
     models = {}
     params = ModelParams()
     for stage, condition in config.STIMULI:
-        front = simulate_frontend(load_stimulus(stage, condition),
-                                  params={"tau_a": params.tau_a}, resolution=resolution)
+        stimulus = load_stimulus(stage, condition)
+        if stage == "Stage1" and condition == "right":
+            front = mirror_stage1_frontend(models[("Stage1", "left")]["frontend"], stimulus)
+        else:
+            front = simulate_frontend(stimulus, params={"tau_a": params.tau_a},
+                                      resolution=resolution)
         models[(stage, condition)] = {"frontend": front, "model": simulate_forward(front, params)}
     return models
 
@@ -150,10 +158,13 @@ def _dt_convergence_check(resolution, canonical):
     """Compare default Stage1 predictions at 1 ms and 0.5 ms integration steps."""
     rows = []
     time_half = np.arange(0.0, 800.0001, 0.5)
+    left = simulate_frontend(load_stimulus("Stage1", "left"),
+                             params={"tau_a": config.PARAM_DEFAULTS["tau_a"]},
+                             time_ms=time_half, resolution=resolution)
     for condition in ("left", "right"):
         stimulus = load_stimulus("Stage1", condition)
-        front = simulate_frontend(stimulus, params={"tau_a": config.PARAM_DEFAULTS["tau_a"]},
-                                  time_ms=time_half, resolution=resolution)
+        front = (left if condition == "left"
+                 else mirror_stage1_frontend(left, stimulus))
         fine = simulate_forward(front, params=ModelParams())
         coarse = canonical[("Stage1", condition)]["model"]
         reference = coarse.eeg
@@ -169,9 +180,16 @@ def _dt_convergence_check(resolution, canonical):
 def _models_for_parameters(conditions, parameters, resolution):
     params = ModelParams.from_any(parameters)
     models = {}
+    left_front = None
     for stage, condition in conditions:
-        front = simulate_frontend(load_stimulus(stage, condition),
-                                  params={"tau_a": params.tau_a}, resolution=resolution)
+        stimulus = load_stimulus(stage, condition)
+        if stage == "Stage1" and condition == "right" and left_front is not None:
+            front = mirror_stage1_frontend(left_front, stimulus)
+        else:
+            front = simulate_frontend(stimulus, params={"tau_a": params.tau_a},
+                                      resolution=resolution)
+        if stage == "Stage1" and condition == "left":
+            left_front = front
         models[(stage, condition)] = {"frontend": front,
                                       "model": simulate_forward(front, params=params)}
     return models

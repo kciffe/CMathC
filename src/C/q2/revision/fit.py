@@ -7,11 +7,11 @@ from scipy.optimize import minimize
 
 try:
     from . import config
-    from .frontend import load_stimulus, simulate_frontend
+    from .frontend import load_stimulus, mirror_stage1_frontend, simulate_frontend
     from .model import ModelParams, simulate_forward
 except ImportError:
     import config
-    from frontend import load_stimulus, simulate_frontend
+    from frontend import load_stimulus, mirror_stage1_frontend, simulate_frontend
     from model import ModelParams, simulate_forward
 
 
@@ -53,10 +53,18 @@ def fit_model(train_cases, model_spec=None, seed=config.SEED, resolution=64,
 
     # The visual front end is shared by records. Cache only a few recent tauA
     # values because it is the only fitted parameter that affects that stage.
+    right_stimulus = load_stimulus("Stage1", "right")
+
     @lru_cache(maxsize=6)
-    def cached_frontend(condition, tau_a):
-        stimulus = load_stimulus("Stage1", condition)
+    def cached_left_frontend(tau_a):
+        stimulus = load_stimulus("Stage1", "left")
         return simulate_frontend(stimulus, params={"tau_a": tau_a}, resolution=resolution)
+
+    def cached_frontend(condition, tau_a):
+        left = cached_left_frontend(tau_a)
+        if condition == "left":
+            return left
+        return mirror_stage1_frontend(left, right_stimulus)
 
     record_count = len(records)
     weights = {c["dataset"]: 1.0 / record_count / 2.0 for c in cases}

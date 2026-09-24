@@ -70,9 +70,11 @@ def _normal_pdf(x, sigma):
 
 def activation(x, beta, threshold):
     """Truncated logistic with F(0)=0 and F(+infinity)=1."""
-    z = np.clip(beta * (np.asarray(x) - threshold), -60.0, 60.0)
+    x = np.asarray(x)
+    z = np.clip(beta * (x - threshold), -60.0, 60.0)
     at_zero = 1.0 / (1.0 + np.exp(beta * threshold))
     value = (1.0 / (1.0 + np.exp(-z)) - at_zero) / (1.0 - at_zero)
+    value = np.where(x == 0.0, 0.0, value)
     return np.clip(value, 0.0, 1.0)
 
 
@@ -199,41 +201,104 @@ def _sample_shifted(frame, dr, dc, base_coords):
     return map_coordinates(frame, coords, order=1, mode="constant", cval=0.0, prefilter=False)
 
 
+def _sample_many_shifted(frame, offsets, base_coords):
+    """Sample a regular image grid at fixed subpixel offsets with zero padding."""
+    frame = np.asarray(frame, dtype=np.float32)
+    offsets = np.asarray(offsets, dtype=np.float32)
+    if frame.ndim != 2 or offsets.ndim != 2 or offsets.shape[1] != 2:
+        raise ValueError("frame must be 2D and offsets must have shape [sample, row/column]")
+    rows, cols = base_coords
+    if rows.shape != frame.shape or cols.shape != frame.shape:
+        raise ValueError("base coordinate grids must match the sampled frame")
+    height, width = frame.shape
+    result = np.zeros((len(offsets), height, width), dtype=np.float32)
+    for index, (dr, dc) in enumerate(offsets):
+        row0, col0 = int(np.floor(dr)), int(np.floor(dc))
+        fr, fc = np.float32(dr - row0), np.float32(dc - col0)
+        # scipy mode="constant" returns cval for any coordinate outside the
+        # image. Restrict the output support first, then add the four bilinear
+        # neighbors through contiguous slices instead of allocating index grids.
+        r_valid0 = max(0, int(np.ceil(-dr)))
+        r_valid1 = min(height - 1, int(np.floor(height - 1 - dr)))
+        c_valid0 = max(0, int(np.ceil(-dc)))
+        c_valid1 = min(width - 1, int(np.floor(width - 1 - dc)))
+        if r_valid1 < r_valid0 or c_valid1 < c_valid0:
+            continue
+        for r_step, r_weight in ((0, 1.0 - fr), (1, fr)):
+            source_dr = row0 + r_step
+            r0 = max(r_valid0, -source_dr)
+            r1 = min(r_valid1, height - 1 - source_dr)
+            if r1 < r0:
+                continue
+            for c_step, c_weight in ((0, 1.0 - fc), (1, fc)):
+                weight = np.float32(r_weight * c_weight)
+                if weight == 0.0:
+                    continue
+                source_dc = col0 + c_step
+                c0 = max(c_valid0, -source_dc)
+                c1 = min(c_valid1, width - 1 - source_dc)
+                if c1 < c0:
+                    continue
+                result[index, r0:r1 + 1, c0:c1 + 1] += (
+                    weight * frame[r0 + source_dr:r1 + source_dr + 1,
+                                   c0 + source_dc:c1 + source_dc + 1])
+    return result
+
+
+@lru_cache(maxsize=2)
+def _shape_support(size):
+    """Cache fixed triangle support offsets, orientation weights, and pixel grid."""
+    templates = build_triangle_templates()
+    offsets, angles, spans = [], [], {}
+    for side, template in templates.items():
+        edge = map_original_coordinates(template.edge_points_rc, size)
+        corner = map_original_coordinates(template.corner_points_rc, size)
+        center = map_original_coordinates(template.center_rc, size)
+        start = len(offsets)
+        offsets.extend(np.concatenate([edge, corner], axis=0) - center)
+        angles.extend(np.concatenate([template.edge_angles, template.corner_angles]))
+        spans[side] = {"edge": slice(start, start + len(edge)),
+                       "corner": slice(start + len(edge), start + len(edge) + len(corner))}
+
+    weight_rows = [_orientation_weights(float(angle)) for angle in angles]
+    pairs = np.asarray([(row[0], row[1]) for row in weight_rows], dtype=np.int8)
+    weights = np.asarray([(row[2], row[3]) for row in weight_rows], dtype=np.float32)
+    rr, cc = np.mgrid[:size, :size].astype(np.float32)
+    return np.asarray(offsets, dtype=np.float32), pairs, weights, spans, (rr, cc)
+
+
 def _pool8(frame):
     n = frame.shape[0]
     ratio = n // config.POOL_SIZE
     return frame.reshape(config.POOL_SIZE, ratio, config.POOL_SIZE, ratio).mean(axis=(1, 3))
 
 
-def _shape_maps(v_orient, templates, size, eps=1e-8):
+def _shape_maps(v_orient, size, eps=1e-8):
     """Build B/H maps from [orientation, y, x] Gabor energy at one time."""
     ratio = 256.0 / size
     rho = config.PIXEL_PARAMS["configuration_blur"] / ratio
     smoothed = np.stack([gaussian_filter(v, rho, mode="constant", cval=0.0) for v in v_orient])
-    rr, cc = np.mgrid[:v_orient.shape[1], :v_orient.shape[2]].astype(np.float32)
-    base_coords = (rr, cc)
+    offsets, pairs, weights, spans, base_coords = _shape_support(size)
     bmap = np.sqrt(np.sum(v_orient * v_orient, axis=0)) / 2.0
+
+    # Evaluate fixed supports by orientation pair. The sampler uses four
+    # slice-based bilinear contributions per offset, avoiding coordinate-grid
+    # allocations in every time step.
+    sampled_response = np.empty((len(offsets), *bmap.shape), dtype=np.float32)
+    for lo, hi in np.unique(pairs, axis=0):
+        indices = np.flatnonzero((pairs[:, 0] == lo) & (pairs[:, 1] == hi))
+        sample_lo = _sample_many_shifted(smoothed[lo], offsets[indices], base_coords)
+        sample_hi = _sample_many_shifted(smoothed[hi], offsets[indices], base_coords)
+        wl = weights[indices, 0, None, None]
+        wh = weights[indices, 1, None, None]
+        sampled_response[indices] = wl * sample_lo + wh * sample_hi
+    log_response = np.log(np.maximum(sampled_response, 0.0) + eps)
+
     outputs = {}
-    for side, template in templates.items():
-        ep = map_original_coordinates(template.edge_points_rc, size)
-        cp = map_original_coordinates(template.corner_points_rc, size)
-        edge_logs, corner_logs = [], []
-        # Each point is represented by the linearly interpolated neighboring
-        # unoriented Gabor channels; positions are translated over the map.
-        for pts, angs, bucket in ((ep, template.edge_angles, edge_logs),
-                                  (cp, template.corner_angles, corner_logs)):
-            for (pr, pc), angle in zip(pts, angs):
-                lo, hi, wl, wh = _orientation_weights(float(angle))
-                # Map-coordinate offsets are measured relative to the template
-                # center; subtract centroid in the original stimulus first.
-                center_grid = map_original_coordinates(template.center_rc, size)
-                dr, dc = float(pr - center_grid[0]), float(pc - center_grid[1])
-                response = (wl * _sample_shifted(smoothed[lo], dr, dc, base_coords)
-                            + wh * _sample_shifted(smoothed[hi], dr, dc, base_coords))
-                bucket.append(np.log(np.maximum(response, 0.0) + eps))
-        edge = np.stack(edge_logs).reshape(3, 3, *bmap.shape)
+    for side, span in spans.items():
+        edge = log_response[span["edge"]].reshape(3, 3, *bmap.shape)
         edge_segment = np.mean(edge, axis=1)
-        corner = np.stack(corner_logs).reshape(3, 2, *bmap.shape).mean(axis=1)
+        corner = log_response[span["corner"]].reshape(3, 2, *bmap.shape).mean(axis=1)
         # Equal log-domain weight to three edges and three corners.
         hmap = np.maximum(np.exp((edge_segment.sum(axis=0) + corner.sum(axis=0)) / 6.0) - eps, 0.0)
         outputs[side] = hmap.astype(np.float32)
@@ -323,7 +388,7 @@ def simulate_frontend(stimulus, events=None, params=None, time_ms=None,
             v = v_block[:, :, :, local_t]
             if remove_position:
                 v = np.broadcast_to(v.mean(axis=(1, 2), keepdims=True), v.shape)
-            bmap, hl, hr = _shape_maps(v, templates, resolution)
+            bmap, hl, hr = _shape_maps(v, resolution)
             gi = start + local_t
             if gi in audit_indices:
                 audit_maps[audit_indices[gi]] = {"V1": v.copy(), "B": bmap.copy(),
@@ -345,6 +410,42 @@ def simulate_frontend(stimulus, events=None, params=None, time_ms=None,
         "remove_position": bool(remove_position), "template_iou_left": templates["left"].mask_iou,
         "template_iou_right": templates["right"].mask_iou, "audit_maps": audit_maps,
     }
+
+
+def mirror_stage1_frontend(left_frontend, right_stimulus):
+    """Derive the right-cue maps by exact reflection of the left-cue maps.
+
+    This symmetry shortcut is valid only for the standardized Stage1 pair,
+    whose signed-contrast matrices are exact horizontal mirrors.
+    """
+    source = left_frontend.get("stimulus")
+    if (source is None or source.stage != "Stage1" or source.condition != "left"
+            or right_stimulus.stage != "Stage1" or right_stimulus.condition != "right"):
+        raise ValueError("mirror_stage1_frontend requires the standardized Stage1 left/right pair")
+    if not np.array_equal(right_stimulus.signed_contrast, source.signed_contrast[:, ::-1]):
+        raise ValueError("Stage1 right contrast is not the exact mirror of left contrast")
+
+    result = dict(left_frontend)
+    orientation_mirror = np.array([0, 3, 2, 1])  # 0,45,90,135 degrees under x reflection
+    result["stimulus"] = right_stimulus
+    result["gabor"] = left_frontend["gabor"][orientation_mirror, :, ::-1, :].copy()
+    for key in ("lgn_on", "lgn_off", "B"):
+        result[key] = left_frontend[key][:, ::-1, :].copy()
+    result["H_L"] = left_frontend["H_R"][:, ::-1, :].copy()
+    result["H_R"] = left_frontend["H_L"][:, ::-1, :].copy()
+    result["lgn_on_mean"] = left_frontend["lgn_on_mean"].copy()
+    result["lgn_off_mean"] = left_frontend["lgn_off_mean"].copy()
+    result["lgn_total_mean"] = left_frontend["lgn_total_mean"].copy()
+    result["template_iou_left"] = left_frontend["template_iou_right"]
+    result["template_iou_right"] = left_frontend["template_iou_left"]
+    result["audit_maps"] = {
+        time: {"V1": maps["V1"][orientation_mirror, :, ::-1].copy(),
+               "B": maps["B"][:, ::-1].copy(),
+               "H_L": maps["H_R"][:, ::-1].copy(),
+               "H_R": maps["H_L"][:, ::-1].copy()}
+        for time, maps in left_frontend["audit_maps"].items()
+    }
+    return result
 
 
 def _kernel_energy_moment(kernel, spacing):
@@ -406,12 +507,18 @@ def scale_kernel_audit():
 def scale_feature_audit(tau_a=80.0):
     """Compare 128-grid V1/config maps against independent 64-grid maps."""
     summaries = []
-    for condition in ("left", "right"):
-        stimulus = load_stimulus("Stage1", condition)
-        low = simulate_frontend(stimulus, params={"tau_a": tau_a}, resolution=64,
-                                capture_spatial_audit=True)
-        high = simulate_frontend(stimulus, params={"tau_a": tau_a}, resolution=128,
+    left_stimulus = load_stimulus("Stage1", "left")
+    low_left = simulate_frontend(left_stimulus, params={"tau_a": tau_a}, resolution=64,
                                  capture_spatial_audit=True)
+    high_left = simulate_frontend(left_stimulus, params={"tau_a": tau_a}, resolution=128,
+                                  capture_spatial_audit=True)
+    fronts = {
+        "left": (low_left, high_left),
+        "right": (mirror_stage1_frontend(low_left, load_stimulus("Stage1", "right")),
+                  mirror_stage1_frontend(high_left, load_stimulus("Stage1", "right"))),
+    }
+    for condition in ("left", "right"):
+        low, high = fronts[condition]
         similarities, zero_count, zero_mismatch = [], 0, 0
         names = ("V1", "B", "H_L", "H_R")
         for time in low["audit_maps"]:

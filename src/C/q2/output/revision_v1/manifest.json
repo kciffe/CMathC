@@ -1,6 +1,6 @@
 {
   "project": "Q2 revision_v1 low-dimensional forward model",
-  "run_mode": "simulate",
+  "run_mode": "validate",
   "python": "3.13.5",
   "numpy": "2.5.1",
   "scipy": "1.18.1",
@@ -31,8 +31,8 @@
         "n_nonzero_pairs": 35,
         "n_zero_pairs": 0,
         "n_zero_mismatch": 0,
-        "minimum_cosine": 0.9665071368217468,
-        "mean_cosine": 0.9870875988687787,
+        "minimum_cosine": 0.9665071964263916,
+        "mean_cosine": 0.9870875818388802,
         "features_pass": true
       },
       {
@@ -40,8 +40,8 @@
         "n_nonzero_pairs": 35,
         "n_zero_pairs": 0,
         "n_zero_mismatch": 0,
-        "minimum_cosine": 0.9665072560310364,
-        "mean_cosine": 0.9870875886508397,
+        "minimum_cosine": 0.9665071964263916,
+        "mean_cosine": 0.9870875818388802,
         "features_pass": true
       }
     ],
@@ -1276,14 +1276,15 @@
     "input\\stage2_task2_target_outward.npy": "002d453c06101e51edb10b90435df6c00e7bc406981f32450b0a7da830af4faa",
     "revision\\config.py": "45ede66195b4f40299e9f74a9a2a8fadc480bd3b6cc7b461ae518139f565b7e0",
     "revision\\evaluate.py": "297341901a4d26cc633a8ebc0b24a5b8f03fa0417c5baeeac6f00103cac06035",
-    "revision\\fit.py": "3c7368f5fec5b7bb4da1e551253b137e96f3e14b29e1733d1b1f11820e78cb67",
-    "revision\\frontend.py": "ab3fafd22a2151d0e4e30b3b997dc18832f5e4a0b2010eaeb0b9f4e20514bfb6",
+    "revision\\fit.py": "357100cd638d20a7d753c22f20fa9f12f64105228984ceff5c79fe0b82b7b9ac",
+    "revision\\frontend.py": "16cd3d399ab136ab352d8c517f74de5f896bb7312e901fef2d0827bdd896256e",
     "revision\\model.py": "563347277a3ff8d00a032e59b7e323c17ec216251ed26d4660c6992c18cea622",
     "revision\\real_data.py": "9bef58f1d914c6e4d27e4ef9d4d3ae47d6b9fa47728051a62d1ca336af10f567",
-    "revision\\run_revision.py": "d88b14bced70adf54be67eaac7f92bb4d73df59d5d4d7b9786843057113cc3b8",
-    "revision\\test_model.py": "102a5061545aaa43339521f538305f863f78d450818ee1b722deaf67ff6144f4",
+    "revision\\run_revision.py": "6e0fa4e709bdad8efae4e41975a984912e065a3999312f31761a0e6b59238950",
+    "revision\\test_frontend.py": "ac1bbc723d52fbc4e5fdb7359d1415d100930ed354100a8eca5e7543070c44bb",
+    "revision\\test_model.py": "7b701e3b29c7e7678122135085aa9734595b58d12041ec614b081a4110bc9888",
     "revision\\test_real_data.py": "aedd57f3ae6a5af7c5c9130f369c37eb2fc32d334ac8063088ab60b88d97c912",
-    "revision\\test_validation.py": "25c4a0a0a43c5e6a972f97b3352eac21f705bafe07e8b07794017bb388cc8466",
+    "revision\\test_validation.py": "574313c06763b0b271bfa6d5aa5854e29645c5d09cb4a8140d6634f03d11758f",
     "q1\\output\\8riemann_denoise\\VisualCogA_Task-1_clean.mat": "b212b195407019d7eab84bf726d856a29ecf8acb822cca62fd2ffbc87a10e63b",
     "q1\\output\\8riemann_denoise\\VisualCogA_Task-2_clean.mat": "02b000f2e2e584d2918a09269b821441451d4abc4cc0a64301af9c3dc029d1d9",
     "q1\\output\\8riemann_denoise\\VisualCogB_Task-1_clean.mat": "72353af870a908b7db965866e51fab5da43f920e11a7cf68728eabc9f31ff50d",
@@ -1323,30 +1324,422 @@
     "the frozen rank-2 observation matrix is illustrative, not an anatomical lead field",
     "model amplitudes are scaled in training folds and do not establish an absolute physiological unit"
   ],
-  "run_status": "partial_mode_outputs",
-  "canonical_conditions": [
-    "Stage1/left",
-    "Stage1/right",
-    "Stage2/dots",
-    "Stage2/inward",
-    "Stage2/outward"
+  "run_status": "validate_complete",
+  "n_fit_failures": 0,
+  "fit_by_heldout_record": {
+    "VisualCogA_Task-1": {
+      "train_records": [
+        "VisualCogA_Task-2",
+        "VisualCogB_Task-1",
+        "VisualCogB_Task-2"
+      ],
+      "parameters": {
+        "tau_s": 75.0,
+        "g_i": 0.5,
+        "tau_a": 135.0
+      },
+      "amplitude": 11405.65927060326,
+      "loss": 2033.9151382761252,
+      "success": true,
+      "status": "converged",
+      "boundary_flags": {
+        "tau_s": false,
+        "g_i": true,
+        "tau_a": false
+      },
+      "starts": [
+        {
+          "start_index": 0,
+          "initial": [
+            40.0,
+            1.0,
+            80.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 4,
+          "n_objective_evaluations": 4,
+          "best_loss": 2248.472671143143,
+          "amplitude": 12407.84812907655,
+          "parameters": {
+            "tau_s": 40.0,
+            "g_i": 1.0,
+            "tau_a": 80.0
+          }
+        },
+        {
+          "start_index": 1,
+          "initial": [
+            28.0,
+            0.7,
+            55.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 20,
+          "n_objective_evaluations": 20,
+          "best_loss": 2206.8485238040166,
+          "amplitude": 10037.236476153763,
+          "parameters": {
+            "tau_s": 39.00221766931495,
+            "g_i": 0.5859769472061067,
+            "tau_a": 55.0
+          }
+        },
+        {
+          "start_index": 2,
+          "initial": [
+            75.0,
+            1.3,
+            135.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 8,
+          "n_objective_evaluations": 8,
+          "best_loss": 2033.9151382761252,
+          "amplitude": 11405.65927060326,
+          "parameters": {
+            "tau_s": 75.0,
+            "g_i": 0.5,
+            "tau_a": 135.0
+          }
+        }
+      ],
+      "n_evaluations": 32,
+      "resolution": 128
+    },
+    "VisualCogA_Task-2": {
+      "train_records": [
+        "VisualCogA_Task-1",
+        "VisualCogB_Task-1",
+        "VisualCogB_Task-2"
+      ],
+      "parameters": {
+        "tau_s": 75.0,
+        "g_i": 0.5,
+        "tau_a": 135.0
+      },
+      "amplitude": 2363.818260094925,
+      "loss": 901.5961082964702,
+      "success": true,
+      "status": "converged",
+      "boundary_flags": {
+        "tau_s": false,
+        "g_i": true,
+        "tau_a": false
+      },
+      "starts": [
+        {
+          "start_index": 0,
+          "initial": [
+            40.0,
+            1.0,
+            80.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 4,
+          "n_objective_evaluations": 4,
+          "best_loss": 912.0648137897617,
+          "amplitude": 0.0,
+          "parameters": {
+            "tau_s": 40.0,
+            "g_i": 1.0,
+            "tau_a": 80.0
+          }
+        },
+        {
+          "start_index": 1,
+          "initial": [
+            28.0,
+            0.7,
+            55.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 4,
+          "n_objective_evaluations": 4,
+          "best_loss": 912.0648137897617,
+          "amplitude": 0.0,
+          "parameters": {
+            "tau_s": 28.0,
+            "g_i": 0.7,
+            "tau_a": 55.0
+          }
+        },
+        {
+          "start_index": 2,
+          "initial": [
+            75.0,
+            1.3,
+            135.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 8,
+          "n_objective_evaluations": 8,
+          "best_loss": 901.5961082964702,
+          "amplitude": 2363.818260094925,
+          "parameters": {
+            "tau_s": 75.0,
+            "g_i": 0.5,
+            "tau_a": 135.0
+          }
+        }
+      ],
+      "n_evaluations": 16,
+      "resolution": 128
+    },
+    "VisualCogB_Task-1": {
+      "train_records": [
+        "VisualCogA_Task-1",
+        "VisualCogA_Task-2",
+        "VisualCogB_Task-2"
+      ],
+      "parameters": {
+        "tau_s": 75.0,
+        "g_i": 0.5,
+        "tau_a": 135.0
+      },
+      "amplitude": 9567.325350932368,
+      "loss": 2076.0206997660093,
+      "success": true,
+      "status": "converged",
+      "boundary_flags": {
+        "tau_s": false,
+        "g_i": true,
+        "tau_a": false
+      },
+      "starts": [
+        {
+          "start_index": 0,
+          "initial": [
+            40.0,
+            1.0,
+            80.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 4,
+          "n_objective_evaluations": 4,
+          "best_loss": 2227.554555961527,
+          "amplitude": 10263.437857441148,
+          "parameters": {
+            "tau_s": 40.0,
+            "g_i": 1.0,
+            "tau_a": 80.0
+          }
+        },
+        {
+          "start_index": 1,
+          "initial": [
+            28.0,
+            0.7,
+            55.0
+          ],
+          "optimizer_success": false,
+          "optimizer_status": 2,
+          "optimizer_message": "ABNORMAL: ",
+          "nfev_reported": 52,
+          "n_objective_evaluations": 52,
+          "best_loss": 2227.240271464774,
+          "amplitude": 6552.236472126651,
+          "parameters": {
+            "tau_s": 28.0,
+            "g_i": 0.70000001,
+            "tau_a": 55.0
+          }
+        },
+        {
+          "start_index": 2,
+          "initial": [
+            75.0,
+            1.3,
+            135.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 8,
+          "n_objective_evaluations": 8,
+          "best_loss": 2076.0206997660093,
+          "amplitude": 9567.325350932368,
+          "parameters": {
+            "tau_s": 75.0,
+            "g_i": 0.5,
+            "tau_a": 135.0
+          }
+        }
+      ],
+      "n_evaluations": 64,
+      "resolution": 128
+    },
+    "VisualCogB_Task-2": {
+      "train_records": [
+        "VisualCogA_Task-1",
+        "VisualCogA_Task-2",
+        "VisualCogB_Task-1"
+      ],
+      "parameters": {
+        "tau_s": 75.0,
+        "g_i": 0.5,
+        "tau_a": 135.0
+      },
+      "amplitude": 7484.243482251009,
+      "loss": 1493.3941281101359,
+      "success": true,
+      "status": "converged",
+      "boundary_flags": {
+        "tau_s": false,
+        "g_i": true,
+        "tau_a": false
+      },
+      "starts": [
+        {
+          "start_index": 0,
+          "initial": [
+            40.0,
+            1.0,
+            80.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 4,
+          "n_objective_evaluations": 4,
+          "best_loss": 1584.5565075046004,
+          "amplitude": 8528.755581418933,
+          "parameters": {
+            "tau_s": 40.0,
+            "g_i": 1.0,
+            "tau_a": 80.0
+          }
+        },
+        {
+          "start_index": 1,
+          "initial": [
+            28.0,
+            0.7,
+            55.0
+          ],
+          "optimizer_success": false,
+          "optimizer_status": 2,
+          "optimizer_message": "ABNORMAL: ",
+          "nfev_reported": 52,
+          "n_objective_evaluations": 52,
+          "best_loss": 1583.7611020909549,
+          "amplitude": 5556.142677929317,
+          "parameters": {
+            "tau_s": 28.0,
+            "g_i": 0.70000001,
+            "tau_a": 55.0
+          }
+        },
+        {
+          "start_index": 2,
+          "initial": [
+            75.0,
+            1.3,
+            135.0
+          ],
+          "optimizer_success": true,
+          "optimizer_status": 0,
+          "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+          "nfev_reported": 8,
+          "n_objective_evaluations": 8,
+          "best_loss": 1493.3941281101359,
+          "amplitude": 7484.243482251009,
+          "parameters": {
+            "tau_s": 75.0,
+            "g_i": 0.5,
+            "tau_a": 135.0
+          }
+        }
+      ],
+      "n_evaluations": 64,
+      "resolution": 128
+    }
+  },
+  "classification_folds": [
+    {
+      "heldout_record": "VisualCogA_Task-1",
+      "status": "complete",
+      "n_trials": 54,
+      "balanced_accuracy": 0.3351724137931035,
+      "recall_left": 0.3103448275862069,
+      "recall_right": 0.36,
+      "roc_auc": 0.2910344827586207,
+      "confusion_matrix": "[[9, 20], [16, 9]]",
+      "n_ties": 0
+    },
+    {
+      "heldout_record": "VisualCogA_Task-2",
+      "status": "complete",
+      "n_trials": 80,
+      "balanced_accuracy": 0.5222222222222223,
+      "recall_left": 0.24444444444444444,
+      "recall_right": 0.8,
+      "roc_auc": 0.5003174603174603,
+      "confusion_matrix": "[[11, 34], [7, 28]]",
+      "n_ties": 0
+    },
+    {
+      "heldout_record": "VisualCogB_Task-1",
+      "status": "complete",
+      "n_trials": 83,
+      "balanced_accuracy": 0.42305458768873405,
+      "recall_left": 0.5365853658536586,
+      "recall_right": 0.30952380952380953,
+      "roc_auc": 0.38501742160278746,
+      "confusion_matrix": "[[22, 19], [29, 13]]",
+      "n_ties": 0
+    },
+    {
+      "heldout_record": "VisualCogB_Task-2",
+      "status": "complete",
+      "n_trials": 80,
+      "balanced_accuracy": 0.5314267756128221,
+      "recall_left": 0.7837837837837838,
+      "recall_right": 0.27906976744186046,
+      "roc_auc": 0.5059710873664363,
+      "confusion_matrix": "[[29, 8], [31, 12]]",
+      "n_ties": 0
+    }
   ],
+  "classification_four_record_mean": {
+    "balanced_accuracy": 0.45296899982922045,
+    "roc_auc": 0.4205851130113262,
+    "recall_left": 0.4687896054170234,
+    "recall_right": 0.43714839424141755
+  },
+  "fit_case_count": 8,
   "dt_convergence_check": [
     {
       "stage": "Stage1",
       "condition": "left",
       "dt_coarse_ms": 1.0,
       "dt_fine_ms": 0.5,
-      "relative_eeg_rms_difference": 0.005403843242675066,
-      "maximum_absolute_difference": 7.021648343652487e-06
+      "relative_eeg_rms_difference": 0.005403390619903803,
+      "maximum_absolute_difference": 7.020717021077871e-06
     },
     {
       "stage": "Stage1",
       "condition": "right",
       "dt_coarse_ms": 1.0,
       "dt_fine_ms": 0.5,
-      "relative_eeg_rms_difference": 0.004790224600583315,
-      "maximum_absolute_difference": 8.137896656990051e-06
+      "relative_eeg_rms_difference": 0.004790120292454958,
+      "maximum_absolute_difference": 8.137722034007311e-06
     }
-  ]
+  ],
+  "control_case_count": 2,
+  "unknown_layout_case_count": 2,
+  "legacy_baseline_status": "available"
 }
