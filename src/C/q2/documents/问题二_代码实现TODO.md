@@ -10,6 +10,8 @@
 
 **依据：** [《问题二项目实施方案》](./问题二_项目实施方案.md)
 
+**当前状态（2026-09-24）：** 七个运行模块已完成首轮方案化实现并落入 `revision/`；尚未执行运行、尺度审计或验收，因此下列检查框保持未勾选。实施状态见 [revision README](../revision/README.md)。
+
 ## 全局约束
 
 - 原 `01_gabor_frontend.py`、`02_lgn.py`、`03_cortex.py`、`04_simulated_eeg.py`、`05_simulated_real_eeg_compare.py` 及历史诊断脚本保留，不覆盖、不改写结果。
@@ -30,15 +32,15 @@
 
 | 文件 | 当前状态 | TODO 职责 |
 |---|---|---|
-| `revision/config.py` | 已有草稿 | 汇总固定路径、时间、参数、模板几何及冻结观测矩阵，避免重复常量 |
-| `revision/real_data.py` | 已有草稿 | 读取 MAT、整理条件、执行事件与质量审计、形成 ERP/试次数组 |
-| `revision/frontend.py` | 新建 | 固定视觉刺激、LGN ON/OFF、Gabor 与三角构型编码 |
-| `revision/model.py` | 已有草稿，需按方案改造 | 六个 E/I 群体、突触响应源代理、固定示意观测 |
-| `revision/fit.py` | 新建 | 有界参数拟合、训练折幅值估计、留一 MAT 切分 |
-| `revision/evaluate.py` | 新建 | ERP 指标、6 维收缩 LDA、数值/映射检查、两个机制对照及作图；吸收 `diagnostics.py` 的首版必要功能 |
-| `revision/run_revision.py` | 已有草稿，需按最终接口整理 | 唯一运行入口，串联审计、模拟、拟合、评价和输出 |
+| `revision/config.py` | 已按方案整理，待运行确认 | 汇总固定路径、时间、参数、模板几何及冻结观测矩阵，避免重复常量 |
+| `revision/real_data.py` | 已按方案调整，待数据审计确认 | 读取 MAT、整理条件、执行事件与质量审计、形成 ERP/试次数组 |
+| `revision/frontend.py` | 已实现主链代码，尺度门待执行 | 固定视觉刺激、LGN ON/OFF、Gabor 与三角构型编码 |
+| `revision/model.py` | 已重写主链，待数值运行 | 六个 E/I 群体、突触响应源代理、固定示意观测 |
+| `revision/fit.py` | 已实现拟合流程，待四折执行 | 有界参数拟合、训练折幅值估计、留一 MAT 切分 |
+| `revision/evaluate.py` | 已实现评价流程，待留出结果确认 | ERP 指标、6 维收缩 LDA、两个冻结参数机制对照；首版必要检查已并入 |
+| `revision/run_revision.py` | 已整理为唯一入口，待实际运行 | 串联审计、模拟、拟合、评价和输出 |
 
-现有 `revision/diagnostics.py` 是草稿辅助文件。将仍需的代码迁入 `evaluate.py` 并更新引用后，再清理冗余文件；原目录中的 `test_*.py` 是草稿检查，不代表完整模型已经验收。不要再创建一组重复的 `validation.py`、`classification.py`、`observation.py` 等小文件。
+原 `revision/diagnostics.py` 草稿已移除；首版需要的检查并入 `evaluate.py`。原目录中的 `test_*.py` 仍是旧草稿检查，不代表完整模型已经验收。不要再创建一组重复的 `validation.py`、`classification.py`、`observation.py` 等小文件。
 
 ## TODO
 

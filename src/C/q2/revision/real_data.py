@@ -10,17 +10,9 @@ import numpy as np
 from scipy.io import loadmat
 
 try:
-    from .config import MIN_TRIALS, Q2_ROOT, STAGES, TIME_MS
+    from .config import CHANNELS, DATASETS, MIN_TRIALS, Q2_ROOT, REAL_ROOT, STAGES
 except ImportError:
-    from config import MIN_TRIALS, Q2_ROOT, STAGES, TIME_MS
-
-
-REAL_ROOT = Q2_ROOT.parent / "q1" / "output" / "8riemann_denoise"
-DATASETS = {
-    "Task1": ("VisualCogA_Task-1", "VisualCogA_Task-2"),
-    "Task2": ("VisualCogB_Task-1", "VisualCogB_Task-2"),
-}
-CHANNELS = ("F3", "Fz", "F4")
+    from config import CHANNELS, DATASETS, MIN_TRIALS, Q2_ROOT, REAL_ROOT, STAGES
 
 
 def _matlab_string(value):
@@ -151,18 +143,30 @@ def load_cases_with_audit(real_root=REAL_ROOT, datasets=None):
                 if baseline.sum() < 2 or time[0] > low + sample_interval or time[-1] < high - sample_interval:
                     raise ValueError(f"{dataset}/{stage}: baseline window is absent or truncated")
                 relative_ms = (time - settings["onset_s"]) * 1000
-                window = (relative_ms >= TIME_MS[0]) & (relative_ms <= TIME_MS[-1])
-                if (window.sum() < 2
-                        or relative_ms[window][0] > TIME_MS[0] + sample_interval * 1000 + 1e-9
-                        or relative_ms[window][-1] < TIME_MS[-1] - sample_interval * 1000 - 1e-9):
-                    raise ValueError(f"{dataset}/{stage}: response interval is absent or truncated")
+                window = (relative_ms >= 0.0) & (relative_ms <= 800.0 + 1e-9)
+                if window.sum() < 2 or relative_ms[window][0] > sample_interval * 1000 + 1e-9:
+                    raise ValueError(f"{dataset}/{stage}: response onset is absent or truncated")
+                # The requested 800-ms endpoint need not itself be sampled.
+                # Accept the final observed sample when it is within one sample
+                # interval of the boundary (e.g. 796.875 ms at 128 Hz), but
+                # reject genuinely truncated epochs for either stage.
+                earliest_valid_end = 800.0 - sample_interval * 1000.0 - 1e-6
+                if relative_ms[window][-1] < earliest_valid_end:
+                    raise ValueError(f"{dataset}/{stage}: response interval is truncated before 800 ms")
                 corrected = data["eeg"] - data["eeg"][:, :, baseline].mean(axis=2, keepdims=True)
                 masks = stage_condition_masks(task, stage, data["cue_type"])
                 for condition, mask in masks.items():
                     selected = corrected[mask][:, :, window]
                     n_trials = int(mask.sum())
+                    is_stage1_label = stage == "Stage1" and condition in ("left", "right")
+                    enough_trials = n_trials >= MIN_TRIALS
+                    role = ("fit_and_classification" if is_stage1_label and enough_trials
+                            else "description_only" if condition == "target_unknown"
+                            else "frozen_parameter_control" if stage == "Stage2" and task == "Task1"
+                            else "below_min_trials" if not enough_trials else "description_only")
                     cases.append({
                         "dataset": dataset,
+                        "record": dataset,
                         "task": task,
                         "stage": stage,
                         "condition": condition,
@@ -170,8 +174,14 @@ def load_cases_with_audit(real_root=REAL_ROOT, datasets=None):
                         "time_ms": relative_ms[window].copy(),
                         "real": selected.mean(axis=0) if n_trials else np.full((3, int(window.sum())), np.nan),
                         "trials": selected,
-                        "eligible_fit": bool(n_trials >= MIN_TRIALS and condition != "target_unknown"),
-                        "eligibility_reason": "unknown_target_layout" if condition == "target_unknown" else ("eligible" if n_trials >= MIN_TRIALS else "below_min_trials"),
+                        "eligible_fit": bool(is_stage1_label and enough_trials),
+                        "eligible_classification": bool(is_stage1_label and enough_trials),
+                        "eligible": bool(is_stage1_label and enough_trials),
+                        "role": role,
+                        "eligibility_reason": ("eligible_stage1_left_right" if is_stage1_label and enough_trials
+                                               else "unknown_target_layout" if condition == "target_unknown"
+                                               else "not_main_stage1_fit" if stage == "Stage2"
+                                               else "below_min_trials"),
                         "baseline_window_s": tuple(settings["baseline"]),
                         "late_window_ms": tuple(settings["late"]),
                         "event_timing_assumption": "cue=0s; cue_offset=0.20s; target=2.20s",

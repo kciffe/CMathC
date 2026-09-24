@@ -1,170 +1,181 @@
-"""Phenomenological forward model. No anatomical source inversion or EEG units."""
+"""Low-dimensional Wilson-Cowan populations and fixed observation map."""
+from dataclasses import dataclass
+
 import numpy as np
-from scipy.ndimage import gaussian_filter
 from scipy.signal import fftconvolve
-from config import Q2_ROOT
 
-# Exactly the original illustrative weights, written in float64.
-# Source labels here: V1 space L/R, IT unary space L/R, IT conjunction space L/R.
-LEAD_FIELD = np.array([[.32, .24, .48, .36, .72, .58],
-                       [.28, .28, .42, .42, .65, .65],
-                       [.24, .32, .36, .48, .58, .72]])
-ANGLES = (0, 45, 90, 135)
-OFFSETS = ((0, 1), (1, 0), (1, 1), (1, -1))
-STIMULI = {("Stage1", "left"): "stage1_cue_left",
-           ("Stage1", "right"): "stage1_cue_right",
-           ("Stage2", "dots"): "stage2_task1_target_dots",
-           ("Stage2", "inward"): "stage2_task2_target_inward",
-           ("Stage2", "outward"): "stage2_task2_target_outward"}
+try:
+    from . import config
+    from .frontend import activation
+except ImportError:
+    import config
+    from frontend import activation
 
 
-def load_contrast(stage, condition):
-    name = STIMULI[(stage, condition)]
-    base = "stage1_baseline_circle" if stage == "Stage1" else "stage2_baseline_blank"
-    image = np.load(Q2_ROOT / "input" / f"{name}.npy").astype(float)
-    baseline = np.load(Q2_ROOT / "input" / f"{base}.npy").astype(float)
-    # Area averaging, not nearest-neighbour aliasing; retains mirror equivariance.
-    return ((image - baseline) / 255).reshape(64, 4, 64, 4).mean(axis=(1, 3))
+@dataclass(frozen=True)
+class ModelParams:
+    tau_s: float = config.PARAM_DEFAULTS["tau_s"]
+    g_i: float = config.PARAM_DEFAULTS["g_i"]
+    tau_a: float = config.PARAM_DEFAULTS["tau_a"]
+
+    @classmethod
+    def from_any(cls, value):
+        if isinstance(value, cls):
+            return value
+        if value is None:
+            return cls()
+        return cls(float(value.get("tau_s", config.PARAM_DEFAULTS["tau_s"])),
+                   float(value.get("g_i", config.PARAM_DEFAULTS["g_i"])),
+                   float(value.get("tau_a", config.PARAM_DEFAULTS["tau_a"])))
 
 
-def stimulus_gate(time_ms, stage, include_offset=True):
-    if stage not in ("Stage1", "Stage2"):
-        raise ValueError(stage)
-    return ((time_ms >= 0) & ((time_ms < 200) if stage == "Stage1" and include_offset else True)).astype(float)
+@dataclass
+class ModelResult:
+    time_ms: np.ndarray
+    excitatory: np.ndarray  # population, hemisphere, time
+    inhibitory: np.ndarray
+    source_proxy: np.ndarray  # six fixed source modes, time
+    observable_modes: np.ndarray  # rank-2 G coordinates, time
+    eeg: np.ndarray  # F3, Fz, F4, time; relative units
+    eeg_scaled: np.ndarray
+    u2_unexplained: np.ndarray
+    diagnostics: dict
 
 
-def activation(x):
-    zero = 1 / (1 + np.exp(.6))
-    return np.clip((1 / (1 + np.exp(-np.clip(4 * (x - .15), -60, 60))) - zero) / (1 - zero), 0, 1)
+def _project_half_fields(field):
+    """Orthonormal left/right half-field projection under area-mean inner product."""
+    n = field.shape[0]
+    if field.shape[0] != field.shape[1] or n % 2:
+        raise ValueError("spatial fields must be even-sized squares")
+    # Coefficients are <field, b> where the area-average inner product uses
+    # b=sqrt(2) on one half and zero elsewhere. The half-field mean is thus
+    # divided by sqrt(2), not multiplied by it.
+    left = field[:, :n // 2].mean(axis=(0, 1)) / np.sqrt(2.0)
+    right = field[:, n // 2:].mean(axis=(0, 1)) / np.sqrt(2.0)
+    return np.stack([left, right])
 
 
-def lgn_relay(contrast, time_ms, stage, dt_ms, include_offset=True):
-    # Center-surround precedes all orientation filtering. Pixel scale is uncalibrated.
-    center = gaussian_filter(contrast, .75, mode="reflect")
-    surround = gaussian_filter(contrast, 2., mode="reflect")
-    field = center - surround
-    gate = stimulus_gate(time_ms, stage, include_offset)
-    relay = np.zeros((*contrast.shape, len(time_ms)), dtype=np.float32)
-    adaptation = np.zeros_like(contrast)
-    tcr = np.zeros((2, *contrast.shape))
-    interneuron = np.zeros_like(tcr)
-    trn = np.zeros_like(tcr)
-    means = np.zeros((2, len(time_ms)))
-    drive_means = np.zeros_like(means)
-    for k in range(len(time_ms) - 1):
-        signed = field * gate[k]
-        transient = signed - adaptation
-        drive = np.stack([.2 * np.maximum(signed, 0) + .8 * np.maximum(transient, 0),
-                          .2 * np.maximum(-signed, 0) + .8 * np.maximum(-transient, 0)])
-        drive_means[:, k] = drive.mean(axis=(1, 2))
-        rt = activation(2.2 * drive - .9 * interneuron - .8 * trn)
-        it = activation(1.2 * drive + .7 * tcr)
-        nt = activation(.9 * tcr)
-        tcr += dt_ms * (rt - tcr) / 18
-        interneuron += dt_ms * (it - interneuron) / 12
-        trn += dt_ms * (nt - trn) / 25
-        adaptation += dt_ms * (signed - adaptation) / 80
-        relay[..., k + 1] = tcr[0] - tcr[1]
-        means[:, k + 1] = tcr.mean(axis=(1, 2))
-    drive_means[:, -1] = drive_means[:, -2]
-    return relay, means, drive_means
+def project_frontend(frontend):
+    """Project B, H_L, H_R to six fixed half-field drives."""
+    drives = []
+    for name in ("B", "H_L", "H_R"):
+        x = np.asarray(frontend[name], dtype=np.float32)
+        if x.ndim != 3 or x.shape[0] != x.shape[1]:
+            raise ValueError(f"frontend {name} must be [y,x,time]")
+        drives.append(_project_half_fields(x))
+    return np.stack(drives).astype(np.float32)  # feature class, hemisphere, time
 
 
-def gabor_kernel(angle, phase):
-    y, x = np.mgrid[-4:5, -4:5]
-    theta = np.deg2rad(angle)
-    u, v = x * np.cos(theta) + y * np.sin(theta), -x * np.sin(theta) + y * np.cos(theta)
-    kernel = np.exp(-(u * u + .25 * v * v) / 2) * np.cos(2 * np.pi * u / 2.5 + phase)
-    kernel -= kernel.mean()
-    return kernel / np.abs(kernel).sum()
+def _delay(signal, time_ms, delay_ms):
+    signal = np.asarray(signal)
+    target = time_ms - delay_ms
+    flat = signal.reshape(-1, signal.shape[-1])
+    out = np.stack([np.interp(target, time_ms, row, left=0.0, right=0.0)
+                    for row in flat])
+    return out.reshape(signal.shape).astype(signal.dtype, copy=False)
 
 
-def v1_features(relay):
-    features = []
-    for angle in ANGLES:
-        even = fftconvolve(relay, gabor_kernel(angle, 0)[..., None], mode="same", axes=(0, 1))
-        odd = fftconvolve(relay, gabor_kernel(angle, np.pi / 2)[..., None], mode="same", axes=(0, 1))
-        energy = np.hypot(even, odd)
-        features.append(energy.reshape(8, 8, 8, 8, -1).mean(axis=(1, 3)))
-    return np.stack(features)
+def _wc_populations(drives, time_ms, params):
+    dt = float(np.median(np.diff(time_ms)))
+    p = np.empty_like(drives, dtype=np.float32)
+    p[0] = _delay(drives[0], time_ms, config.WC_FIXED["delay_early"])
+    p[1:] = _delay(drives[1:], time_ms, config.WC_FIXED["delay_shape"])
+    e = np.zeros_like(p, dtype=np.float32)
+    inh = np.zeros_like(p, dtype=np.float32)
+    w = config.WC_FIXED
+    for ti in range(len(time_ms) - 1):
+        e_input = w["w_ee"] * e[:, :, ti] - params.g_i * w["w_ei"] * inh[:, :, ti] + w["g_p"] * p[:, :, ti]
+        i_input = w["w_ie"] * e[:, :, ti] - w["w_ii"] * inh[:, :, ti] + w["g_q"] * p[:, :, ti]
+        fe = activation(e_input, 5.0, 0.35)
+        fi = activation(i_input, 5.0, 0.35)
+        tau_e = np.array([w["tau_e_early"], params.tau_s, params.tau_s], dtype=float)[:, None]
+        tau_i = tau_e * np.array([w["tau_i_early"] / w["tau_e_early"], w["tau_i_ratio"], w["tau_i_ratio"]])[:, None]
+        e[:, :, ti + 1] = e[:, :, ti] + dt * (-e[:, :, ti] + (1.0 - e[:, :, ti]) * fe) / tau_e
+        inh[:, :, ti + 1] = inh[:, :, ti] + dt * (-inh[:, :, ti] + (1.0 - inh[:, :, ti]) * fi) / tau_i
+    tol = 1e-6
+    if (not np.isfinite(e).all() or not np.isfinite(inh).all()
+            or min(float(e.min()), float(inh.min())) < -tol
+            or max(float(e.max()), float(inh.max())) > 1.0 + tol):
+        raise FloatingPointError("Wilson-Cowan E/I state left the [0,1] range")
+    return e, inh, p
 
 
-def configuration_features(v1):
-    """Ordered orientation pairs at distinct spatial locations; no wrap-around.
-
-    Shape 4 x 8 x 8 x T -> 64 x 8 x 8 x T.
-    For each displacement, all 4x4 ordered orientation pairs are retained.
-    sqrt(product) has the same units as the single-feature activity.
-    """
-    results = []
-    for dy, dx in OFFSETS:
-        shifted = np.zeros_like(v1)
-        ys = slice(0, 8 - dy)
-        xs = slice(0, 8 - dx) if dx >= 0 else slice(-dx, 8)
-        yt = slice(dy, 8)
-        xt = slice(dx, 8) if dx >= 0 else slice(0, 8 + dx)
-        shifted[:, ys, xs] = v1[:, yt, xt]
-        for first in range(4):
-            for second in range(4):
-                results.append(np.sqrt(np.maximum(v1[first] * shifted[second], 0)))
-    return np.stack(results)
+def _synaptic_kernel(tau_ms, dt_ms, n_samples):
+    t = np.arange(n_samples, dtype=float) * dt_ms
+    h = np.where(t >= 0, t * np.exp(-t / tau_ms) / (tau_ms * tau_ms), 0.0)
+    # Discrete area normalization keeps the proxy scale stable as dt changes.
+    area = h.sum() * dt_ms
+    return (h / area if area > 0 else h).astype(np.float32)
 
 
-def delayed(x, delay_ms, dt_ms):
-    n = int(round(delay_ms / dt_ms))
-    out = np.zeros_like(x)
-    if n == 0:
-        return x.copy()
-    if n < x.shape[-1]:
-        out[..., n:] = x[..., :-n]
-    return out
+def _source_proxy(e, inh, time_ms):
+    dt = float(np.median(np.diff(time_ms)))
+    h_e = _synaptic_kernel(10.0, dt, len(time_ms))
+    h_i = _synaptic_kernel(20.0, dt, len(time_ms))
+    pe = fftconvolve(e, h_e[None, None, :], mode="full", axes=(-1,))[..., :len(time_ms)] * dt
+    pi = fftconvolve(inh, h_i[None, None, :], mode="full", axes=(-1,))[..., :len(time_ms)] * dt
+    population_source = pe - pi
+    p_b = population_source[0]
+    p_l = population_source[1]
+    p_r = population_source[2]
+    sigma = (p_r + p_l) / np.sqrt(2.0)
+    delta = (p_r - p_l) / np.sqrt(2.0)
+    return np.concatenate([p_b, sigma, delta], axis=0).astype(np.float32)
 
 
-def population(drive, tau_e, dt_ms):
-    """Wilson-Cowan rates and low-pass net synaptic-drive proxy (relative units)."""
-    e = np.zeros_like(drive, dtype=np.float32)
-    inh = np.zeros(drive.shape[:-1])
-    proxy = np.zeros_like(e)
-    for k in range(drive.shape[-1] - 1):
-        net = 1.2 * e[..., k] - inh + 5 * drive[..., k]
-        et = activation(net)
-        it = activation(e[..., k] - .8 * inh + 2 * drive[..., k])
-        e[..., k + 1] = e[..., k] + dt_ms * (-e[..., k] + (1 - e[..., k]) * et) / tau_e
-        inh += dt_ms * (-inh + (1 - inh) * it) / (.55 * tau_e)
-        proxy[..., k + 1] = proxy[..., k] + dt_ms * (net - proxy[..., k]) / 10
-    return e, proxy
+def _frozen_rank2_map(g):
+    u, s, vt = np.linalg.svd(g, full_matrices=False)
+    rank = int(np.linalg.matrix_rank(g))
+    if rank != 2:
+        raise ValueError(f"frozen lead matrix expected rank 2, received {rank}")
+    u2, s2, vt2 = u[:, :rank].copy(), s[:rank].copy(), vt[:rank].copy()
+    # Fixed signs make the saved observable coordinates deterministic.
+    for row in range(rank):
+        pivot = np.argmax(np.abs(u2[:, row]))
+        if u2[pivot, row] < 0:
+            u2[:, row] *= -1
+            vt2[row] *= -1
+    return u2, s2, vt2
 
 
-def spatial_sources(source):
-    return np.stack([source[:, :, :4].mean(axis=(0, 1, 2)),
-                     source[:, :, 4:].mean(axis=(0, 1, 2))])
+def simulate_forward(frontend, params=None, fixed_observation=None, time_ms=None, amplitude=1.0):
+    """Run the six E/I populations, source proxy, and frozen rank-2 EEG map."""
+    params = ModelParams.from_any(params)
+    if time_ms is None:
+        time_ms = np.asarray(frontend["time_ms"], dtype=float)
+    else:
+        time_ms = np.asarray(time_ms, dtype=float)
+    if time_ms.ndim != 1 or len(time_ms) < 2 or not np.all(np.diff(time_ms) > 0):
+        raise ValueError("time_ms must be strictly increasing")
+    if params.tau_s <= 0 or params.g_i <= 0 or params.tau_a <= 0 or amplitude < 0:
+        raise ValueError("positive time constants/g_i and nonnegative amplitude required")
+    drives = project_frontend(frontend)
+    e, inh, delayed_drive = _wc_populations(drives, time_ms, params)
+    source = _source_proxy(e, inh, time_ms)
+    g = config.LEAD_FIELD if fixed_observation is None else np.asarray(fixed_observation, dtype=float)
+    if g.shape != (3, 6) or np.linalg.matrix_rank(g) != 2:
+        raise ValueError("observation matrix must be fixed 3x6 rank 2")
+    u2, s2, vt2 = _frozen_rank2_map(g)
+    modes = (s2[:, None] * (vt2 @ source)).astype(np.float32)
+    prediction = (u2 @ modes).astype(np.float32)
+    direct = (g @ source).astype(np.float32)
+    if not np.allclose(prediction, direct, rtol=1e-5, atol=1e-6):
+        raise FloatingPointError("rank-2 SVD readout disagrees with the fixed lead map")
+    eeg_scaled = (amplitude * prediction).astype(np.float32)
+    return ModelResult(
+        time_ms=time_ms.copy(), excitatory=e, inhibitory=inh, source_proxy=source,
+        observable_modes=modes, eeg=prediction, eeg_scaled=eeg_scaled,
+        u2_unexplained=np.zeros_like(prediction[0]),
+        diagnostics={"G_rank": 2, "G": g.copy(), "amplitude": float(amplitude),
+                     "drive_max": float(np.max(delayed_drive)),
+                     "E_range": [float(e.min()), float(e.max())],
+                     "I_range": [float(inh.min()), float(inh.max())],
+                     "source_labels": ["B_left", "B_right", "Sigma_left", "Sigma_right", "Delta_left", "Delta_right"]})
 
 
-def cortex_from_v1(v1_drive, time_ms, tau_it_ms=40, dt_ms=1):
-    v1, v1_current = population(delayed(v1_drive, 8, dt_ms), 18, dt_ms)
-    it, it_current = population(delayed(v1, 25, dt_ms), tau_it_ms, dt_ms)
-    conjunction = configuration_features(v1)
-    cfg, cfg_current = population(delayed(conjunction, 25, dt_ms), tau_it_ms, dt_ms)
-    sources = np.concatenate([spatial_sources(v1_current), spatial_sources(it_current), spatial_sources(cfg_current)])
-    # Full features preserved here; spatial pooling is only an observation model.
-    active = (time_ms >= 50) & (time_ms <= 200)
-    return {"eeg": LEAD_FIELD @ sources, "sources": sources,
-            "v1_joint_feature": v1[..., active].mean(axis=-1),
-            "it_joint_feature": it[..., active].mean(axis=-1),
-            "it_configuration_feature": cfg[..., active].mean(axis=-1),
-            "v1_drive": v1_drive,
-            "population_means": np.stack([v1.mean(axis=(0, 1, 2)), it.mean(axis=(0, 1, 2)), cfg.mean(axis=(0, 1, 2))])}
-
-
-def simulate(contrast, stage, tau_it_ms=40, dt_ms=1, include_offset=True):
-    contrast = np.asarray(contrast, dtype=float)
-    if contrast.shape != (64, 64) or not np.isfinite(contrast).all():
-        raise ValueError("contrast must be a finite 64x64 matrix")
-    if dt_ms <= 0 or dt_ms > 1 or tau_it_ms <= 0:
-        raise ValueError("use 0 < dt_ms <= 1 and positive tau_it_ms")
-    time_ms = np.arange(round(800 / dt_ms) + 1) * dt_ms
-    relay, means, drives = lgn_relay(contrast, time_ms, stage, dt_ms, include_offset)
-    out = cortex_from_v1(v1_features(relay), time_ms, tau_it_ms, dt_ms)
-    out.update(time_ms=time_ms, lgn_mean=means, lgn_drive_mean=drives,
-               stimulus_gate=stimulus_gate(time_ms, stage, include_offset))
-    return out
+def observable_modes_from_real(real):
+    """Project F3/Fz/F4 observations onto u0/u1/u2, without interpolation."""
+    y = np.asarray(real, dtype=float)
+    if y.shape[-2] != 3:
+        raise ValueError("real data channel axis must be F3/Fz/F4")
+    return np.einsum("kc,...ct->...kt", np.stack([config.U0, config.U1, config.U2]), y)

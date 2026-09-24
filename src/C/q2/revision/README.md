@@ -1,15 +1,40 @@
-# 未完成的工程草稿
+# Q2 revision_v1 implementation
 
-本目录是在任务要求更新前建立的探针代码，**不是正式方案的完成实现**。
+This directory contains an independent implementation of the approved
+[Q2 project plan](../documents/问题二_项目实施方案.md). It does not replace or
+write into the original 01–05 scripts or their outputs.
 
-正式实施依据：[问题二项目实施方案](../documents/问题二_项目实施方案.md)。恢复工作先读[会话接续记录](../documents/会话接续记录.md)。
+## Modules
 
-已知状态：
+- config.py: fixed paths, timings, parameters, stimulus matrix names, and the
+  rank-2 observation matrix.
+- real_data.py: per-MAT clean EEG loading, F3/Fz/F4 ordering, baseline
+  correction, Stage1 cue grouping, and conservative Stage2 labels.
+- frontend.py: signed contrast, center-surround LGN ON/OFF dynamics, four
+  Gabor channels, mirrored triangle configuration codes, and 64/128 scale audits.
+- model.py: six E/I Wilson–Cowan populations, relative synaptic source proxy,
+  and fixed rank-2 observation mapping.
+- fit.py: bounded Stage1-only leave-one-MAT fitting of tau_s, g_i, and tau_a,
+  with one nonnegative amplitude per training fold.
+- evaluate.py: leave-one-MAT real-trial shrinkage LDA, ERP measures, and the
+  frozen-parameter no-position/no-offset controls.
+- run_revision.py: one entry point for audit, forward simulation, and
+  leave-one-MAT evaluation.
 
-- 仅跑过一次`run_revision.py --simulate-only`，输出在`../output/revision/`。
-- 尚缺`validation.py`；完整运行入口及`test_validation.py`不能视为可用或通过。
-- 当前`model.py`最终等权池化会抵消部分构型身份；需按正式方案替换构型编码与读出，并添加对应反例测试。
-- 现有几项单元测试通过，不等于完整主链通过，更不等于真实ERP或单试次判别验收通过。
-- 后续正式结果应写入`../output/revision_v1/`，不混入本次探针输出，也不覆盖原01—05结果。
+## Run modes
 
-本轮用户要求优先完成方案，代码实施已停止在上述状态。
+From the repository root, run one of:
+
+    ./.venv/Scripts/python.exe src/C/q2/revision/run_revision.py --mode audit
+    ./.venv/Scripts/python.exe src/C/q2/revision/run_revision.py --mode simulate
+    ./.venv/Scripts/python.exe src/C/q2/revision/run_revision.py --mode validate
+
+Validate is the full four-fold workflow. The implementation has not yet been
+run end to end; the draft test_*.py files are historical probes and are not
+evidence that this implementation passes. Run the audit and simulation first,
+inspect failures and runtime, then execute full validation.
+
+Outputs are written only to src/C/q2/output/revision_v1. The full run is
+designed to produce six data artifacts and three composite figures. Task2
+Stage2 remains target_unknown; inward/outward are model counterfactuals only.
+EEG observation units are relative, not calibrated microvolts.
