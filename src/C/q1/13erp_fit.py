@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from pathlib import Path
+import argparse
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -20,6 +21,7 @@ PROJECT_DIR = Path(__file__).resolve().parent
 CLEAN_DIR = PROJECT_DIR / "output" / "8riemann_denoise"
 ERP_DIR = PROJECT_DIR / "output" / "11erp_extract"
 RESULT_DIR = PROJECT_DIR / "output" / "13erp_fit"
+EXPLORATORY_RESULT_DIR = PROJECT_DIR / "output" / "13erp_fit_exploratory"
 
 CHANNELS = [
     ("F3", 1),
@@ -149,7 +151,13 @@ def fit_gaussian(time, signal, start, end):
     }
 
 
-def process_dataset(dataset_name, peak_table):
+def process_dataset(
+    dataset_name,
+    peak_table,
+    exploratory_all_windows=False,
+    result_dir=None,
+):
+    output_dir = result_dir or RESULT_DIR
     mat = loadmat(CLEAN_DIR / f"{dataset_name}_clean.mat")
 
     trials = np.asarray(mat["trial_data"], dtype=float)
@@ -198,7 +206,7 @@ def process_dataset(dataset_name, peak_table):
 
                 old_status = fixed_row[spec["StatusColumn"]]
 
-                if old_status != "valid":
+                if not exploratory_all_windows and old_status != "valid":
                     attempted = 0
                     skip_reason = f"fixed_status_{old_status}"
 
@@ -221,6 +229,14 @@ def process_dataset(dataset_name, peak_table):
                         )
 
                         if fit_result["FitValid"]:
+                            fit_label = (
+                                "探索性全窗拟合·提示后"
+                                if spec["Event"] == "Cue"
+                                else "探索性全窗拟合·目标后"
+                            ) if exploratory_all_windows else {
+                                "Cue": "P300候选窗·提示后",
+                                "Target": "P300候选窗·目标后",
+                            }[spec["Event"]]
                             ax.plot(
                                 window_time,
                                 fit_result["Fitted"],
@@ -230,10 +246,7 @@ def process_dataset(dataset_name, peak_table):
                                 }[spec["Event"]],
                                 linestyle="--",
                                 linewidth=1.5,
-                                label={
-                                    "Cue": "P300候选窗·提示后",
-                                    "Target": "P300候选窗·目标后",
-                                }[spec["Event"]],
+                                label=fit_label,
                             )
                         else:
                             skip_reason = "fit_parameter_invalid"
@@ -264,12 +277,16 @@ def process_dataset(dataset_name, peak_table):
                     else np.nan
                 )
 
-                rows.append({
+                row = {
                     "Dataset": dataset_name,
                     "Condition": condition_name,
                     "Channel": channel_name,
                     "N_trials": len(condition_trials),
-                    "FitType": spec["FitType"],
+                    "FitType": (
+                        "ExploratoryAllWindows"
+                        if exploratory_all_windows
+                        else spec["FitType"]
+                    ),
                     "Event": spec["Event"],
                     "WindowStart": start,
                     "WindowEnd": end,
@@ -288,7 +305,10 @@ def process_dataset(dataset_name, peak_table):
                     "FitValid": fit_result["FitValid"],
                     "R2": fit_result["R2"],
                     "RMSE": fit_result["RMSE"],
-                })
+                }
+                if exploratory_all_windows:
+                    row["UpstreamPeakStatus"] = old_status
+                rows.append(row)
 
             ax.axvline(0, linestyle="--", linewidth=1)
             ax.axvline(TARGET_ONSET, linestyle=":", linewidth=1)
@@ -303,14 +323,23 @@ def process_dataset(dataset_name, peak_table):
             ax.legend(fontsize=8)
 
     fig.suptitle(
-        f"{dataset_name} P300 候选窗高斯拟合",
+        (
+            f"{dataset_name} 探索性全窗高斯拟合（不经第11步峰状态筛选）"
+            if exploratory_all_windows
+            else f"{dataset_name} P300 候选窗高斯拟合"
+        ),
         fontsize=16,
     )
 
     fig.tight_layout()
 
     fig.savefig(
-        RESULT_DIR / f"{dataset_name}_ERP高斯拟合.png",
+        output_dir
+        / (
+            f"{dataset_name}_ERP高斯拟合_探索性全窗.png"
+            if exploratory_all_windows
+            else f"{dataset_name}_ERP高斯拟合.png"
+        ),
         dpi=300,
         bbox_inches="tight",
     )
@@ -320,8 +349,11 @@ def process_dataset(dataset_name, peak_table):
     return rows
 
 
-def main():
-    RESULT_DIR.mkdir(parents=True, exist_ok=True)
+def main(exploratory_all_windows=False):
+    output_dir = (
+        EXPLORATORY_RESULT_DIR if exploratory_all_windows else RESULT_DIR
+    )
+    output_dir.mkdir(parents=True, exist_ok=True)
 
     peak_table = pd.read_csv(
         ERP_DIR / "ERP候选峰指标.csv"
@@ -334,13 +366,15 @@ def main():
             process_dataset(
                 dataset_name,
                 peak_table,
+                exploratory_all_windows=exploratory_all_windows,
+                result_dir=output_dir,
             )
         )
 
     result = pd.DataFrame(all_rows)
 
     result.to_csv(
-        RESULT_DIR / "ERP高斯拟合参数.csv",
+        output_dir / "ERP高斯拟合参数.csv",
         index=False,
         encoding="utf-8-sig",
     )
@@ -349,4 +383,11 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--exploratory-all-windows",
+        action="store_true",
+        help="Fit every fixed window regardless of the stage 11 peak status.",
+    )
+    args = parser.parse_args()
+    main(exploratory_all_windows=args.exploratory_all_windows)

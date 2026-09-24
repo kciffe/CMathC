@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
@@ -27,6 +28,8 @@ CANDIDATE_WINDOWS = (
     ("target", 2.45, 2.70),
 )
 TARGET_ONSET_S = 2.2
+P300_CUE_COLOR = "#AFC6E9"
+P300_TARGET_COLOR = "#C8B6E2"
 ERP_COLORS = ("#0072B2", "#D55E00", "#009E73", "#CC79A7")
 
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "DejaVu Sans"]
@@ -280,17 +283,33 @@ def format_alpha_legend(alpha, keep_count):
 
 
 def install_external_legend(fig, source_axis, fontsize=8):
-    """Place the series legend directly below the figure title."""
+    """Place alpha and candidate-window keys in one figure-level legend."""
     handles, labels = source_axis.get_legend_handles_labels()
-    fig.tight_layout(rect=(0, 0, 1.0, 0.90))
+    window_handles = [
+        Patch(
+            facecolor=P300_CUE_COLOR,
+            edgecolor="none",
+            alpha=0.55,
+            label="提示后 P300 候选时窗（250–500 ms）",
+        ),
+        Patch(
+            facecolor=P300_TARGET_COLOR,
+            edgecolor="none",
+            alpha=0.55,
+            label="目标后 P300 候选时窗（250–500 ms）",
+        ),
+    ]
+    handles.extend(window_handles)
+    labels.extend(handle.get_label() for handle in window_handles)
+    fig.tight_layout(rect=(0, 0, 1.0, 0.84))
     return fig.legend(
         handles,
         labels,
         loc="upper center",
-        bbox_to_anchor=(0.5, 0.91),
-        ncol=2,
+        bbox_to_anchor=(0.5, 0.92),
+        ncol=3,
         fontsize=fontsize,
-        frameon=False,
+        frameon=True,
         columnspacing=1.5,
     )
 
@@ -314,11 +333,22 @@ def plot_dataset(dataset, curves):
                     linewidth=1.25,
                     label=format_alpha_legend(alpha, keep_count),
                 )
-            ax.axvspan(0.25, 0.50, color="#F0C36E", alpha=0.16)
-            ax.axvspan(2.45, 2.70, color="#B69AD5", alpha=0.16)
-            ax.axvline(0, color="#555555", linewidth=0.8, linestyle="--")
-            ax.axvline(TARGET_ONSET_S, color="#777777", linewidth=0.8, linestyle=":")
+            ax.axvspan(
+                *CANDIDATE_WINDOWS[0][1:],
+                color=P300_CUE_COLOR,
+                alpha=0.55,
+                zorder=0,
+            )
+            ax.axvspan(
+                *CANDIDATE_WINDOWS[1][1:],
+                color=P300_TARGET_COLOR,
+                alpha=0.55,
+                zorder=0,
+            )
+            ax.axvline(0, color="tab:blue", linewidth=1, linestyle="--")
+            ax.axvline(TARGET_ONSET_S, color="tab:blue", linewidth=1, linestyle=":")
             ax.set_title(f"{condition_label} · {channel_name}")
+            ax.tick_params(axis="x", labelbottom=True)
             ax.grid(True, alpha=0.2)
             ax.set_xlim(-0.5, 3.0)
             if column == 0:
@@ -326,9 +356,9 @@ def plot_dataset(dataset, curves):
             if row == 1:
                 ax.set_xlabel("相对提示 onset 的时间 (s)")
     fig.suptitle(
-        f"{dataset['name']}：B 组 SQI 阈值敏感性（仅改变 α 与保留集合）\n"
-        "阴影：候选 P300 搜索窗；Fz 数值摘要见 CSV",
+        f"{dataset['name']}：B 组 SQI 阈值敏感性（仅改变 α 与保留集合）",
         fontsize=13,
+        y=0.985,
     )
     install_external_legend(fig, axes[0, 0], fontsize=8)
     output_path = RESULT_DIR / f"{dataset['name']}_alpha_ERP_sensitivity.png"

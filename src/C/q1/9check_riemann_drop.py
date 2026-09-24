@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
@@ -25,7 +26,12 @@ SQI_DIR = PROJECT_DIR / "output" / "8riemann_denoise"
 RESULT_DIR = PROJECT_DIR / "output" / "9check_riemann_drop"
 
 TRIAL_LIMIT = 5
-WINDOW_START, WINDOW_END = -0.2, 1.0
+WINDOW_START, WINDOW_END = -0.2, 3.0
+CUE_P300_WINDOW = (0.25, 0.50)
+TARGET_ONSET = 2.20
+TARGET_P300_WINDOW = (2.45, 2.70)
+P300_CUE_COLOR = "#AFC6E9"
+P300_TARGET_COLOR = "#C8B6E2"
 CHANNELS = (("F3", 1), ("Fz", 0), ("F4", 2))
 TRIAL_COLORS = ("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00")
 GROUPS = (
@@ -199,8 +205,22 @@ def plot_dataset(dataset_name, trials, relative_time, groups, threshold):
                     label=format_trial_sqi_legend(trial_index, trial["SQI"]),
                 )
 
-            ax.axvline(0, color="#555555", linewidth=0.8, linestyle="--", alpha=0.8)
+            ax.axvline(0, color="tab:blue", linewidth=1, linestyle="--")
+            ax.axvline(TARGET_ONSET, color="tab:blue", linewidth=1, linestyle=":")
+            ax.axvspan(
+                *CUE_P300_WINDOW,
+                color=P300_CUE_COLOR,
+                alpha=0.55,
+                zorder=0,
+            )
+            ax.axvspan(
+                *TARGET_P300_WINDOW,
+                color=P300_TARGET_COLOR,
+                alpha=0.55,
+                zorder=0,
+            )
             ax.set_title(channel_name)
+            ax.tick_params(axis="x", labelbottom=True)
             ax.grid(True, alpha=0.2)
             if column == 0:
                 ax.set_ylabel(f"{row_label}\nEEG 振幅（原始数据单位）")
@@ -221,8 +241,30 @@ def plot_dataset(dataset_name, trials, relative_time, groups, threshold):
     fig.suptitle(
         f"{dataset_name}：SQI 阈值边界 Trial 对比（阈值 = {threshold:.6f}）",
         fontsize=14,
+        y=0.985,
     )
-    fig.tight_layout(rect=(0.04, 0, 0.81, 0.94))
+    fig.tight_layout(rect=(0.04, 0, 0.81, 0.90))
+    fig.legend(
+        handles=[
+            Patch(
+                facecolor=P300_CUE_COLOR,
+                edgecolor="none",
+                alpha=0.55,
+                label="提示后 P300 候选时窗（250–500 ms）",
+            ),
+            Patch(
+                facecolor=P300_TARGET_COLOR,
+                edgecolor="none",
+                alpha=0.55,
+                label="目标后 P300 候选时窗（250–500 ms）",
+            ),
+        ],
+        loc="upper center",
+        bbox_to_anchor=(0.42, 0.945),
+        ncol=2,
+        fontsize=9,
+        frameon=True,
+    )
     for row, legend in enumerate(row_legends):
         if legend is None:
             continue

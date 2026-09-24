@@ -1,6 +1,6 @@
 # `13erp_fit.py` 代码说明与结果总结
 
-> 本文对应 `2026-09-24` 当前脚本与输出快照。当前版本只保留两个固定候选窗，移除了探索性晚期拟合窗口及其对应图例/拟合结果。拟合数值有效不等于模型适合生理解释；潜伏期解释还需排除窗口边界解并检查拟合优度。
+> 本文对应 `2026-09-24` 当前脚本与输出快照。正式分析只保留两个固定候选窗，并移除了探索性晚期拟合窗口；另提供可选的探索性全窗拟合输出。拟合数值有效不等于模型适合生理解释；潜伏期解释还需排除窗口边界解并检查拟合优度。
 
 ## 1. 脚本定位与数据流
 
@@ -146,7 +146,47 @@ B_Task-1 左右 Fz 的固定提示窗拟合较好，可作为候选 P300 参数�
 
 </details>
 
-## 7. 论文表述建议与限制
+## 7. 探索性全窗拟合（可选）
+
+正式 `FixedCandidate` 输出继续要求第 11 阶段对应的 `PeakStatus == valid`。如果需要观察被上游状态筛掉的固定窗，可以运行：
+
+```powershell
+.\.venv\Scripts\python.exe src/C/q1/13erp_fit.py --exploratory-all-windows
+```
+
+这会在独立目录 `output/13erp_fit_exploratory/` 中生成参数 CSV 和四张图，不覆盖 `output/13erp_fit/` 的正式结果。探索性 CSV 含 48 条记录，每个数据集 × 条件 × 通道 × 事件窗一条；`FitType=ExploratoryAllWindows` 表示它绕过了第 11 阶段峰状态筛选，`UpstreamPeakStatus` 保留被绕过的原状态。`Attempted=1` 表示算法确实尝试了拟合；`FitValid=1` 仅表示参数有限且满足数值约束，不代表曲线质量合格。
+
+当前快照中 48 条均完成数值拟合，但有 27 条 `GaussianMuAtBoundary=1`，16 条 `R²<0`。Task-2 中 22 条 μ 卡在窗口边界，7 条 `R²<0`。因此探索性图适合查看被正式规则跳过的波形如何被高斯模型近似；后续使用参数时仍应结合 `UpstreamPeakStatus`、`PeakShapeStatus`、`GaussianMuAtBoundary`、`R²` 与 `RMSE` 筛选，不能把所有探索性拟合都当作 P300 潜伏期证据。
+
+<details>
+<summary>VisualCogA_Task-1 探索性全窗拟合</summary>
+
+![VisualCogA_Task-1 探索性全窗拟合](../output/13erp_fit_exploratory/VisualCogA_Task-1_ERP高斯拟合_探索性全窗.png)
+
+</details>
+
+<details>
+<summary>VisualCogA_Task-2 探索性全窗拟合</summary>
+
+![VisualCogA_Task-2 探索性全窗拟合](../output/13erp_fit_exploratory/VisualCogA_Task-2_ERP高斯拟合_探索性全窗.png)
+
+</details>
+
+<details>
+<summary>VisualCogB_Task-1 探索性全窗拟合</summary>
+
+![VisualCogB_Task-1 探索性全窗拟合](../output/13erp_fit_exploratory/VisualCogB_Task-1_ERP高斯拟合_探索性全窗.png)
+
+</details>
+
+<details>
+<summary>VisualCogB_Task-2 探索性全窗拟合</summary>
+
+![VisualCogB_Task-2 探索性全窗拟合](../output/13erp_fit_exploratory/VisualCogB_Task-2_ERP高斯拟合_探索性全窗.png)
+
+</details>
+
+## 8. 论文表述建议与限制
 
 > **固定候选窗分析：**A_Task-1、B_Task-1 的部分 Fz ERP 在提示后 250–500 ms 内呈现内部正峰，且部分单高斯拟合具有较高 R²，可作为候选 P300 的参数化摘要。报告潜伏期时应排除 μ 落在窗口边界的记录，并结合 R²、RMSE 和 ERP 波形筛选。
 

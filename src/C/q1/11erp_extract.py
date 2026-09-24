@@ -3,6 +3,7 @@
 from pathlib import Path
 
 import matplotlib.pyplot as plt
+from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
 from scipy.io import loadmat
@@ -30,6 +31,8 @@ CUE_WINDOW = (0.25, 0.50)
 TARGET_ONSET = 2.20
 TARGET_WINDOW = (2.45, 2.70)
 PLOT_START, PLOT_END = -0.2, 3.0
+P300_CUE_COLOR = "#AFC6E9"
+P300_TARGET_COLOR = "#C8B6E2"
 
 plt.rcParams["font.sans-serif"] = [
     "Microsoft YaHei",
@@ -149,23 +152,62 @@ def process_dataset(dataset_name):
                 "TargetPeakStatus": target_peak["status"],
             })
 
-        ax.axvline(0, linestyle="--", linewidth=1)
-        ax.axvline(TARGET_ONSET, linestyle=":", linewidth=1)
-        ax.axvspan(CUE_WINDOW[0], CUE_WINDOW[1], alpha=0.12)
-        ax.axvspan(TARGET_WINDOW[0], TARGET_WINDOW[1], alpha=0.12)
+        ax.axvline(0, color="tab:blue", linestyle="--", linewidth=1)
+        ax.axvline(TARGET_ONSET, color="tab:blue", linestyle=":", linewidth=1)
+        ax.axvspan(
+            CUE_WINDOW[0],
+            CUE_WINDOW[1],
+            color=P300_CUE_COLOR,
+            alpha=0.55,
+            zorder=0,
+        )
+        ax.axvspan(
+            TARGET_WINDOW[0],
+            TARGET_WINDOW[1],
+            color=P300_TARGET_COLOR,
+            alpha=0.55,
+            zorder=0,
+        )
 
         ax.set_title(f"{condition_name} ERP (n={len(condition_trials)})")
         ax.set_xlabel("相对提示 onset 的时间 (s)")
         ax.set_ylabel("基线校正后 ERP 幅值（原始数据单位）")
+        ax.tick_params(axis="x", labelbottom=True)
         ax.grid(alpha=0.22)
-        ax.legend()
 
     fig.suptitle(
         f"{dataset_name} 正式 ERP：左右条件叠加平均",
         fontsize=16,
+        y=0.985,
+    )
+    handles, labels = axes[0].get_legend_handles_labels()
+    window_handles = [
+        Patch(
+            facecolor=P300_CUE_COLOR,
+            edgecolor="none",
+            alpha=0.55,
+            label="提示后 P300 候选时窗（250–500 ms）",
+        ),
+        Patch(
+            facecolor=P300_TARGET_COLOR,
+            edgecolor="none",
+            alpha=0.55,
+            label="目标后 P300 候选时窗（250–500 ms）",
+        ),
+    ]
+    handles.extend(window_handles)
+    labels.extend(handle.get_label() for handle in window_handles)
+    fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.93),
+        ncol=5,
+        fontsize=9,
+        frameon=True,
     )
 
-    fig.tight_layout()
+    fig.tight_layout(rect=(0, 0, 1, 0.86))
 
     fig.savefig(
         RESULT_DIR / f"{dataset_name}_ERP.png",
