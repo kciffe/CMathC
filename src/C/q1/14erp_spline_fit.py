@@ -359,7 +359,7 @@ def process_dataset(
             }))
 
     fig.suptitle(f"{dataset_name}：ERP 拟合曲线", fontsize=15, y=0.985)
-    fig.tight_layout(rect=(0, 0, 1, 0.88))
+    fig.tight_layout(rect=(0, 0, 1, 0.85))
     fig.legend(
         handles=[
             Line2D([0], [0], color="tab:blue", linewidth=3.0, label="条件平均 ERP"),
@@ -378,10 +378,18 @@ def process_dataset(
                 alpha=0.55,
                 label="目标后 P300 候选时窗（250–500 ms）",
             ),
+            Line2D(
+                [0], [0], color="tab:blue", linewidth=1, linestyle="--",
+                label="提示开始（0 s）",
+            ),
+            Line2D(
+                [0], [0], color="tab:blue", linewidth=1, linestyle=":",
+                label="目标显示开始（2.20 s）",
+            ),
         ],
         loc="upper center",
         bbox_to_anchor=(0.5, 0.945),
-        ncol=4,
+        ncol=3,
         fontsize=9,
         frameon=True,
     )

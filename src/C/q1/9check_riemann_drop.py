@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
@@ -257,6 +258,14 @@ def plot_dataset(dataset_name, trials, relative_time, groups, threshold):
                 edgecolor="none",
                 alpha=0.55,
                 label="目标后 P300 候选时窗（250–500 ms）",
+            ),
+            Line2D(
+                [0], [0], color="tab:blue", linewidth=1, linestyle="--",
+                label="提示开始（0 s）",
+            ),
+            Line2D(
+                [0], [0], color="tab:blue", linewidth=1, linestyle=":",
+                label="目标显示开始（2.20 s）",
             ),
         ],
         loc="upper center",

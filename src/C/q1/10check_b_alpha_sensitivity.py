@@ -8,6 +8,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import numpy as np
 import pandas as pd
@@ -299,15 +300,25 @@ def install_external_legend(fig, source_axis, fontsize=8):
             label="目标后 P300 候选时窗（250–500 ms）",
         ),
     ]
-    handles.extend(window_handles)
-    labels.extend(handle.get_label() for handle in window_handles)
+    stage_handles = [
+        Line2D(
+            [0], [0], color="tab:blue", linewidth=1, linestyle="--",
+            label="提示开始（0 s）",
+        ),
+        Line2D(
+            [0], [0], color="tab:blue", linewidth=1, linestyle=":",
+            label="目标显示开始（2.20 s）",
+        ),
+    ]
+    handles.extend(window_handles + stage_handles)
+    labels.extend(handle.get_label() for handle in window_handles + stage_handles)
     fig.tight_layout(rect=(0, 0, 1.0, 0.84))
     return fig.legend(
         handles,
         labels,
         loc="upper center",
         bbox_to_anchor=(0.5, 0.92),
-        ncol=3,
+        ncol=4,
         fontsize=fontsize,
         frameon=True,
         columnspacing=1.5,
