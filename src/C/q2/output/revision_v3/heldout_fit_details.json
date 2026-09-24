@@ -1,0 +1,866 @@
+{
+  "VisualCogA_Task-1": {
+    "train_records": [
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-1",
+      "VisualCogB_Task-2"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.67184551683742,
+      "tau_a": 80.0
+    },
+    "amplitude": -12.03882748353462,
+    "loss": 1048.118657456759,
+    "success": false,
+    "status": "profile_grid_best_candidate_optimizer_not_converged",
+    "boundary_flags": {
+      "tau_s": true,
+      "g_i": false,
+      "tau_a": false
+    },
+    "starts": [
+      {
+        "tau_a_profile_ms": 40.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1146.9252938995567,
+        "amplitude": -9.806381485855914,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5013082072709661,
+          "tau_a": 40.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 60.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "nfev_reported": 60,
+        "n_objective_evaluations": 60,
+        "best_loss": 1076.9360062197543,
+        "amplitude": -10.929036724409114,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5716844481903065,
+          "tau_a": 60.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1048.1260837350608,
+        "amplitude": -12.03517227384537,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6666405171558254,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1051.4255083998958,
+        "amplitude": -13.173009438478102,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.8015762885208694,
+          "tau_a": 100.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 120.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1071.7355897975083,
+        "amplitude": -14.40411722540795,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.9400821881305677,
+          "tau_a": 120.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 140.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1098.414967054734,
+        "amplitude": -15.742062339785207,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.0654169605945762,
+          "tau_a": 140.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 160.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1125.5146578598697,
+        "amplitude": -17.195251488165518,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.1731246742763926,
+          "tau_a": 160.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 1,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          28.0,
+          0.7
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1048.1278749686267,
+        "amplitude": -12.03974927792016,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6730234921696999,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 2,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          75.0,
+          1.3
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1048.118657456759,
+        "amplitude": -12.03882748353462,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.67184551683742,
+          "tau_a": 80.0
+        }
+      }
+    ],
+    "n_evaluations": 540,
+    "resolution": 128,
+    "feature_route": "opponent",
+    "observation_rank": 3
+  },
+  "VisualCogA_Task-2": {
+    "train_records": [
+      "VisualCogA_Task-1",
+      "VisualCogB_Task-1",
+      "VisualCogB_Task-2"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.7890917834576392,
+      "tau_a": 100.0
+    },
+    "amplitude": -4.426329764501648,
+    "loss": 772.9992713099547,
+    "success": false,
+    "status": "profile_grid_best_candidate_optimizer_not_converged",
+    "boundary_flags": {
+      "tau_s": true,
+      "g_i": false,
+      "tau_a": false
+    },
+    "starts": [
+      {
+        "tau_a_profile_ms": 40.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 796.864709281301,
+        "amplitude": -3.1234530664368387,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.51,
+          "tau_a": 40.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 60.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 799.6561969719618,
+        "amplitude": -3.2219762771574594,
+        "parameters": {
+          "tau_s": 41.3216971014802,
+          "g_i": 0.5445780834704359,
+          "tau_a": 60.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 773.8865528967203,
+        "amplitude": -4.03520411890726,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6692521592643953,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 772.9992713099547,
+        "amplitude": -4.426329764501648,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.7890917834576392,
+          "tau_a": 100.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 120.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "nfev_reported": 57,
+        "n_objective_evaluations": 57,
+        "best_loss": 798.0584338365313,
+        "amplitude": -4.07547543323965,
+        "parameters": {
+          "tau_s": 40.658110715245215,
+          "g_i": 0.8487432284342058,
+          "tau_a": 120.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 140.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 780.9340765564602,
+        "amplitude": -5.209388035758293,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.048732170604838,
+          "tau_a": 140.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 160.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 809.1702319105848,
+        "amplitude": -4.517099213587034,
+        "parameters": {
+          "tau_s": 40.551829615476,
+          "g_i": 1.0676647882363093,
+          "tau_a": 160.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 1,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          28.0,
+          0.7
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 798.7947942604599,
+        "amplitude": -3.7041008366587924,
+        "parameters": {
+          "tau_s": 28.508474918299047,
+          "g_i": 0.7166923019576346,
+          "tau_a": 100.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 2,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          75.0,
+          1.3
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 772.9999012260097,
+        "amplitude": -4.432268644539768,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.7968890211286633,
+          "tau_a": 100.0
+        }
+      }
+    ],
+    "n_evaluations": 537,
+    "resolution": 128,
+    "feature_route": "opponent",
+    "observation_rank": 3
+  },
+  "VisualCogB_Task-1": {
+    "train_records": [
+      "VisualCogA_Task-1",
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-2"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.6770764465655795,
+      "tau_a": 80.0
+    },
+    "amplitude": -9.69681697498373,
+    "loss": 1450.4635368152963,
+    "success": false,
+    "status": "profile_grid_best_candidate_optimizer_not_converged",
+    "boundary_flags": {
+      "tau_s": true,
+      "g_i": false,
+      "tau_a": false
+    },
+    "starts": [
+      {
+        "tau_a_profile_ms": 40.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1510.0315509829375,
+        "amplitude": -7.903090859938059,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5098532147204937,
+          "tau_a": 40.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 60.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1466.3788973621085,
+        "amplitude": -8.814663623919156,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.572443919944756,
+          "tau_a": 60.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1450.4635368152963,
+        "amplitude": -9.69681697498373,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6770764465655795,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1455.7829138375923,
+        "amplitude": -10.588135955335014,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.803096420435246,
+          "tau_a": 100.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 120.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 63,
+        "n_objective_evaluations": 60,
+        "best_loss": 1471.9610643357255,
+        "amplitude": -11.568620865556122,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.9444707344080817,
+          "tau_a": 120.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 140.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1491.836820295428,
+        "amplitude": -12.600441778098,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.0652020717337087,
+          "tau_a": 140.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 160.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1511.4618459727785,
+        "amplitude": -13.738451071459506,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.1725012835679791,
+          "tau_a": 160.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 1,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          28.0,
+          0.7
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1450.48199670824,
+        "amplitude": -9.691489811333996,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6695346347675413,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 2,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          75.0,
+          1.3
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1450.4638049876867,
+        "amplitude": -9.696872241429578,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6771466486375364,
+          "tau_a": 80.0
+        }
+      }
+    ],
+    "n_evaluations": 540,
+    "resolution": 128,
+    "feature_route": "opponent",
+    "observation_rank": 3
+  },
+  "VisualCogB_Task-2": {
+    "train_records": [
+      "VisualCogA_Task-1",
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-1"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.6595982762030772,
+      "tau_a": 80.0
+    },
+    "amplitude": -7.67572376540552,
+    "loss": 1097.9633469350308,
+    "success": false,
+    "status": "profile_grid_best_candidate_optimizer_not_converged",
+    "boundary_flags": {
+      "tau_s": true,
+      "g_i": false,
+      "tau_a": false
+    },
+    "starts": [
+      {
+        "tau_a_profile_ms": 40.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: NORM OF PROJECTED GRADIENT <= PGTOL",
+        "nfev_reported": 24,
+        "n_objective_evaluations": 24,
+        "best_loss": 1133.291110358603,
+        "amplitude": -6.291422006998396,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5,
+          "tau_a": 40.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 60.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1108.5832948924965,
+        "amplitude": -6.987919427507341,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5598820491310937,
+          "tau_a": 60.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1097.9650109180836,
+        "amplitude": -7.675918511930615,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6606137830009784,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1099.0344908921231,
+        "amplitude": -8.381399911566698,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.7846776021381676,
+          "tau_a": 100.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 120.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1106.5318638096228,
+        "amplitude": -9.14889542474594,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.9226825207717366,
+          "tau_a": 120.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 140.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1116.6026417883747,
+        "amplitude": -9.962408322325665,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.0435139750631575,
+          "tau_a": 140.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 160.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1126.9963211900908,
+        "amplitude": -10.886361725388394,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.1566041239914735,
+          "tau_a": 160.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 1,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          28.0,
+          0.7
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1097.9633469350308,
+        "amplitude": -7.67572376540552,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6595982762030772,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 2,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          75.0,
+          1.3
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 1,
+        "optimizer_message": "objective evaluation budget exhausted; candidate is best finite point evaluated",
+        "nfev_reported": 66,
+        "n_objective_evaluations": 60,
+        "best_loss": 1111.2385243885806,
+        "amplitude": -7.452759459033169,
+        "parameters": {
+          "tau_s": 77.79482162599963,
+          "g_i": 0.6421976721410693,
+          "tau_a": 80.0
+        }
+      }
+    ],
+    "n_evaluations": 504,
+    "resolution": 128,
+    "feature_route": "opponent",
+    "observation_rank": 3
+  }
+}

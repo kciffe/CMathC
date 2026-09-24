@@ -211,6 +211,15 @@ def _metric_row(case, method, prediction, source_time, amp=1.0, params=None, los
            "nrmse_by_real_rms": metrics["nrmse_by_real_rms"],
            "channel_corr_mean": metrics["channel_corr_mean"],
            "channel_correlations": metrics["channel_correlations"],
+           "fit_observation_space": "u0/u1_observable_subspace",
+           "observable_rmse": metrics["observable_rmse"],
+           "observable_nrmse_by_real_rms": metrics["observable_nrmse_by_real_rms"],
+           "observable_corr_mean": metrics["observable_corr_mean"],
+           "observable_mode_correlations": metrics["observable_mode_correlations"],
+           "full_sensor_rmse": metrics["full_sensor_rmse"],
+           "full_sensor_nrmse_by_real_rms": metrics["full_sensor_nrmse_by_real_rms"],
+           "u2_energy_share": metrics["u2_energy_share"],
+           "u2_unexplained_rms": metrics["u2_unexplained_rms"],
            "real_u2_rms": float(np.sqrt(np.mean(u2 * u2))),
            "real_u2_late_rms": float(np.sqrt(np.mean(u2[late_mask] ** 2))) if late_mask.any() else float("nan")}
     if params:
@@ -358,6 +367,8 @@ def _base_manifest(mode, scale, event_audit, legacy_hashes):
         "feature_windows_ms": config.FEATURE_WINDOWS_MS,
         "lda_shrinkage": config.LDA_SHRINKAGE,
         "G_rank": int(np.linalg.matrix_rank(config.LEAD_FIELD)),
+        "fit_observation_space": ["u0_common", "u1_lateral"],
+        "excluded_residual_mode": "u2_unobservable_under_rank2_G; reported separately",
         "G": config.LEAD_FIELD, "triangle_templates": template_manifest(),
         "real_event_audit": event_audit,
         "input_and_revision_hashes": _source_hashes(), "legacy_hashes_before": legacy_hashes,
@@ -472,9 +483,17 @@ def run(mode="validate"):
                                 "condition": "dots", "method": "frozen_parameter_dots_control",
                                 "n_trials": case["n_trials"], "amplitude": fit.amplitude,
                                 "param_tau_s": fit.parameters["tau_s"], "param_g_i": fit.parameters["g_i"],
-                                "param_tau_a": fit.parameters["tau_a"], "rmse": met["rmse"],
-                                "nrmse_by_real_rms": met["nrmse_by_real_rms"],
-                                "channel_corr_mean": met["channel_corr_mean"]})
+                                 "param_tau_a": fit.parameters["tau_a"], "rmse": met["rmse"],
+                                 "nrmse_by_real_rms": met["nrmse_by_real_rms"],
+                                 "channel_corr_mean": met["channel_corr_mean"],
+                                 "fit_observation_space": "u0/u1_observable_subspace",
+                                 "observable_rmse": met["observable_rmse"],
+                                 "observable_nrmse_by_real_rms": met["observable_nrmse_by_real_rms"],
+                                 "observable_corr_mean": met["observable_corr_mean"],
+                                 "full_sensor_rmse": met["full_sensor_rmse"],
+                                 "full_sensor_nrmse_by_real_rms": met["full_sensor_nrmse_by_real_rms"],
+                                 "u2_energy_share": met["u2_energy_share"],
+                                 "u2_unexplained_rms": met["u2_unexplained_rms"]})
                 curve_store[(heldout, "dots")] = {"frozen_dots": dots_curve}
             elif case["stage"] == "Stage2" and case["condition"] == "target_unknown":
                 late = (case["time_ms"] >= 250.0) & (case["time_ms"] <= 500.0)

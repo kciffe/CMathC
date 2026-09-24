@@ -4,6 +4,7 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
@@ -75,3 +76,27 @@ def test_multistart_runs_only_for_the_winning_tau_a_profile(monkeypatch):
 
     assert len(optimizer_starts) == 4  # two profile starts + two winner confirmations
     assert [row["tau_a_profile_ms"] for row in result.starts] == [40.0, 60.0, 40.0, 40.0]
+
+
+def test_fit_objective_ignores_unobservable_u2_residual(monkeypatch):
+    time_ms = np.arange(4, dtype=float)
+    observable = np.array([[1.0, 2.0, 3.0, 2.0],
+                           [0.5, 1.0, 0.0, -0.5]])
+    prediction = config.U_OBS.T @ observable
+    frontend = {"time_ms": time_ms}
+    monkeypatch.setattr(fit, "simulate_forward", lambda *_args, **_kwargs:
+                        SimpleNamespace(eeg=prediction, time_ms=time_ms))
+    u2 = config.U2[:, None] * np.array([[0.0, 3.0, -2.0, 1.0]])
+    cases = [
+        {"condition": condition, "dataset": "record", "time_ms": time_ms,
+         "real": 1.5 * prediction + extra}
+        for condition, extra in (("left", np.zeros_like(prediction)), ("right", u2))
+    ]
+    evaluate_candidate = fit._make_candidate_evaluator(
+        80.0, {"left": frontend, "right": frontend}, cases, {"record": 0.5}
+    )
+
+    loss, amplitude = evaluate_candidate(np.array([40.0, 1.0]))
+
+    assert amplitude == pytest.approx(1.5)
+    assert loss == pytest.approx(0.0, abs=1e-12)

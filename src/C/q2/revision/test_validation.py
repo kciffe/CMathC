@@ -4,12 +4,14 @@ import sys
 from types import SimpleNamespace
 
 import numpy as np
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import evaluate
+import config
 from evaluate import (classification_leave_one_record, extract_features,
-                      fit_classifier, predict_classifier)
+                      fit_classifier, predict_classifier, erp_metrics)
 import run_revision
 
 
@@ -29,6 +31,22 @@ def test_feature_extraction_returns_three_windows_times_two_modes():
     assert features.shape == (2, 6)
     assert np.all(features[0, 1::2] < 0)
     assert np.all(features[1, 1::2] > 0)
+
+
+def test_erp_metrics_separate_observable_fit_from_unexplained_u2():
+    time_ms = np.arange(8, dtype=float)
+    modes = np.vstack([np.linspace(0.0, 1.0, len(time_ms)),
+                       np.linspace(1.0, -1.0, len(time_ms))])
+    prediction = config.U_OBS.T @ modes
+    u2_signal = np.array([0.0, 2.0, -1.0, 3.0, 2.0, -2.0, 1.0, 0.0])
+    real = prediction + config.U2[:, None] * u2_signal[None, :]
+
+    metrics = erp_metrics(real, prediction, time_ms, "Stage1")
+
+    assert metrics["observable_rmse"] == pytest.approx(0.0, abs=1e-12)
+    assert metrics["u2_unexplained_rms"] == pytest.approx(np.sqrt(np.mean(u2_signal ** 2)))
+    assert metrics["u2_energy_share"] > 0.0
+    assert metrics["full_sensor_rmse"] > 0.0
 
 
 def test_shrinkage_lda_uses_training_records_and_separates_clear_features():

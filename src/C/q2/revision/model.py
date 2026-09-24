@@ -174,8 +174,16 @@ def simulate_forward(frontend, params=None, fixed_observation=None, time_ms=None
 
 
 def observable_modes_from_real(real):
-    """Project F3/Fz/F4 observations onto u0/u1/u2, without interpolation."""
+    """Project F3/Fz/F4 onto the two modes observable by the rank-2 lead map."""
     y = np.asarray(real, dtype=float)
     if y.shape[-2] != 3:
         raise ValueError("real data channel axis must be F3/Fz/F4")
-    return np.einsum("kc,...ct->...kt", np.stack([config.U0, config.U1, config.U2]), y)
+    return np.einsum("kc,...ct->...kt", config.U_OBS, y)
+
+
+def unexplained_mode_from_real(real):
+    """Project the sensor component orthogonal to the rank-2 lead map (u2)."""
+    y = np.asarray(real, dtype=float)
+    if y.shape[-2] != 3:
+        raise ValueError("real data channel axis must be F3/Fz/F4")
+    return np.einsum("c,...ct->...t", config.U2, y)

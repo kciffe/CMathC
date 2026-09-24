@@ -1,0 +1,5 @@
+﻿interpretation,n_left,n_right,null_q95_9d,permutation_p_6d_exploratory,permutation_p_9d_holm,permutation_p_9d_primary,permutation_repeats,record,separation_stat_6d,separation_stat_9d
+within-record trial-label association; not LO-record generalization,29,25,1.9601871305396017,0.038,0.14,0.035,1999,VisualCogA_Task-1,1.3369814129598512,2.1602337213257696
+within-record trial-label association; not LO-record generalization,45,35,1.377715446243777,0.4345,0.795,0.552,1999,VisualCogA_Task-2,0.2698365101197043,0.3027014131079759
+within-record trial-label association; not LO-record generalization,41,42,1.0579273280637365,0.2685,0.795,0.3975,1999,VisualCogB_Task-1,0.38341940404486435,0.4194684325660756
+within-record trial-label association; not LO-record generalization,37,43,1.2863588672818014,0.487,0.5595,0.1865,1999,VisualCogB_Task-2,0.2263079487528915,0.7237718487891013

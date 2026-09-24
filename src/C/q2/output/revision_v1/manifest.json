@@ -1197,16 +1197,28 @@
       "epoch_start_s": -1.0,
       "epoch_end_s": 2.9921875,
       "unknown_cue_trials": 0,
-      "event_channel_label": "Action:L-1/R+1",
-      "event_codes_present": "-1;0;1",
-      "absolute_code_2_samples": 0,
-      "first_event_median_delay_ms": 10.937499999999822,
-      "first_event_min_delay_ms": 10.937499999999822,
-      "first_event_max_delay_ms": 128.12499999999983,
-      "trials_with_post_target_edge": 54,
-      "trials_with_multiple_post_target_edges": 0,
-      "event_role": "diagnostic_only_unknown_semantics",
-      "timing_policy": "cue_aligned_epoch; fixed_target_2.20s_assumption"
+      "cue_marker_label": "VisCue:L-1/R+1",
+      "cue_marker_codes_present": "-1;0;1",
+      "cue_marker_trials": 54,
+      "cue_onset_median_ms": 0.0,
+      "cue_onset_min_ms": 0.0,
+      "cue_onset_max_ms": 0.0,
+      "cue_last_active_sample_median_ms": 195.3125,
+      "cue_offset_median_ms": 203.125,
+      "cue_offset_observed_trials": 54,
+      "cue_active_duration_median_ms": 203.125,
+      "cue_type_agreement": 1.0,
+      "cue_type_agreement_trials": 54,
+      "action_channel_label": "Action:L-1/R+1",
+      "action_codes_present": "-1;0;1",
+      "action_absolute_code_2_samples": 0,
+      "action_first_post_target_edge_median_ms": 10.937499999999822,
+      "action_first_post_target_edge_min_ms": 10.937499999999822,
+      "action_first_post_target_edge_max_ms": 128.12499999999983,
+      "action_trials_with_post_target_edge": 54,
+      "action_trials_with_multiple_post_target_edges": 0,
+      "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+      "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
     },
     {
       "dataset": "VisualCogA_Task-2",
@@ -1216,16 +1228,28 @@
       "epoch_start_s": -1.0,
       "epoch_end_s": 2.9921875,
       "unknown_cue_trials": 0,
-      "event_channel_label": "TgtAct:L-2/R+2",
-      "event_codes_present": "-1;0;1",
-      "absolute_code_2_samples": 0,
-      "first_event_median_delay_ms": 10.937499999999822,
-      "first_event_min_delay_ms": 10.937499999999822,
-      "first_event_max_delay_ms": 18.749999999999822,
-      "trials_with_post_target_edge": 80,
-      "trials_with_multiple_post_target_edges": 0,
-      "event_role": "diagnostic_only_unknown_semantics",
-      "timing_policy": "cue_aligned_epoch; fixed_target_2.20s_assumption"
+      "cue_marker_label": "VisCue:L-1/R+1",
+      "cue_marker_codes_present": "-1;0;1",
+      "cue_marker_trials": 80,
+      "cue_onset_median_ms": 0.0,
+      "cue_onset_min_ms": 0.0,
+      "cue_onset_max_ms": 0.0,
+      "cue_last_active_sample_median_ms": 195.3125,
+      "cue_offset_median_ms": 203.125,
+      "cue_offset_observed_trials": 80,
+      "cue_active_duration_median_ms": 203.125,
+      "cue_type_agreement": 1.0,
+      "cue_type_agreement_trials": 80,
+      "action_channel_label": "TgtAct:L-2/R+2",
+      "action_codes_present": "-1;0;1",
+      "action_absolute_code_2_samples": 0,
+      "action_first_post_target_edge_median_ms": 10.937499999999822,
+      "action_first_post_target_edge_min_ms": 10.937499999999822,
+      "action_first_post_target_edge_max_ms": 18.749999999999822,
+      "action_trials_with_post_target_edge": 80,
+      "action_trials_with_multiple_post_target_edges": 0,
+      "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+      "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
     },
     {
       "dataset": "VisualCogB_Task-1",
@@ -1235,16 +1259,28 @@
       "epoch_start_s": -1.0,
       "epoch_end_s": 2.9921875,
       "unknown_cue_trials": 0,
-      "event_channel_label": "Action:L-1/R+1",
-      "event_codes_present": "-1;0;1",
-      "absolute_code_2_samples": 0,
-      "first_event_median_delay_ms": 10.937499999999822,
-      "first_event_min_delay_ms": 10.937499999999822,
-      "first_event_max_delay_ms": 34.37499999999982,
-      "trials_with_post_target_edge": 83,
-      "trials_with_multiple_post_target_edges": 0,
-      "event_role": "diagnostic_only_unknown_semantics",
-      "timing_policy": "cue_aligned_epoch; fixed_target_2.20s_assumption"
+      "cue_marker_label": "VisCue:L-1/R+1",
+      "cue_marker_codes_present": "-1;0;1",
+      "cue_marker_trials": 83,
+      "cue_onset_median_ms": 0.0,
+      "cue_onset_min_ms": 0.0,
+      "cue_onset_max_ms": 0.0,
+      "cue_last_active_sample_median_ms": 195.3125,
+      "cue_offset_median_ms": 203.125,
+      "cue_offset_observed_trials": 83,
+      "cue_active_duration_median_ms": 203.125,
+      "cue_type_agreement": 1.0,
+      "cue_type_agreement_trials": 83,
+      "action_channel_label": "Action:L-1/R+1",
+      "action_codes_present": "-1;0;1",
+      "action_absolute_code_2_samples": 0,
+      "action_first_post_target_edge_median_ms": 10.937499999999822,
+      "action_first_post_target_edge_min_ms": 10.937499999999822,
+      "action_first_post_target_edge_max_ms": 34.37499999999982,
+      "action_trials_with_post_target_edge": 83,
+      "action_trials_with_multiple_post_target_edges": 0,
+      "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+      "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
     },
     {
       "dataset": "VisualCogB_Task-2",
@@ -1254,16 +1290,28 @@
       "epoch_start_s": -1.0,
       "epoch_end_s": 2.9921875,
       "unknown_cue_trials": 0,
-      "event_channel_label": "TgtAct:L-2/R+2",
-      "event_codes_present": "-1;0;1",
-      "absolute_code_2_samples": 0,
-      "first_event_median_delay_ms": 18.749999999999822,
-      "first_event_min_delay_ms": 10.937499999999822,
-      "first_event_max_delay_ms": 18.749999999999822,
-      "trials_with_post_target_edge": 80,
-      "trials_with_multiple_post_target_edges": 0,
-      "event_role": "diagnostic_only_unknown_semantics",
-      "timing_policy": "cue_aligned_epoch; fixed_target_2.20s_assumption"
+      "cue_marker_label": "VisCue:L-1/R+1",
+      "cue_marker_codes_present": "-1;0;1",
+      "cue_marker_trials": 80,
+      "cue_onset_median_ms": 0.0,
+      "cue_onset_min_ms": 0.0,
+      "cue_onset_max_ms": 0.0,
+      "cue_last_active_sample_median_ms": 195.3125,
+      "cue_offset_median_ms": 203.125,
+      "cue_offset_observed_trials": 80,
+      "cue_active_duration_median_ms": 203.125,
+      "cue_type_agreement": 1.0,
+      "cue_type_agreement_trials": 80,
+      "action_channel_label": "TgtAct:L-2/R+2",
+      "action_codes_present": "-1;0;1",
+      "action_absolute_code_2_samples": 0,
+      "action_first_post_target_edge_median_ms": 18.749999999999822,
+      "action_first_post_target_edge_min_ms": 10.937499999999822,
+      "action_first_post_target_edge_max_ms": 18.749999999999822,
+      "action_trials_with_post_target_edge": 80,
+      "action_trials_with_multiple_post_target_edges": 0,
+      "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+      "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
     }
   ],
   "input_and_revision_hashes": {
@@ -1340,7 +1388,7 @@
         "tau_a": 160.0
       },
       "amplitude": 11957.395643890864,
-      "loss": 2007.4493580565063,
+      "loss": 2902.461420137866,
       "success": false,
       "status": "profile_grid_best_candidate_optimizer_not_converged",
       "boundary_flags": {
@@ -1540,7 +1588,8 @@
         }
       ],
       "n_evaluations": 495,
-      "resolution": 128
+      "resolution": 128,
+      "loss_before_u2_projection": 2007.4493580565063
     },
     "VisualCogA_Task-2": {
       "train_records": [
@@ -1554,7 +1603,7 @@
         "tau_a": 160.0
       },
       "amplitude": 2570.9082086771,
-      "loss": 899.3528927093382,
+      "loss": 1219.3962860201423,
       "success": true,
       "status": "profile_grid_converged",
       "boundary_flags": {
@@ -1754,7 +1803,8 @@
         }
       ],
       "n_evaluations": 267,
-      "resolution": 128
+      "resolution": 128,
+      "loss_before_u2_projection": 899.3528927093382
     },
     "VisualCogB_Task-1": {
       "train_records": [
@@ -1768,7 +1818,7 @@
         "tau_a": 160.0
       },
       "amplitude": 9926.81859765134,
-      "loss": 2058.3590033787714,
+      "loss": 2949.0225554284743,
       "success": false,
       "status": "profile_grid_best_candidate_optimizer_not_converged",
       "boundary_flags": {
@@ -1968,7 +2018,8 @@
         }
       ],
       "n_evaluations": 510,
-      "resolution": 128
+      "resolution": 128,
+      "loss_before_u2_projection": 2058.3590033787714
     },
     "VisualCogB_Task-2": {
       "train_records": [
@@ -1982,7 +2033,7 @@
         "tau_a": 160.0
       },
       "amplitude": 7818.590984263139,
-      "loss": 1482.8985900434234,
+      "loss": 2138.848167196071,
       "success": true,
       "status": "profile_grid_converged",
       "boundary_flags": {
@@ -2182,7 +2233,8 @@
         }
       ],
       "n_evaluations": 507,
-      "resolution": 128
+      "resolution": 128,
+      "loss_before_u2_projection": 1482.8985900434234
     }
   },
   "classification_folds": [
@@ -2266,5 +2318,60 @@
     "max_abs_difference_to_saved_control_csv": 0.0,
     "replay_seconds": 56.0,
     "pytest": "23 passed"
+  },
+  "posthoc_diagnostic_refresh": {
+    "status": "refreshed_from_existing_saved_predictions",
+    "model_fit_rerun": false,
+    "condition_audit_refreshed": true,
+    "erp_metrics_refreshed": 26,
+    "fit_objective_change": "Removed the orthogonal u2 residual from the objective. Since G has rank 2 and every model prediction has u2=0, the omitted term is constant over parameters; the minimizer is unchanged. Stored fold losses were algebraically converted to the two-mode mean-square scale.",
+    "loss_conversion_by_heldout_record": {
+      "VisualCogA_Task-1": {
+        "old_full_sensor_loss": 2007.4493580565063,
+        "new_observable_loss": 2902.461420137866,
+        "training_u2_mean_square": 217.42523389378673
+      },
+      "VisualCogA_Task-2": {
+        "old_full_sensor_loss": 899.3528927093382,
+        "new_observable_loss": 1219.3962860201423,
+        "training_u2_mean_square": 259.2661060877297
+      },
+      "VisualCogB_Task-1": {
+        "old_full_sensor_loss": 2058.3590033787714,
+        "new_observable_loss": 2949.0225554284743,
+        "training_u2_mean_square": 277.0318992793654
+      },
+      "VisualCogB_Task-2": {
+        "old_full_sensor_loss": 1482.8985900434234,
+        "new_observable_loss": 2138.848167196071,
+        "training_u2_mean_square": 170.99943573812868
+      }
+    },
+    "current_revision_hashes": {
+      "input\\stage1_baseline_circle.npy": "380cb78b182ff4459701a5d0fdd4a89cb83c7b108f5292d9feb8a593a675c9cb",
+      "input\\stage1_cue_left.npy": "17fa8e4613fda6d0a9ebb2067446de75ecd42b53ef9a5607dfa792bc64f2ea54",
+      "input\\stage1_cue_right.npy": "f9975ff818e3178813b24d1e03a1a01dd754382dbe6799350bab24a2ba46b8e2",
+      "input\\stage2_baseline_blank.npy": "0f85570f7454d647541f145961578fe5ec435e6840fc86684621e488fc590a98",
+      "input\\stage2_task1_target_dots.npy": "581fe3881c16513bf62575d53fde873b3cf801bc1d1b4ced7931de18524571d4",
+      "input\\stage2_task2_target_inward.npy": "a9eb817de5b60eb84f296c0e0465f9f135761560ff470171d0f728c98cf198f3",
+      "input\\stage2_task2_target_outward.npy": "002d453c06101e51edb10b90435df6c00e7bc406981f32450b0a7da830af4faa",
+      "revision\\config.py": "60ca59ad018bf1744f96216d4bfa7db5a845977295b0ab991382c7828e111718",
+      "revision\\evaluate.py": "ea930a27b851e065150a1ae74c710254d9efb8e202f36c244731d2c392222ca8",
+      "revision\\fit.py": "b51d159385a306b70ceec48d4e34f74032ab7ddd34e48fe2133eebb0061f8a09",
+      "revision\\frontend.py": "16cd3d399ab136ab352d8c517f74de5f896bb7312e901fef2d0827bdd896256e",
+      "revision\\model.py": "0f0df8dd0e220d755bca7e180f30a192c15a58949c5dbb30350c21d597183807",
+      "revision\\real_data.py": "201c4d1c4bdfba25ac5d8ef1bedfe4ccf90ec5820804f0086dbc181cee8b01c1",
+      "revision\\run_revision.py": "f435a5b8a328c0d4fa094c1a431838aa6e5671c362efc4d6cbd08e9453e9ff86",
+      "revision\\test_fit.py": "b30025c8932f5aaade76d8c2a421b92bd6bff60e52fd1502a26b2b0529f2ccbd",
+      "revision\\test_frontend.py": "ac1bbc723d52fbc4e5fdb7359d1415d100930ed354100a8eca5e7543070c44bb",
+      "revision\\test_model.py": "7b701e3b29c7e7678122135085aa9734595b58d12041ec614b081a4110bc9888",
+      "revision\\test_real_data.py": "ab6fefef440ce0eb844c10a8fbbba8f23bfa2cb276be0f1943b98a84741ecdf4",
+      "revision\\test_validation.py": "b0ef4466d0de4139a0cf449568511a83471e3ea6afab0950d69f21298686d5aa",
+      "q1\\output\\8riemann_denoise\\VisualCogA_Task-1_clean.mat": "b212b195407019d7eab84bf726d856a29ecf8acb822cca62fd2ffbc87a10e63b",
+      "q1\\output\\8riemann_denoise\\VisualCogA_Task-2_clean.mat": "02b000f2e2e584d2918a09269b821441451d4abc4cc0a64301af9c3dc029d1d9",
+      "q1\\output\\8riemann_denoise\\VisualCogB_Task-1_clean.mat": "72353af870a908b7db965866e51fab5da43f920e11a7cf68728eabc9f31ff50d",
+      "q1\\output\\8riemann_denoise\\VisualCogB_Task-2_clean.mat": "ee27be52f4c9dc1672145b158de33c2d4b8e817fc3483496cedc6f1ed4f1648e"
+    },
+    "cue_offset_semantics": "first inactive sample after VisCue; last active sample is reported separately to show sample-grid bracket"
   }
 }

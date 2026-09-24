@@ -7,12 +7,14 @@ try:
     from . import config
     from .fit import _interpolate_prediction
     from .frontend import load_stimulus, simulate_frontend
-    from .model import ModelParams, simulate_forward
+    from .model import (ModelParams, observable_modes_from_real,
+                        unexplained_mode_from_real, simulate_forward)
 except ImportError:
     import config
     from fit import _interpolate_prediction
     from frontend import load_stimulus, simulate_frontend
-    from model import ModelParams, simulate_forward
+    from model import (ModelParams, observable_modes_from_real,
+                       unexplained_mode_from_real, simulate_forward)
 
 
 def extract_features(trials, time_ms):
@@ -199,23 +201,55 @@ def peak_summary(signal, time_ms, window):
 
 
 def erp_metrics(real, predicted, time_ms, stage):
-    """Shape and amplitude metrics on the actual shared sample grid."""
+    """Report rank-two observable fit and full sensor error separately."""
     y, p = np.asarray(real, dtype=float), np.asarray(predicted, dtype=float)
     if y.shape != p.shape or y.shape != (3, len(time_ms)):
         raise ValueError("ERP arrays must share [3,time] shape")
-    residual = y - p
-    scale = float(np.sqrt(np.mean(y * y)))
-    rmse = float(np.sqrt(np.mean(residual * residual)))
+    full_residual = y - p
+    full_scale = float(np.sqrt(np.mean(y * y)))
+    full_rmse = float(np.sqrt(np.mean(full_residual * full_residual)))
     corrs = []
     for channel in range(3):
         a, b = y[channel], p[channel]
         corrs.append(float(np.corrcoef(a, b)[0, 1])
                       if np.std(a) >= 1e-12 and np.std(b) >= 1e-12 else float("nan"))
+    real_modes = observable_modes_from_real(y)
+    predicted_modes = observable_modes_from_real(p)
+    observable_residual = real_modes - predicted_modes
+    observable_scale = float(np.sqrt(np.mean(real_modes * real_modes)))
+    observable_rmse = float(np.sqrt(np.mean(observable_residual * observable_residual)))
+    mode_corrs = []
+    for mode in range(2):
+        a, b = real_modes[mode], predicted_modes[mode]
+        mode_corrs.append(float(np.corrcoef(a, b)[0, 1])
+                           if np.std(a) >= 1e-12 and np.std(b) >= 1e-12 else float("nan"))
+    real_u2 = unexplained_mode_from_real(y)
+    predicted_u2 = unexplained_mode_from_real(p)
+    u2_residual = real_u2 - predicted_u2
+    all_mode_energy = (np.sum(np.mean(real_modes * real_modes, axis=-1))
+                       + np.mean(real_u2 * real_u2))
+    u2_energy_share = (float(np.mean(real_u2 * real_u2) / all_mode_energy)
+                       if all_mode_energy > 0 else float("nan"))
     late = config.STAGES[stage]["late"]
     finite = np.isfinite(corrs)
-    return {"rmse": rmse, "nrmse_by_real_rms": rmse / scale if scale else float("nan"),
+    finite_modes = np.isfinite(mode_corrs)
+    return {"rmse": full_rmse,
+            "nrmse_by_real_rms": full_rmse / full_scale if full_scale else float("nan"),
             "channel_corr_mean": float(np.mean(np.asarray(corrs)[finite])) if finite.any() else float("nan"),
-            "channel_correlations": corrs, "late_peaks": peak_summary(y, time_ms, late)}
+            "channel_correlations": corrs,
+            "full_sensor_rmse": full_rmse,
+            "full_sensor_nrmse_by_real_rms": full_rmse / full_scale if full_scale else float("nan"),
+            "observable_rmse": observable_rmse,
+            "observable_nrmse_by_real_rms": (observable_rmse / observable_scale
+                                              if observable_scale else float("nan")),
+            "observable_mode_correlations": mode_corrs,
+            "observable_corr_mean": (float(np.mean(np.asarray(mode_corrs)[finite_modes]))
+                                     if finite_modes.any() else float("nan")),
+            "u2_unexplained_rms": float(np.sqrt(np.mean(u2_residual * u2_residual))),
+            "real_u2_rms": float(np.sqrt(np.mean(real_u2 * real_u2))),
+            "predicted_u2_rms": float(np.sqrt(np.mean(predicted_u2 * predicted_u2))),
+            "u2_energy_share": u2_energy_share,
+            "late_peaks": peak_summary(y, time_ms, late)}
 
 
 def estimate_shared_amplitude(cases, predictions):
@@ -227,8 +261,9 @@ def estimate_shared_amplitude(cases, predictions):
     numerator, denominator = 0.0, 0.0
     for case in cases:
         pred_item = predictions[(case["dataset"], case["condition"])]
-        pred = _interpolate_prediction(pred_item["eeg"], pred_item["time_ms"], case["time_ms"])
-        obs, weight = case["real"], weights[id(case)]
+        pred = observable_modes_from_real(
+            _interpolate_prediction(pred_item["eeg"], pred_item["time_ms"], case["time_ms"]))
+        obs, weight = observable_modes_from_real(case["real"]), weights[id(case)]
         numerator += weight * float(np.mean(pred * obs))
         denominator += weight * float(np.mean(pred * pred))
     return max(0.0, numerator / denominator) if denominator > 1e-18 else 0.0

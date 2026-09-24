@@ -9,11 +9,11 @@ from scipy.optimize import minimize
 try:
     from . import config
     from .frontend import load_stimulus, mirror_stage1_frontend, simulate_frontend
-    from .model import ModelParams, simulate_forward
+    from .model import ModelParams, observable_modes_from_real, simulate_forward
 except ImportError:
     import config
     from frontend import load_stimulus, mirror_stage1_frontend, simulate_frontend
-    from model import ModelParams, simulate_forward
+    from model import ModelParams, observable_modes_from_real, simulate_forward
 
 
 @dataclass
@@ -68,8 +68,8 @@ def _make_candidate_evaluator(tau_a, fronts, cases, weights):
         for case in cases:
             result = model_by_condition[case["condition"]]
             pred = _interpolate_prediction(result.eeg, result.time_ms, case["time_ms"])
-            predicted.append(pred)
-            actual.append(np.asarray(case["real"], dtype=float))
+            predicted.append(observable_modes_from_real(pred))
+            actual.append(observable_modes_from_real(np.asarray(case["real"], dtype=float)))
             case_weights.append(weights[case["dataset"]])
         denom = sum(w * np.mean(pred * pred) for pred, w in zip(predicted, case_weights))
         if not np.isfinite(denom) or denom <= 1e-18:
