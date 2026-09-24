@@ -40,7 +40,7 @@ C = max(B - T, 0)
 ΔI = T - B
 ```
 
-暗目标出现时 `ΔI < 0`，目标消失、亮度恢复时 `ΔI > 0`。脚本分别保存 signed delta 与 Gabor contrast 数组，后续 ON/OFF 建模应读取 signed delta。
+暗目标出现时 `ΔI < 0`，目标消失、亮度恢复时 `ΔI > 0`。前端将 signed delta 与正对比/Gabor 特征分别保存。当前 `02_lgn.py` 对 Stage1 和 Task2 Stage2 使用 Gabor 空间通道，并依据实验时序构造 ON/OFF 瞬态；Task1 Stage2 双圆点则从 signed delta 提取空间亮度特征。论文中应区分“空间特征来源”和“ON/OFF 事件时序”，不要写成所有阶段都直接把 signed delta 输入 LGN。
 
 ## 4. Gabor 与空间特征设置
 
@@ -67,7 +67,45 @@ Task1 Stage2 的双圆点目标方向性较弱，因此以刺激增量的 4×4 �
 
 这些数值是当前人工构造刺激及 Gabor 参数下的模型特征，不是生理参数估计、EEG 实测结论或分类准确率。
 
-## 6. 输出目录
+## 6. 代表性结果图
+
+Task1 与 Task2 的 Stage1 刺激相同，以下用 Task1/Stage1 展示一次；Task2 Stage2 单独展示相向/背向目标。方向响应图用于说明全局方向能量与局部空间排列是不同层次的特征。
+
+### Stage1：左右提示
+
+![Stage1 左右提示及各方向 Gabor 响应总览](../output/01_gabor_frontend/Task1/Stage1/stage1_Gabor方向响应总览.png)
+
+图 1. 左右提示的 Gabor 方向响应总览。左右刺激的全局方向响应接近，但方向滤波响应仍具有空间定位。
+
+![Stage1 左右提示 Gabor 空间差异](../output/01_gabor_frontend/Task1/Stage1/stage1_Gabor差异.png)
+
+图 2. 左提示减右提示的有符号方向响应差，显示差异集中在空间位置与方向组合。
+
+![Stage1 左右提示 4×4 空间方向响应](../output/01_gabor_frontend/Task1/Stage1/stage1_Gabor空间响应热图.png)
+
+图 3. 4×4 网格中的方向响应分布及左右差值；模型接口应保留这些通道，不能只用全局平均代替。
+
+### Task1 Stage2：双圆点
+
+![Task1 Stage2 双圆点空间亮度特征](../output/01_gabor_frontend/Task1/Stage2/stage2_task1_空间亮度热图.png)
+
+图 4. 双圆点刺激增量的 4×4 平均亮度特征。该刺激方向性较弱，因此以空间亮度分布作为主特征。
+
+### Task2 Stage2：相向/背向双三角
+
+![Task2 Stage2 相向与背向 Gabor 响应总览](../output/01_gabor_frontend/Task2/Stage2/stage2_task2_Gabor方向响应总览.png)
+
+图 5. 相向与背向双三角的 Gabor 方向响应总览。
+
+![Task2 Stage2 相向减背向 Gabor 空间差异](../output/01_gabor_frontend/Task2/Stage2/stage2_task2_Gabor差异.png)
+
+图 6. 相向减背向的有符号 Gabor 响应差异。
+
+![Task2 Stage2 4×4 空间方向响应](../output/01_gabor_frontend/Task2/Stage2/stage2_task2_Gabor空间响应热图.png)
+
+图 7. 相向/背向刺激在 4×4 空间网格上的方向响应分布；全局平均相近不代表空间模式相同。
+
+## 7. 输出目录
 
 所有结果保存到 `src/C/q2/output/01_gabor_frontend/`：
 
@@ -83,13 +121,13 @@ Task1 Stage2 的双圆点目标方向性较弱，因此以刺激增量的 4×4 �
 
 左右提示阶段在 Task1/Stage1 与 Task2/Stage1 中重复保存，是为了与两类任务各自的实验记录保持目录对应，并非两套不同的视觉输入。
 
-## 7. 主要查看文件
+## 8. 主要查看文件
 
 Stage1 与 Task2 Stage2 各生成三张图：Gabor 方向响应总览、A−B 差异图、4×4 空间响应热图；并生成空间方向响应 CSV。Task1 Stage2 生成双圆点空间亮度热图和特征 CSV，另有 Gabor 辅助方向响应 CSV。
 
 输出中的 signed delta、正对比及 Gabor 响应 `.npy` 均保留为独立中间数组，便于后续将 signed delta 接入 LGN ON/OFF 通路，将空间方向特征接入 LGN/V1 编码。
 
-## 8. 运行
+## 9. 运行
 
 从项目根目录运行：
 
