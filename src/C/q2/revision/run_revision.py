@@ -17,7 +17,7 @@ try:
     from .evaluate import (classification_leave_one_record, erp_metrics,
                            estimate_shared_amplitude, mechanism_control_rows,
                            run_forward_condition)
-    from .fit import _interpolate_prediction, fit_model
+    from .fit import _cached_left_frontend, _interpolate_prediction, fit_model
     from .frontend import (choose_resolution, load_stimulus, mirror_stage1_frontend,
                            simulate_frontend, template_manifest)
     from .model import ModelParams, simulate_forward
@@ -27,7 +27,7 @@ except ImportError:
     from evaluate import (classification_leave_one_record, erp_metrics,
                           estimate_shared_amplitude, mechanism_control_rows,
                           run_forward_condition)
-    from fit import _interpolate_prediction, fit_model
+    from fit import _cached_left_frontend, _interpolate_prediction, fit_model
     from frontend import (choose_resolution, load_stimulus, mirror_stage1_frontend,
                           simulate_frontend, template_manifest)
     from model import ModelParams, simulate_forward
@@ -147,6 +147,8 @@ def _canonical_models(resolution):
         stimulus = load_stimulus(stage, condition)
         if stage == "Stage1" and condition == "right":
             front = mirror_stage1_frontend(models[("Stage1", "left")]["frontend"], stimulus)
+        elif stage == "Stage1" and condition == "left":
+            front = _cached_left_frontend(params.tau_a, resolution)
         else:
             front = simulate_frontend(stimulus, params={"tau_a": params.tau_a},
                                       resolution=resolution)
@@ -185,6 +187,8 @@ def _models_for_parameters(conditions, parameters, resolution):
         stimulus = load_stimulus(stage, condition)
         if stage == "Stage1" and condition == "right" and left_front is not None:
             front = mirror_stage1_frontend(left_front, stimulus)
+        elif stage == "Stage1" and condition == "left":
+            front = _cached_left_frontend(params.tau_a, resolution)
         else:
             front = simulate_frontend(stimulus, params={"tau_a": params.tau_a},
                                       resolution=resolution)
@@ -374,6 +378,7 @@ def run(mode="validate"):
     legacy_before = _legacy_hashes()
     cases, event_audit = load_cases_with_audit()
     _write_csv(config.OUTPUT_ROOT / "condition_audit.csv", _condition_audit(cases, event_audit))
+    print("Running spatial-resolution audit...", flush=True)
     scale = choose_resolution()
     manifest = _base_manifest(mode, scale, event_audit, legacy_before)
     if mode == "audit":
@@ -387,7 +392,9 @@ def run(mode="validate"):
 
     resolution = scale["chosen_resolution"]
     print(f"Frozen spatial resolution: {resolution}x{resolution}", flush=True)
+    print("Building canonical forward-model conditions...", flush=True)
     canonical = _canonical_models(resolution)
+    print("Checking 0.5 ms integration convergence...", flush=True)
     dt_check = _dt_convergence_check(resolution, canonical)
     if mode == "simulate":
         _save_outputs(config.OUTPUT_ROOT / "model_outputs.npz", canonical, [], {})
@@ -403,14 +410,17 @@ def run(mode="validate"):
     fit_by_record, summary, curve_store, plot_cases = {}, [], {}, {}
     for heldout in records:
         train = [c for c in main_cases if c["dataset"] != heldout]
+        print(f"Fitting Stage1 with held-out record {heldout}...", flush=True)
         try:
-            fit = fit_model(train, resolution=resolution)
+            fit = fit_model(train, resolution=resolution, progress=True)
         except Exception as exc:
             summary.append({"heldout_record": heldout, "stage": "Stage1",
                             "method": "fit_failed", "fit_status": type(exc).__name__,
                             "failure_reason": str(exc), "train_records": sorted({c["dataset"] for c in train})})
             continue
         fit_by_record[heldout] = fit
+        print(f"  selected parameters: {fit.parameters}; fit loss={fit.loss:.6g}; "
+              f"optimizer success={fit.success}", flush=True)
         fitted_models = _models_for_parameters(
             (("Stage1", "left"), ("Stage1", "right")), fit.parameters, resolution)
         default_map = {(c["dataset"], c["condition"]): {
@@ -511,7 +521,8 @@ def run(mode="validate"):
         summary.append(row)
 
     scores, class_rows, class_mean = classification_leave_one_record(cases)
-    controls = mechanism_control_rows(fit_by_record, resolution)
+    print("Computing frozen-parameter mechanism controls and writing outputs...", flush=True)
+    controls = mechanism_control_rows(fit_by_record, resolution, progress=True)
     for row in class_rows:
         summary.append({"heldout_record": row.get("heldout_record"),
                         "method": "real_only_shrinkage_LDA", **row})

@@ -45,6 +45,12 @@ PARAM_BOUNDS = {"tau_s": (20.0, 100.0), "g_i": (0.5, 1.5), "tau_a": (40.0, 160.0
 PARAM_DEFAULTS = {"tau_s": 40.0, "g_i": 1.0, "tau_a": 80.0}
 FIT_STARTS = (np.array([40.0, 1.0, 80.0]), np.array([28.0, 0.7, 55.0]), np.array([75.0, 1.3, 135.0]))
 MAX_NFEV_PER_START = 60
+# Profile the expensive visual adaptation parameter once per candidate, then
+# optimize only the two inexpensive Wilson-Cowan parameters at each profile.
+FIT_TAU_A_GRID = np.arange(40.0, 160.0 + 1e-9, 20.0)
+# L-BFGS-B's default 1e-8 finite-difference step is below float32 state
+# resolution. These steps apply to tau_s (ms) and g_i, respectively.
+FIT_FINITE_DIFF_STEPS = np.array([0.5, 0.01], dtype=float)
 
 LEAD_FIELD = np.array([
     [.32, .24, .48, .36, .72, .58],
@@ -58,4 +64,3 @@ U_OBS = np.stack([U0, U1])
 
 FEATURE_WINDOWS_MS = ((80.0, 200.0), (250.0, 450.0), (450.0, 700.0))
 LDA_SHRINKAGE = 0.1
-

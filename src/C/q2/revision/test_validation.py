@@ -1,11 +1,13 @@
 """Behavioral checks for fixed-window ERP features and leave-record LDA."""
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import evaluate
 from evaluate import (classification_leave_one_record, extract_features,
                       fit_classifier, predict_classifier)
 import run_revision
@@ -66,3 +68,32 @@ def test_leave_one_record_classifier_never_trains_on_heldout_record():
 
 def test_full_workflow_exposes_stage2_forward_runner():
     assert callable(run_revision.run_forward_condition)
+
+
+def test_repeated_condition_runner_reuses_deterministic_frontend(monkeypatch):
+    evaluate._cached_condition_frontend.cache_clear()
+    frontend_calls = []
+    monkeypatch.setattr(evaluate, "load_stimulus", lambda stage, condition:
+                        (stage, condition))
+
+    def fake_frontend(stimulus, params, resolution, include_offset, remove_position):
+        frontend_calls.append((stimulus, params["tau_a"], resolution,
+                               include_offset, remove_position))
+        return {"sentinel": stimulus}
+
+    model_calls = []
+    monkeypatch.setattr(evaluate, "simulate_frontend", fake_frontend)
+    monkeypatch.setattr(evaluate, "simulate_forward", lambda front, params, amplitude:
+                        model_calls.append((front, amplitude)) or
+                        SimpleNamespace(eeg_scaled=np.full((3, 2), amplitude)))
+
+    first = evaluate.run_forward_condition("Stage1", "left", {"tau_a": 80.0},
+                                           resolution=128, amplitude=1.0)
+    second = evaluate.run_forward_condition("Stage1", "left", {"tau_a": 80.0},
+                                            resolution=128, amplitude=2.0)
+
+    assert len(frontend_calls) == 1
+    assert len(model_calls) == 2
+    np.testing.assert_array_equal(first.eeg_scaled, 1.0)
+    np.testing.assert_array_equal(second.eeg_scaled, 2.0)
+    evaluate._cached_condition_frontend.cache_clear()

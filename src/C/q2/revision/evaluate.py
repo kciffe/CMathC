@@ -1,4 +1,6 @@
 """Held-out ERP, feature-classification, and preregistered mechanism checks."""
+from functools import lru_cache
+
 import numpy as np
 
 try:
@@ -232,20 +234,28 @@ def estimate_shared_amplitude(cases, predictions):
     return max(0.0, numerator / denominator) if denominator > 1e-18 else 0.0
 
 
+@lru_cache(maxsize=32)
+def _cached_condition_frontend(stage, condition, tau_a, resolution, include_offset, remove_position):
+    stimulus = load_stimulus(stage, condition)
+    return simulate_frontend(stimulus, params={"tau_a": float(tau_a)},
+                             resolution=int(resolution), include_offset=bool(include_offset),
+                             remove_position=bool(remove_position))
+
+
 def run_forward_condition(stage, condition, parameters, resolution=64,
                           include_offset=True, remove_position=False, amplitude=1.0):
     params = ModelParams.from_any(parameters)
-    stimulus = load_stimulus(stage, condition)
-    front = simulate_frontend(stimulus, params={"tau_a": params.tau_a},
-                              resolution=resolution, include_offset=include_offset,
-                              remove_position=remove_position)
+    front = _cached_condition_frontend(stage, condition, float(params.tau_a), int(resolution),
+                                       bool(include_offset), bool(remove_position))
     return simulate_forward(front, params=params, amplitude=amplitude)
 
 
-def mechanism_control_rows(fit_by_record, resolution=64):
+def mechanism_control_rows(fit_by_record, resolution=64, progress=False):
     """Apply no-position and no-offset controls with frozen fold parameters."""
     out = []
     for record, fit in fit_by_record.items():
+        if progress:
+            print(f"  mechanism controls for {record}...", flush=True)
         params = ModelParams.from_any(fit.parameters)
         regular = {condition: run_forward_condition("Stage1", condition, params, resolution,
                                                      amplitude=fit.amplitude).eeg_scaled
@@ -254,6 +264,8 @@ def mechanism_control_rows(fit_by_record, resolution=64):
         regular_rms = float(np.sqrt(np.mean(regular_difference ** 2)))
         for control, kwargs in (("remove_position", {"remove_position": True}),
                                 ("remove_cue_offset", {"include_offset": False})):
+            if progress:
+                print(f"    {control}", flush=True)
             predictions = {}
             for condition in ("left", "right"):
                 result = run_forward_condition("Stage1", condition, params, resolution,
