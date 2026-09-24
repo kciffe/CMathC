@@ -113,10 +113,10 @@ def simulate_lgn(features, cue_duration_ms=None):
     }
 
 
-def save_result(output_dir, name, result, features):
-    np.save(output_dir / f"{name}_feature.npy", features)
-    np.save(output_dir / f"{name}_lgn_on.npy", result["tcr_on"])
-    np.save(output_dir / f"{name}_lgn_off.npy", result["tcr_off"])
+def save_result(output_dir, name, result, save_on_off):
+    if save_on_off:
+        np.save(output_dir / f"{name}_lgn_on.npy", result["tcr_on"])
+        np.save(output_dir / f"{name}_lgn_off.npy", result["tcr_off"])
     # TCR 总响应作为后续 cortex 的输入。
     np.save(output_dir / f"{name}_lgn_total.npy", result["tcr_total"])
 
@@ -211,8 +211,8 @@ def make_features(path, kind):
     return delta_features(source)
 
 
-def process_pair(task, stage, stimuli, feature_kind, cue_duration_ms, title):
-    input_dir = GABOR_ROOT / task / stage
+def process_pair(task, stage, stimuli, feature_kind, cue_duration_ms, title, input_task=None):
+    input_dir = GABOR_ROOT / (input_task or task) / stage
     output_dir = OUTPUT_ROOT / task / stage
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -227,7 +227,7 @@ def process_pair(task, stage, stimuli, feature_kind, cue_duration_ms, title):
         result = simulate_lgn(feature, cue_duration_ms)
         if not cases:
             np.save(output_dir / "time_ms.npy", result["time"])
-        save_result(output_dir, name, result, feature)
+        save_result(output_dir, name, result, cue_duration_ms is not None)
         cases.append((label, result))
 
     save_summary(output_dir, [summary_row(label, result) for label, result in cases])
@@ -243,7 +243,7 @@ def process_single(task, stage, name, label, filename, feature_kind, title):
     features = normalize_single(make_features(input_dir / filename, feature_kind))
     result = simulate_lgn(features)
     np.save(output_dir / "time_ms.npy", result["time"])
-    save_result(output_dir, name, result, features)
+    save_result(output_dir, name, result, save_on_off=False)
     save_summary(output_dir, [summary_row(label, result)])
     plot_response(output_dir, title, [(label, result)])
     plot_peak_map(output_dir, [(label, result)])
@@ -260,7 +260,7 @@ def main():
                    "stage2_task1_delta_signed.npy", "delta",
                    "Task1 Stage2 双圆点 LGN 响应")
     process_pair("Task2", "Stage1", left_right, "gabor", 200.0,
-                 "Task2 Stage1 LGN 响应")
+                 "Task2 Stage1 LGN 响应", input_task="Task1")
     process_pair("Task2", "Stage2", [
         ("inward", "相向", "stage2_task2_gabor_inward.npy"),
         ("outward", "背向", "stage2_task2_gabor_outward.npy"),

@@ -20,7 +20,7 @@
 | Task2 / Stage1 | 与 Task1 共用左/右三角提示阶段 | 便于与 Task2 的 EEG 记录按阶段对应 |
 | Task2 / Stage2 | 白色基线 → 相向/背向双三角 | 比较两种排列的 Gabor 空间方向响应 |
 
-Stage1 的刺激及视觉结果在 Task1、Task2 目录中各保存一份；两份内容相同，便于后续按任务关联 EEG。Stage2 结果分别属于对应的任务。
+Task1 与 Task2 的 Stage1 刺激完全相同，前端数组与图表只保存一份于 Task1/Stage1；Task2/Stage1 保留共享数据说明，LGN 与 Cortex 结果仍按任务分别输出。Stage2 结果分别属于对应的任务。
 
 ## 3. 两类输入的计算约定
 
@@ -40,7 +40,7 @@ C = max(B - T, 0)
 ΔI = T - B
 ```
 
-暗目标出现时 `ΔI < 0`，目标消失、亮度恢复时 `ΔI > 0`。前端将 signed delta 与正对比/Gabor 特征分别保存。当前 `02_lgn.py` 对 Stage1 和 Task2 Stage2 使用 Gabor 空间通道，并依据实验时序构造 ON/OFF 瞬态；Task1 Stage2 双圆点则从 signed delta 提取空间亮度特征。论文中应区分“空间特征来源”和“ON/OFF 事件时序”，不要写成所有阶段都直接把 signed delta 输入 LGN。
+暗目标出现时 `ΔI < 0`，目标消失、亮度恢复时 `ΔI > 0`。前端保留 signed delta，并由其计算正对比与 Gabor 特征；为减少重复文件，正对比矩阵不单独保存。当前 `02_lgn.py` 对 Stage1 和 Task2 Stage2 使用 Gabor 空间通道，并依据实验时序构造 ON/OFF 瞬态；Task1 Stage2 双圆点则从 signed delta 提取空间亮度特征。论文中应区分“空间特征来源”和“ON/OFF 事件时序”，不要写成所有阶段都直接把 signed delta 输入 LGN。
 
 ## 4. Gabor 与空间特征设置
 
@@ -112,20 +112,20 @@ Task1 与 Task2 的 Stage1 刺激相同，以下用 Task1/Stage1 展示一次；
 ```text
 01_gabor_frontend/
 ├── Task1/
-│   ├── Stage1/  # 左右提示的 signed delta、contrast、Gabor 响应/差异、PNG、CSV
-│   └── Stage2/  # 双圆点的 signed delta、contrast、Gabor 辅助结果、空间亮度 PNG/CSV
+│   ├── Stage1/  # 左右提示 signed delta、Gabor 响应、PNG、CSV（共享数据唯一副本）
+│   └── Stage2/  # 双圆点 signed delta、Gabor 辅助结果、空间亮度 PNG/CSV
 └── Task2/
-    ├── Stage1/  # 与 Task1/Stage1 相同的结果，供任务记录对应
-    └── Stage2/  # 相向/背向双三角的 signed delta、contrast、Gabor 响应/差异、PNG、CSV
+    ├── Stage1/  # 共享数据说明；数组和图表复用 Task1/Stage1
+    └── Stage2/  # 相向/背向双三角 signed delta、Gabor 响应、PNG、CSV
 ```
 
-左右提示阶段在 Task1/Stage1 与 Task2/Stage1 中重复保存，是为了与两类任务各自的实验记录保持目录对应，并非两套不同的视觉输入。
+左右提示阶段在 Task1/Stage1 与 Task2/Stage1 中使用同一份前端数据，不重复保存像素数组和图表；Task2 分支在下游仍保留独立结果目录。
 
 ## 8. 主要查看文件
 
 Stage1 与 Task2 Stage2 各生成三张图：Gabor 方向响应总览、A−B 差异图、4×4 空间响应热图；并生成空间方向响应 CSV。Task1 Stage2 生成双圆点空间亮度热图和特征 CSV，另有 Gabor 辅助方向响应 CSV。
 
-输出中的 signed delta、正对比及 Gabor 响应 `.npy` 均保留为独立中间数组，便于后续将 signed delta 接入 LGN ON/OFF 通路，将空间方向特征接入 LGN/V1 编码。
+输出保留 signed delta 与 Gabor 响应数组，供亮度变化分析及空间方向编码使用。正对比可由 signed delta 重算，左右/相向背向差值可由成对 Gabor 响应重算，因此不重复落盘；Gabor 响应以 float32 存储以减少文件体积。
 
 ## 9. 运行
 

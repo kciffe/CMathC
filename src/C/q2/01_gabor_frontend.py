@@ -54,7 +54,7 @@ def gabor_response(img, theta_deg):
 
 
 def calc_gabor(img):
-    return np.stack([gabor_response(img, angle) for angle in ANGLES])
+    return np.stack([gabor_response(img, angle) for angle in ANGLES]).astype(np.float32)
 
 
 def spatial_energy(response, grid=4):
@@ -256,26 +256,25 @@ def main():
 
     stage1_left_gabor = calc_gabor(stage1_left_contrast)
     stage1_right_gabor = calc_gabor(stage1_right_contrast)
-    stage1_diff = stage1_left_gabor - stage1_right_gabor
+    os.makedirs(TASK1_STAGE1_DIR, exist_ok=True)
+    np.save(os.path.join(TASK1_STAGE1_DIR, "stage1_delta_left_signed.npy"), stage1_left_signed)
+    np.save(os.path.join(TASK1_STAGE1_DIR, "stage1_delta_right_signed.npy"), stage1_right_signed)
+    np.save(os.path.join(TASK1_STAGE1_DIR, "stage1_gabor_left.npy"), stage1_left_gabor)
+    np.save(os.path.join(TASK1_STAGE1_DIR, "stage1_gabor_right.npy"), stage1_right_gabor)
 
-    for output_dir in (TASK1_STAGE1_DIR, TASK2_STAGE1_DIR):
-        os.makedirs(output_dir, exist_ok=True)
-        np.save(os.path.join(output_dir, "stage1_delta_left_signed.npy"), stage1_left_signed)
-        np.save(os.path.join(output_dir, "stage1_delta_right_signed.npy"), stage1_right_signed)
-        np.save(os.path.join(output_dir, "stage1_contrast_left.npy"), stage1_left_contrast)
-        np.save(os.path.join(output_dir, "stage1_contrast_right.npy"), stage1_right_contrast)
-        np.save(os.path.join(output_dir, "stage1_gabor_left.npy"), stage1_left_gabor)
-        np.save(os.path.join(output_dir, "stage1_gabor_right.npy"), stage1_right_gabor)
-        np.save(os.path.join(output_dir, "stage1_gabor_diff.npy"), stage1_diff)
+    save_pair_csv(TASK1_STAGE1_DIR, "stage1", "左提示", "右提示", stage1_left_gabor, stage1_right_gabor)
+    plot_pair_overview(
+        TASK1_STAGE1_DIR, "stage1", "左提示增量", "右提示增量",
+        stage1_left_contrast, stage1_right_contrast,
+        stage1_left_gabor, stage1_right_gabor
+    )
+    plot_diff(TASK1_STAGE1_DIR, "stage1", "左提示", "右提示", stage1_left_gabor, stage1_right_gabor)
+    plot_spatial(TASK1_STAGE1_DIR, "stage1", "左提示", "右提示", stage1_left_gabor, stage1_right_gabor)
 
-        save_pair_csv(output_dir, "stage1", "左提示", "右提示", stage1_left_gabor, stage1_right_gabor)
-        plot_pair_overview(
-            output_dir, "stage1", "左提示增量", "右提示增量",
-            stage1_left_contrast, stage1_right_contrast,
-            stage1_left_gabor, stage1_right_gabor
-        )
-        plot_diff(output_dir, "stage1", "左提示", "右提示", stage1_left_gabor, stage1_right_gabor)
-        plot_spatial(output_dir, "stage1", "左提示", "右提示", stage1_left_gabor, stage1_right_gabor)
+    os.makedirs(TASK2_STAGE1_DIR, exist_ok=True)
+    with open(os.path.join(TASK2_STAGE1_DIR, "共享数据说明.txt"), "w", encoding="utf-8") as stream:
+        stream.write("Task2 Stage1 与 Task1 Stage1 使用相同的视觉提示。\n")
+        stream.write("前端数值数组和结果图统一保存在 ../../Task1/Stage1。\n")
 
     # 第二阶段公共白色基线
     stage2_baseline = load_img("stage2_baseline_blank.npy")
@@ -288,7 +287,6 @@ def main():
     dots_gabor = calc_gabor(dots_contrast)
 
     np.save(os.path.join(TASK1_STAGE2_DIR, "stage2_task1_delta_signed.npy"), dots_signed)
-    np.save(os.path.join(TASK1_STAGE2_DIR, "stage2_task1_contrast.npy"), dots_contrast)
     np.save(os.path.join(TASK1_STAGE2_DIR, "stage2_task1_gabor_dots.npy"), dots_gabor)
 
     save_single_csv(TASK1_STAGE2_DIR, "stage2_task1", "双圆点", dots_gabor)
@@ -306,15 +304,10 @@ def main():
 
     inward_gabor = calc_gabor(inward_contrast)
     outward_gabor = calc_gabor(outward_contrast)
-    task2_diff = inward_gabor - outward_gabor
-
     np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_delta_inward_signed.npy"), inward_signed)
     np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_delta_outward_signed.npy"), outward_signed)
-    np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_contrast_inward.npy"), inward_contrast)
-    np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_contrast_outward.npy"), outward_contrast)
     np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_gabor_inward.npy"), inward_gabor)
     np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_gabor_outward.npy"), outward_gabor)
-    np.save(os.path.join(TASK2_STAGE2_DIR, "stage2_task2_gabor_diff.npy"), task2_diff)
 
     save_pair_csv(TASK2_STAGE2_DIR, "stage2_task2", "相向", "背向", inward_gabor, outward_gabor)
     plot_pair_overview(

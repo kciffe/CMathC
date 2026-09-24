@@ -150,7 +150,8 @@ def simulate_cortex(lgn_total):
 
 def save_result(output_dir, name, result):
     for key, value in result.items():
-        np.save(output_dir / f"{name}_{key}.npy", value)
+        if key.endswith("_source"):
+            np.save(output_dir / f"{name}_{key}.npy", value)
 
 
 def peak_info(signal, time_ms):
