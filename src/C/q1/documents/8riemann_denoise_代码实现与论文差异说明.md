@@ -156,6 +156,42 @@ threshold = ordered[argmax(diff(ordered[0 : search_end+1])) + 1]
 
 脚本写入的是 `output/8riemann_denoise` 下的结果，不覆盖 `output/7filter_downsample` 的输入。重新运行会重写 8 号脚本自身同名输出，因此若要保留不同算法版本的结果，应先另存或另建结果目录。
 
+### 5.1 当前 SQI 诊断图
+
+以下图片直接引用 `output/8riemann_denoise/` 中的脚本输出，并按数据集静态排版。每个数据集同时展示排序后的 SQI 与阈值，以及按原始 Trial 编号排列的 SQI/剔除状态；两类图分别便于检查阈值间隔和单个 Trial 的分类。PDF 中每个数据集从新页开始，避免标题与首张图分离。
+
+<div class="page"></div>
+
+#### VisualCogA_Task-1
+
+![VisualCogA_Task-1 SQI 排序与阈值](../output/8riemann_denoise/VisualCogA_Task-1_01_SQI排序与阈值.png)
+
+![VisualCogA_Task-1 各 Trial SQI](../output/8riemann_denoise/VisualCogA_Task-1_02_各Trial_SQI.png)
+
+<div class="page"></div>
+
+#### VisualCogA_Task-2
+
+![VisualCogA_Task-2 SQI 排序与阈值](../output/8riemann_denoise/VisualCogA_Task-2_01_SQI排序与阈值.png)
+
+![VisualCogA_Task-2 各 Trial SQI](../output/8riemann_denoise/VisualCogA_Task-2_02_各Trial_SQI.png)
+
+<div class="page"></div>
+
+#### VisualCogB_Task-1
+
+![VisualCogB_Task-1 SQI 排序与阈值](../output/8riemann_denoise/VisualCogB_Task-1_01_SQI排序与阈值.png)
+
+![VisualCogB_Task-1 各 Trial SQI](../output/8riemann_denoise/VisualCogB_Task-1_02_各Trial_SQI.png)
+
+<div class="page"></div>
+
+#### VisualCogB_Task-2
+
+![VisualCogB_Task-2 SQI 排序与阈值](../output/8riemann_denoise/VisualCogB_Task-2_01_SQI排序与阈值.png)
+
+![VisualCogB_Task-2 各 Trial SQI](../output/8riemann_denoise/VisualCogB_Task-2_02_各Trial_SQI.png)
+
 ## 6. 运行与复现
 
 在项目根目录运行：

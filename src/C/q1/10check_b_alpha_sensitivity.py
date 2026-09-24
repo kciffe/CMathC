@@ -274,6 +274,27 @@ def summarize_dataset(dataset, corrected_trials):
     return records, curves
 
 
+def format_alpha_legend(alpha, keep_count):
+    """Format an alpha-series legend entry using Chinese sample-count text."""
+    return f"α={alpha:g}（保留 {int(keep_count)} 个试次）"
+
+
+def install_external_legend(fig, source_axis, fontsize=8):
+    """Place the series legend directly below the figure title."""
+    handles, labels = source_axis.get_legend_handles_labels()
+    fig.tight_layout(rect=(0, 0, 1.0, 0.90))
+    return fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.91),
+        ncol=2,
+        fontsize=fontsize,
+        frameon=False,
+        columnspacing=1.5,
+    )
+
+
 def plot_dataset(dataset, curves):
     """Plot the alpha-only ERP comparison; source filtering/SQI stay fixed."""
     fig, axes = plt.subplots(2, 3, figsize=(15, 8), sharex=True, sharey="col")
@@ -291,7 +312,7 @@ def plot_dataset(dataset, curves):
                     curves[alpha][condition][channel_index],
                     color=ERP_COLORS[alpha_index],
                     linewidth=1.25,
-                    label=f"α={alpha:g}, n={keep_count}",
+                    label=format_alpha_legend(alpha, keep_count),
                 )
             ax.axvspan(0.25, 0.50, color="#F0C36E", alpha=0.16)
             ax.axvspan(2.45, 2.70, color="#B69AD5", alpha=0.16)
@@ -304,13 +325,12 @@ def plot_dataset(dataset, curves):
                 ax.set_ylabel("基线校正后 ERP（原始数据单位）")
             if row == 1:
                 ax.set_xlabel("相对提示 onset 的时间 (s)")
-    axes[0, 0].legend(fontsize=8, frameon=False)
     fig.suptitle(
         f"{dataset['name']}：B 组 SQI 阈值敏感性（仅改变 α 与保留集合）\n"
         "阴影：候选 P300 搜索窗；Fz 数值摘要见 CSV",
         fontsize=13,
     )
-    fig.tight_layout(rect=(0, 0, 1, 0.92))
+    install_external_legend(fig, axes[0, 0], fontsize=8)
     output_path = RESULT_DIR / f"{dataset['name']}_alpha_ERP_sensitivity.png"
     fig.savefig(output_path, dpi=240, bbox_inches="tight")
     plt.close(fig)

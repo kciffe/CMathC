@@ -123,6 +123,34 @@ def random_same_n_erp(trials, sample_n, repeat, rng):
     )
 
 
+def cleaning_legend_labels(clipped_count, current_count):
+    """Return Chinese legend labels for the A1 equal-sample-size comparison."""
+    clipped_count = int(clipped_count)
+    current_count = int(current_count)
+    return (
+        f"仅按削顶规则筛选（{clipped_count} 个试次）",
+        f"随机等样本量平均波形（{current_count} 个试次）",
+        "随机等样本量抽样的逐点 95% 区间",
+        f"当前质量指数筛选结果（{current_count} 个试次）",
+    )
+
+
+def install_external_legend(fig, source_axis, fontsize=9):
+    """Place the series legend directly below the figure title."""
+    handles, labels = source_axis.get_legend_handles_labels()
+    fig.tight_layout(rect=(0, 0, 1.0, 0.90))
+    return fig.legend(
+        handles,
+        labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, 0.91),
+        ncol=2,
+        fontsize=fontsize,
+        frameon=False,
+        columnspacing=1.5,
+    )
+
+
 def main():
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -154,6 +182,9 @@ def main():
             N_REPEAT,
             rng,
         )
+        legend_labels = cleaning_legend_labels(
+            len(clipped_trials), len(current_trials)
+        )
 
         for col, (channel_name, channel_index) in enumerate(CHANNELS):
             ax = axes[row, col]
@@ -163,38 +194,35 @@ def main():
                 clipped_erp[channel_index, plot_mask],
                 linestyle="--",
                 linewidth=1.2,
-                label=f"仅削顶 n={len(clipped_trials)}",
+                label=legend_labels[0],
             )
             ax.plot(
                 plot_time,
                 random_mean[channel_index, plot_mask],
                 linewidth=1.2,
-                label=f"随机同样本量均值 n={len(current_trials)}",
+                label=legend_labels[1],
             )
             ax.fill_between(
                 plot_time,
                 random_low[channel_index, plot_mask],
                 random_high[channel_index, plot_mask],
                 alpha=0.15,
-                label="随机同样本量逐点 95% 区间",
+                label=legend_labels[2],
             )
             ax.plot(
                 plot_time,
                 current_erp[channel_index, plot_mask],
                 linewidth=1.6,
-                label=f"当前SQI清洗 n={len(current_trials)}",
+                label=legend_labels[3],
             )
 
             ax.axvline(0, linestyle="--", linewidth=1)
             ax.set_title(f"{condition_name} · {channel_name}")
-            ax.set_ylabel("基线校正后 ERP 幅值")
+            ax.set_ylabel("基线校正后 ERP 幅值（原始数据单位）")
             ax.grid(alpha=0.22)
 
             if row == 1:
                 ax.set_xlabel("相对提示 onset 的时间 (s)")
-
-            if row == 0 and col == 0:
-                ax.legend(fontsize=9)
 
             current_curve = current_erp[channel_index, plot_mask]
             clipped_curve = clipped_erp[channel_index, plot_mask]
@@ -216,7 +244,7 @@ def main():
         "VisualCogA_Task-1 清洗强度与等样本量诊断",
         fontsize=17,
     )
-    fig.tight_layout()
+    install_external_legend(fig, axes[0, 0], fontsize=9)
     fig.savefig(
         RESULT_DIR / "VisualCogA_Task-1_清洗强度与等样本量诊断.png",
         dpi=300,

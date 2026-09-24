@@ -86,6 +86,26 @@ ERP_{q,c}(t)=\frac{1}{N_q}\sum_{i:cue\_type_i=q}X^{\mathrm{bc}}_{i,c}(t),
 
 绘图前，脚本仅选择 `−0.2 ≤ relative_time ≤ 3.0 s` 的样本。当前代码未显式设置 `xlim`，所以 Matplotlib 会根据这些样本自动留出坐标边距；选取的信号区间是上述范围，但坐标框显示端点可能略宽于 `−0.2～3.0 s`。
 
+### 4.1 当前四组正式 ERP 图
+
+以下图片均为脚本输出的左右条件平均 ERP；每张图含左右两个面板，分别绘制 F3、Fz、F4。图中阴影和事件参考线应结合第 5 节的候选峰窗口与状态规则解读。
+
+#### VisualCogA_Task-1
+
+![VisualCogA_Task-1 左右条件平均 ERP](../output/11erp_extract/VisualCogA_Task-1_ERP.png)
+
+#### VisualCogA_Task-2
+
+![VisualCogA_Task-2 左右条件平均 ERP](../output/11erp_extract/VisualCogA_Task-2_ERP.png)
+
+#### VisualCogB_Task-1
+
+![VisualCogB_Task-1 左右条件平均 ERP](../output/11erp_extract/VisualCogB_Task-1_ERP.png)
+
+<h4 style="break-after: avoid-page; page-break-after: avoid;">VisualCogB_Task-2</h4>
+
+![VisualCogB_Task-2 左右条件平均 ERP](../output/11erp_extract/VisualCogB_Task-2_ERP.png)
+
 ## 5. 候选峰提取与状态
 
 候选窗使用闭区间，分别为：

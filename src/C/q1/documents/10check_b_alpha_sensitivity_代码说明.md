@@ -89,6 +89,20 @@ output/10check_b_alpha_sensitivity/
 
 以上数量是当前输出数据的运行记录；若输入 MAT 或 SQI CSV 变化，应重新运行脚本并以新输出为准。
 
+### 6.1 α 敏感性 ERP 图
+
+下图分别展示 B_Task-1 和 B_Task-2 在不同 α 下的左右条件 ERP。曲线数量少于四条时，表示某些 α 得到相同的保留集合、曲线因此重合。
+
+#### VisualCogB_Task-1
+
+![VisualCogB_Task-1 不同 α 下的 ERP 敏感性](../output/10check_b_alpha_sensitivity/VisualCogB_Task-1_alpha_ERP_sensitivity.png)
+
+<div class="page"></div>
+
+#### VisualCogB_Task-2
+
+![VisualCogB_Task-2 不同 α 下的 ERP 敏感性](../output/10check_b_alpha_sensitivity/VisualCogB_Task-2_alpha_ERP_sensitivity.png)
+
 ## 7. 运行与测试
 
 在项目根目录运行：

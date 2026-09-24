@@ -188,6 +188,11 @@ def load_dataset(dataset_name):
     return source, trials, relative_time, cue_type, drop_values, sample_rate
 
 
+def status_legend_labels():
+    """Return Chinese labels for retained and SQI-rejected trials."""
+    return "保留试次", "黎曼阈值剔除试次"
+
+
 def save_diagnostic_plots(dataset_name, sqi_valid, threshold, sqi, valid_indices, riemann_drop):
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -195,7 +200,7 @@ def save_diagnostic_plots(dataset_name, sqi_valid, threshold, sqi, valid_indices
     ordered = np.sort(sqi_valid)
     ax.plot(np.arange(len(ordered)), ordered, marker="o", markersize=3)
     ax.axhline(threshold, linestyle="--", label=f"阈值 = {threshold:.4f}")
-    ax.set(xlabel="排序后的 Trial 编号", ylabel="SQI", title=f"{dataset_name} SQI 排序与阈值")
+    ax.set(xlabel="排序后的 Trial 编号", ylabel="SQI（无量纲）", title=f"{dataset_name} SQI 排序与阈值")
     ax.grid(alpha=0.25)
     ax.legend()
     fig.tight_layout()
@@ -203,11 +208,12 @@ def save_diagnostic_plots(dataset_name, sqi_valid, threshold, sqi, valid_indices
     plt.close(fig)
 
     keep = ~riemann_drop[valid_indices]
+    keep_label, drop_label = status_legend_labels()
     fig, ax = plt.subplots(figsize=(12, 5))
-    ax.scatter(valid_indices[keep], sqi[valid_indices[keep]], s=30, label="保留 Trial")
-    ax.scatter(valid_indices[~keep], sqi[valid_indices[~keep]], s=35, label="黎曼剔除 Trial")
+    ax.scatter(valid_indices[keep], sqi[valid_indices[keep]], s=30, label=keep_label)
+    ax.scatter(valid_indices[~keep], sqi[valid_indices[~keep]], s=35, label=drop_label)
     ax.axhline(threshold, linestyle="--", label=f"阈值 = {threshold:.4f}")
-    ax.set(xlabel="原始 Trial 编号", ylabel="SQI", title=f"{dataset_name} 每个 Trial 的 SQI")
+    ax.set(xlabel="原始 Trial 编号", ylabel="SQI（无量纲）", title=f"{dataset_name} 每个 Trial 的 SQI")
     ax.grid(alpha=0.25)
     ax.legend()
     fig.tight_layout()

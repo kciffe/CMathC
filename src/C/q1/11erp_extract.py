@@ -156,7 +156,7 @@ def process_dataset(dataset_name):
 
         ax.set_title(f"{condition_name} ERP (n={len(condition_trials)})")
         ax.set_xlabel("相对提示 onset 的时间 (s)")
-        ax.set_ylabel("基线校正后 ERP 幅值")
+        ax.set_ylabel("基线校正后 ERP 幅值（原始数据单位）")
         ax.grid(alpha=0.22)
         ax.legend()
 

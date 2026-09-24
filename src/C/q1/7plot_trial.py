@@ -80,7 +80,7 @@ def plot_trials(
             )
 
             ax.set_xlabel("Time(s)")
-            ax.set_ylabel("EEG")
+            ax.set_ylabel("EEG（原始数据单位）")
             ax.grid(alpha=0.25)
 
     legend_handles = [

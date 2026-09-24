@@ -67,6 +67,12 @@ output/9check_riemann_drop/{dataset}_SQI边界Trial对比.png
 
 同时，控制台打印每个数据集的阈值、三组所选 Trial 编号及 SQI 值。脚本不生成或覆盖新的 `.mat`、SQI CSV，也不执行 Trial 删除。
 
+### 5.1 代表性边界 Trial 图：VisualCogA_Task-1
+
+下图只展示 `VisualCogA_Task-1`，作为四组边界诊断的代表。按当前 SQI 指标表统计，A1 在 83 个未削顶且 SQI 有效的 Trial 中剔除 29 个（约 34.9%）；其剔除数和比例都高于 A2（5/85，约 5.9%）、B1（2/85，约 2.4%）和 B2（3/83，约 3.6%）。因此 A1 的阈值下边界与保留侧边界样本对比最能展示该诊断图要检查的问题。只在本文插入这一张是为了避免重复呈现相同布局，并不表示其余三组没有运行或检查；四组输出图仍保存在 `output/9check_riemann_drop/`。
+
+![VisualCogA_Task-1 SQI 边界 Trial 对比：最低 SQI、阈值下方边界与阈值上方边界样本](../output/9check_riemann_drop/VisualCogA_Task-1_SQI边界Trial对比.png)
+
 ## 6. 运行与测试
 
 在项目根目录运行：

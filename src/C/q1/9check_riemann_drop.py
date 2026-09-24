@@ -166,6 +166,11 @@ def load_dataset(dataset_name):
     return trials, relative_time, groups, threshold, mat_path, csv_path
 
 
+def format_trial_sqi_legend(trial_index, sqi):
+    """Format a trial legend entry with Chinese descriptors."""
+    return f"第 {int(trial_index)} 个试次 · 信号质量指数 {float(sqi):.3f}"
+
+
 def plot_dataset(dataset_name, trials, relative_time, groups, threshold):
     RESULT_DIR.mkdir(parents=True, exist_ok=True)
     fig, axes = plt.subplots(3, 3, figsize=(18, 10), sharex=True, sharey="col")
@@ -191,14 +196,14 @@ def plot_dataset(dataset_name, trials, relative_time, groups, threshold):
                     color=TRIAL_COLORS[trial_position],
                     linewidth=0.9,
                     alpha=0.85,
-                    label=f"Trial {trial_index} · SQI {trial['SQI']:.3f}",
+                    label=format_trial_sqi_legend(trial_index, trial["SQI"]),
                 )
 
             ax.axvline(0, color="#555555", linewidth=0.8, linestyle="--", alpha=0.8)
             ax.set_title(channel_name)
             ax.grid(True, alpha=0.2)
             if column == 0:
-                ax.set_ylabel(f"{row_label}\nEEG 振幅（原始单位）")
+                ax.set_ylabel(f"{row_label}\nEEG 振幅（原始数据单位）")
                 if selected.empty:
                     row_legends.append(None)
                 else:
