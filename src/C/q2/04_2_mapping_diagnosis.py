@@ -12,6 +12,8 @@ OUTPUT_ROOT = SCRIPT_DIR / "output" / "04_2_mapping_diagnosis"
 
 GRID = 4
 CHANNELS = ["F3", "Fz", "F4"]
+ONSET_LATE_WINDOW = (250, 500)
+OFFSET_LATE_WINDOW = (450, 700)  # Stage1 cue offset is at 200 ms.
 
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei"]
 plt.rcParams["axes.unicode_minus"] = False
@@ -187,6 +189,7 @@ def save_diagnosis(output_dir, rows):
         "指标",
         "数值",
         "时间(ms)",
+        "统计窗口(ms)",
     ]
 
     with path.open(
@@ -346,11 +349,15 @@ def main():
             time_ms
         )
 
+        late_window = (
+            OFFSET_LATE_WINDOW
+            if stage == "Stage1"
+            else ONSET_LATE_WINDOW
+        )
         late_value, late_time = max_asymmetry(
             eeg,
             time_ms,
-            250,
-            500
+            *late_window,
         )
 
         spread = np.mean(
@@ -394,6 +401,7 @@ def main():
             "指标": "F4-F3晚期窗最大差",
             "数值": late_value,
             "时间(ms)": late_time,
+            "统计窗口(ms)": f"{late_window[0]}–{late_window[1]}",
         })
 
     lead_field = recover_lead_field(

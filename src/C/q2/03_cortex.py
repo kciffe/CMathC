@@ -11,6 +11,9 @@ OUTPUT_ROOT = SCRIPT_DIR / "output" / "03_cortex"
 
 DT = 1.0
 GRID = 4
+# Shared IT/PFC delay and time-constant multiplier selected by leave-one-record-out
+# validation on Stage2 Fz late-peak latency. V1 and all coupling weights stay fixed.
+ASSOCIATION_TIME_SCALE = 1.5
 
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei"]
 plt.rcParams["axes.unicode_minus"] = False
@@ -107,11 +110,11 @@ def simulate_cortex(lgn_total):
 
     # IT：组合V1不同方向信息，形成较慢的形状表征。
     it_input = pool_v1_to_it(v1_e)
-    it_input = shift_signal(it_input, 25.0)
+    it_input = shift_signal(it_input, 25.0 * ASSOCIATION_TIME_SCALE)
     it_e, it_i = wilson_cowan(
         it_input,
-        tau_e=40.0,
-        tau_i=22.0,
+        tau_e=40.0 * ASSOCIATION_TIME_SCALE,
+        tau_i=22.0 * ASSOCIATION_TIME_SCALE,
         w_ee=1.5,
         w_ei=1.0,
         w_ie=1.1,
@@ -122,11 +125,11 @@ def simulate_cortex(lgn_total):
 
     # PFC：更慢的认知整合，并保留左/右两个通道。
     pfc_input = pool_it_to_pfc(it_e)
-    pfc_input = shift_signal(pfc_input, 50.0)
+    pfc_input = shift_signal(pfc_input, 50.0 * ASSOCIATION_TIME_SCALE)
     pfc_e, pfc_i = wilson_cowan(
         pfc_input,
-        tau_e=70.0,
-        tau_i=40.0,
+        tau_e=70.0 * ASSOCIATION_TIME_SCALE,
+        tau_i=40.0 * ASSOCIATION_TIME_SCALE,
         w_ee=1.6,
         w_ei=1.1,
         w_ie=1.0,

@@ -11,6 +11,8 @@ OUTPUT_ROOT = SCRIPT_DIR / "output" / "04_simulated_eeg"
 
 GRID = 4
 CHANNELS = ["F3", "Fz", "F4"]
+ONSET_LATE_WINDOW = (250, 500)
+OFFSET_LATE_WINDOW = (450, 700)  # Stage1 cue offset at 200 ms; 250–500 ms afterward.
 
 # 简化导联矩阵：6个皮层源 -> F3/Fz/F4
 # 6个源依次为：
@@ -71,10 +73,10 @@ def map_to_eeg(source_matrix):
     return LEAD_FIELD @ source_matrix
 
 
-def late_peak(signal, time_ms):
+def peak_in_window(signal, time_ms, window):
     mask = (
-        (time_ms >= 250)
-        & (time_ms <= 500)
+        (time_ms >= window[0])
+        & (time_ms <= window[1])
     )
 
     values = signal[mask]
@@ -88,34 +90,50 @@ def late_peak(signal, time_ms):
     )
 
 
-def summary_row(label, eeg, time_ms):
+def asymmetry_peak(eeg, time_ms, window=None):
+    difference = eeg[2] - eeg[0]
+
+    if window is None:
+        values = difference
+        times = time_ms
+    else:
+        mask = (
+            (time_ms >= window[0])
+            & (time_ms <= window[1])
+        )
+        values = difference[mask]
+        times = time_ms[mask]
+
+    index = int(np.argmax(np.abs(values)))
+    return float(values[index]), float(times[index])
+
+
+def summary_row(label, eeg, time_ms, late_window):
     row = {
-        "条件": label
+        "条件": label,
+        "晚期峰窗(ms)": f"{late_window[0]}–{late_window[1]}",
     }
 
     for i, channel in enumerate(CHANNELS):
-        peak, peak_time = late_peak(
+        peak, peak_time = peak_in_window(
             eeg[i],
-            time_ms
+            time_ms,
+            late_window,
         )
 
         row[f"{channel}晚期峰值"] = peak
         row[f"{channel}晚期峰时间(ms)"] = peak_time
 
-    asymmetry = eeg[2] - eeg[0]
-    index = int(
-        np.argmax(
-            np.abs(asymmetry)
-        )
+    full_difference, full_time = asymmetry_peak(eeg, time_ms)
+    late_difference, late_time = asymmetry_peak(
+        eeg,
+        time_ms,
+        late_window,
     )
-
-    row["F4-F3最大差"] = float(
-        asymmetry[index]
-    )
-
-    row["F4-F3最大差时间(ms)"] = float(
-        time_ms[index]
-    )
+    row["F4-F3全时段最大差"] = full_difference
+    row["F4-F3全时段最大差时间(ms)"] = full_time
+    row["F4-F3晚期窗最大差"] = late_difference
+    row["F4-F3晚期窗最大差时间(ms)"] = late_time
 
     return row
 
@@ -145,7 +163,8 @@ def plot_eeg(
     output_dir,
     title,
     cases,
-    time_ms
+    time_ms,
+    late_window,
 ):
     fig, axes = plt.subplots(
         1,
@@ -191,9 +210,10 @@ def plot_eeg(
             )
 
         axis.axvspan(
-            250,
-            500,
-            alpha=0.08
+            *late_window,
+            alpha=0.08,
+            color="gray",
+            label=f"统计窗 {late_window[0]}–{late_window[1]} ms",
         )
 
         axis.axhline(
@@ -222,7 +242,7 @@ def plot_eeg(
             alpha=0.25
         )
 
-        axis.legend()
+        axis.legend(loc="upper left", framealpha=0.9)
 
     fig.suptitle(
         title
@@ -244,7 +264,8 @@ def process_stage(
     task,
     stage,
     stimuli,
-    title
+    title,
+    late_window,
 ):
     input_dir = (
         CORTEX_ROOT
@@ -307,7 +328,8 @@ def process_stage(
             summary_row(
                 label,
                 eeg,
-                time_ms
+                time_ms,
+                late_window,
             )
         )
 
@@ -327,7 +349,8 @@ def process_stage(
         output_dir,
         title,
         cases,
-        time_ms
+        time_ms,
+        late_window,
     )
 
 
@@ -340,6 +363,7 @@ def main():
             ("right", "右提示"),
         ],
         "Task1 Stage1 模拟 EEG",
+        OFFSET_LATE_WINDOW,
     )
 
     process_stage(
@@ -349,6 +373,7 @@ def main():
             ("dots", "双圆点"),
         ],
         "Task1 Stage2 模拟 EEG",
+        ONSET_LATE_WINDOW,
     )
 
     process_stage(
@@ -359,6 +384,7 @@ def main():
             ("right", "右提示"),
         ],
         "Task2 Stage1 模拟 EEG",
+        OFFSET_LATE_WINDOW,
     )
 
     process_stage(
@@ -369,6 +395,7 @@ def main():
             ("outward", "背向"),
         ],
         "Task2 Stage2 模拟 EEG",
+        ONSET_LATE_WINDOW,
     )
 
     print(
