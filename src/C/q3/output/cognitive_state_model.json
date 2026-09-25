@@ -1,23 +1,172 @@
 {
-  "observation_unit": "one retained trial at one fixed event-locked analysis stage",
+  "observation_unit": "one raw EEG trial at a fixed cue/target event-locked stage",
   "proxy_vector": [
     "V_visual_like",
     "H_memory_like",
     "P_control_like"
   ],
   "proxy_definitions": {
-    "V_visual_like": "frontal mean ERP candidate amplitude across F3/Fz/F4",
-    "H_memory_like": "frontal mean log theta power across F3/Fz/F4",
-    "P_control_like": "frontal mean log beta power across F3/Fz/F4"
+    "V_visual_like": "mean frontal ERP candidate amplitude (250-500 ms)",
+    "H_memory_like": "mean frontal log theta power",
+    "P_control_like": "mean frontal log beta power"
   },
-  "additional_feature": "AI_alpha = log(P_alpha,F4) - log(P_alpha,F3)",
-  "inputs_u": [
-    "VisCue direction",
-    "event stage"
+  "additional_feature_families": [
+    "gamma power proxy (exploratory; evaluated in ablation sensitivity)",
+    "ERP frontal asymmetry",
+    "alpha asymmetry"
   ],
-  "task_type": "unresolved; not inferred from recording filenames or response-channel coding",
+  "within_trial_path": {
+    "equations": [
+      "V = aV + bV*u + eV",
+      "H = aH + bHV*V + bHT*T_candidate + eH",
+      "P = aP + bPH*H + bPV*V + bPT*T_candidate + eP"
+    ],
+    "estimates": {
+      "cue_locked": {
+        "n_trials": 387,
+        "equations": {
+          "V_visual_forward_proxy": {
+            "status": "fit_descriptive_only",
+            "n": 387,
+            "rank": 2,
+            "rmse_in_sample": 55.46067408180894,
+            "coefficients": [
+              {
+                "parameter": "intercept",
+                "estimate": -3.7178568592733114
+              },
+              {
+                "parameter": "cue_side",
+                "estimate": 0.851302021011502
+              }
+            ],
+            "outcome_column": "V_visual_like_raw"
+          },
+          "H_memory_proxy": {
+            "status": "fit_descriptive_only",
+            "n": 387,
+            "rank": 3,
+            "rmse_in_sample": 0.846537857968513,
+            "coefficients": [
+              {
+                "parameter": "intercept",
+                "estimate": 2.755172080988395
+              },
+              {
+                "parameter": "V_visual_like_raw",
+                "estimate": 0.002345078177654353
+              },
+              {
+                "parameter": "task_filename_code_centered",
+                "estimate": 0.13413697343240436
+              }
+            ],
+            "outcome_column": "H_memory_like_raw"
+          },
+          "P_control_proxy": {
+            "status": "fit_descriptive_only",
+            "n": 387,
+            "rank": 4,
+            "rmse_in_sample": 0.6895482847852106,
+            "coefficients": [
+              {
+                "parameter": "intercept",
+                "estimate": 2.2161819317334666
+              },
+              {
+                "parameter": "H_memory_like_raw",
+                "estimate": 0.10292496438223331
+              },
+              {
+                "parameter": "V_visual_like_raw",
+                "estimate": 0.0005482466928327101
+              },
+              {
+                "parameter": "task_filename_code_centered",
+                "estimate": -0.21011534143096705
+              }
+            ],
+            "outcome_column": "P_control_like_raw"
+          }
+        }
+      },
+      "target_locked": {
+        "n_trials": 396,
+        "equations": {
+          "V_visual_forward_proxy": {
+            "status": "fit_descriptive_only",
+            "n": 396,
+            "rank": 2,
+            "rmse_in_sample": 31.439755885678316,
+            "coefficients": [
+              {
+                "parameter": "intercept",
+                "estimate": 0.5528704399871345
+              },
+              {
+                "parameter": "cue_side",
+                "estimate": -0.1905444409389864
+              }
+            ],
+            "outcome_column": "V_visual_like_raw"
+          },
+          "H_memory_proxy": {
+            "status": "fit_descriptive_only",
+            "n": 396,
+            "rank": 3,
+            "rmse_in_sample": 0.7353690332040125,
+            "coefficients": [
+              {
+                "parameter": "intercept",
+                "estimate": 1.8459023214548953
+              },
+              {
+                "parameter": "V_visual_like_raw",
+                "estimate": 0.00013029379109272434
+              },
+              {
+                "parameter": "task_filename_code_centered",
+                "estimate": -0.06869200687534148
+              }
+            ],
+            "outcome_column": "H_memory_like_raw"
+          },
+          "P_control_proxy": {
+            "status": "fit_descriptive_only",
+            "n": 396,
+            "rank": 4,
+            "rmse_in_sample": 0.4507402818044707,
+            "coefficients": [
+              {
+                "parameter": "intercept",
+                "estimate": 2.30376563527447
+              },
+              {
+                "parameter": "H_memory_like_raw",
+                "estimate": 0.12971586030697416
+              },
+              {
+                "parameter": "V_visual_like_raw",
+                "estimate": 0.0012392711336624285
+              },
+              {
+                "parameter": "task_filename_code_centered",
+                "estimate": -0.23674560128858424
+              }
+            ],
+            "outcome_column": "P_control_like_raw"
+          }
+        }
+      }
+    }
+  },
+  "task_type": "formal Project-1/Project-2 mapping remains unverified; exploratory T_candidate uses only the filename Task-1/Task-2 suffix",
+  "condition_summary": "state_condition_effects.csv reports descriptive cue-side means by filename task-code candidate; no task or participant significance claim is made",
   "latent_factor_model_fitted": false,
-  "reason": "three-channel trial-level observations do not identify unconstrained latent loadings; use predefined feature composites",
+  "reason": "Three electrodes and a small number of recording groups do not identify an unconstrained sparse C matrix. Fixed observed proxies are used as a transparent fallback; coefficients are not interpreted as source activity.",
   "state_transition_model_fitted": false,
-  "interpretation_limit": "functional feature proxies only; they do not identify LGN, hippocampal, or PFC sources"
+  "state_scores_for_prediction": "raw proxy values are used; descriptive pooled z scores are not used by held-out predictive models",
+  "cue_label_leakage_guard": "cue_side is a predictor only in the descriptive V path equation; it is absent from EEG feature-only cue classifiers",
+  "path_inference": "coefficients are descriptive, without trial-independent p-values; four records do not verify independent participants",
+  "interpretation_limit": "V/H/P are macro cognitive functional proxies, not localized LGN, hippocampal or PFC sources"
 }

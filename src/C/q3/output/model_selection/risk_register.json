@@ -1,0 +1,12 @@
+{
+  "status":"OPEN_LIMITATIONS",
+  "risks":[
+    {"id":"target_anchor", "risk":"Target onset is not independently marked; cue+2.2 s produces median RT 0.015 s and 399/400 RTs below 0.1 s.", "mitigation":"Verify target event/timebase; keep DDM gated; perform target-offset sensitivity analysis."},
+    {"id":"task_and_subject_mapping", "risk":"Task-1/2 and A/B filename labels do not yet establish official project or participant grouping.", "mitigation":"Verify metadata/protocol before task interactions or LOSO claims."},
+    {"id":"behavior_truth", "risk":"No independent target truth/deadline is available for every task; current response marker count has zero omissions.", "mitigation":"Keep correctness/timeliness blank without verified labels; do not report omission rates."},
+    {"id":"latent_identifiability", "risk":"Sparse C alone does not fully fix factor sign/scale/rotation; full residual covariance may overfit.", "mitigation":"Use anchors, diagonal/shrinkage R, rank diagnostics, simulation recovery and proxy-score fallback."},
+    {"id":"artifact_removal", "risk":"ICA using only F3/Fz/F4 has no independent EOG reference and can remove neural signal.", "mitigation":"Use auditable artifact metrics; describe ICA only if additional valid channels are allowed and evaluated."},
+    {"id":"bandwidth_and_short_windows", "risk":"Existing Q1 clean signal is capped at 24 Hz; short cue/target windows weaken theta/PAC estimates.", "mitigation":"Use raw 256 Hz for the proposed branches; defer PAC/PLV from core claims and report support checks."},
+    {"id":"small_group_count", "risk":"297 matched trials are nested in four files; independent subject count is unknown and likely much smaller than trial count.", "mitigation":"Grouped validation, per-file effects, conservative uncertainty; no random trial split as primary evidence."}
+  ]
+}

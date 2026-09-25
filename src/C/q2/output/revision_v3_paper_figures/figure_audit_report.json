@@ -173,6 +173,30 @@
         "axes_count": 13,
         "minimum_font_size_pt": 5.0
       }
+    },
+    {
+      "figure_id": "exploratory_lr_local_window",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "axis 'VisualCogA_Task-1：右−左 ERP' is missing an x or y label",
+        "legend is fully inside the data region: VisualCogA_Task-1：右−左 ERP",
+        "axis 'F4 125–219 ms；BA=72.5%，准确率=72.2%' is missing an x or y label",
+        "legend is fully inside the data region: F4 125–219 ms；BA=72.5%，准确率=72.2%",
+        "axis 'VisualCogA_Task-2：右−左 ERP' is missing an x or y label",
+        "axis 'Fz 266–281 ms；BA=63.0%，准确率=61.3%' is missing an x or y label",
+        "axis 'VisualCogB_Task-1：右−左 ERP' is missing an x or y label",
+        "axis 'Fz 359–555 ms；BA=67.5%，准确率=67.5%' is missing an x or y label"
+      ],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 188.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 127,
+        "axes_count": 8,
+        "minimum_font_size_pt": 5.0
+      }
     }
   ]
 }

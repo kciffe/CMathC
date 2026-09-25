@@ -1,9 +1,9 @@
 ﻿stage,record,status,left_n,right_n,folds,repeats,mean_balanced_accuracy,sd_across_repeats,interpretation
-cue_locked,VisualCogA_Task-1,ok,29,25,5,10,0.5986206896551725,0.03960166304854963,within-record diagnostic only; not a cross-record generalization estimate
-cue_locked,VisualCogA_Task-2,ok,45,35,5,10,0.5079365079365079,0.040956619006060596,within-record diagnostic only; not a cross-record generalization estimate
-cue_locked,VisualCogB_Task-1,ok,41,42,5,10,0.5227351916376307,0.03180795319350052,within-record diagnostic only; not a cross-record generalization estimate
-cue_locked,VisualCogB_Task-2,ok,37,43,5,10,0.5353551225644249,0.03926188386628571,within-record diagnostic only; not a cross-record generalization estimate
-target_locked,VisualCogA_Task-1,ok,29,25,5,10,0.45331034482758614,0.06235527834287647,within-record diagnostic only; not a cross-record generalization estimate
-target_locked,VisualCogA_Task-2,ok,45,35,5,10,0.5928571428571427,0.03586388421490478,within-record diagnostic only; not a cross-record generalization estimate
-target_locked,VisualCogB_Task-1,ok,41,42,5,10,0.45783972125435535,0.03667839834837876,within-record diagnostic only; not a cross-record generalization estimate
-target_locked,VisualCogB_Task-2,ok,37,43,5,10,0.45182275298554375,0.03757279530176974,within-record diagnostic only; not a cross-record generalization estimate
+cue_locked,VisualCogA_Task-1,ok,54,46,5,10,0.3847020933977455,0.04740961836622044,within-record diagnostic only; not a cross-record generalization estimate
+cue_locked,VisualCogA_Task-2,ok,54,42,5,10,0.5175925925925926,0.03413080063789517,within-record diagnostic only; not a cross-record generalization estimate
+cue_locked,VisualCogB_Task-1,ok,46,52,5,10,0.48189799331103683,0.024143192756355437,within-record diagnostic only; not a cross-record generalization estimate
+cue_locked,VisualCogB_Task-2,ok,46,47,5,10,0.4910268270120259,0.02790323553462295,within-record diagnostic only; not a cross-record generalization estimate
+target_locked,VisualCogA_Task-1,ok,54,46,5,10,0.5036634460547504,0.04213311251923428,within-record diagnostic only; not a cross-record generalization estimate
+target_locked,VisualCogA_Task-2,ok,55,43,5,10,0.53553911205074,0.017526598494565296,within-record diagnostic only; not a cross-record generalization estimate
+target_locked,VisualCogB_Task-1,ok,47,51,5,10,0.5438464747601167,0.03999374603997081,within-record diagnostic only; not a cross-record generalization estimate
+target_locked,VisualCogB_Task-2,ok,50,50,5,10,0.562,0.02043961295567453,within-record diagnostic only; not a cross-record generalization estimate

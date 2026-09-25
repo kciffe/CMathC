@@ -1,0 +1,11 @@
+{
+  "version":"1.0",
+  "questions":[
+    {"id":"Q3_EEG", "result_artifact":"src/C/q3/output/trial_features.csv", "validation_artifact":"src/C/q3/output/eeg_heldout_record_metrics.csv", "requires_baseline":true, "requires_uncertainty":true},
+    {"id":"Q3_STATE", "result_artifact":"src/C/q3/output/state_scores.csv", "validation_artifact":"src/C/q3/output/state_model_diagnostics.json", "requires_baseline":true, "requires_uncertainty":true},
+    {"id":"Q3_ABLATION", "result_artifact":"src/C/q3/output/ablation_metrics.csv", "validation_artifact":"src/C/q3/output/ablation_loro_summary.json", "requires_baseline":true, "requires_uncertainty":true},
+    {"id":"Q3_BEHAVIOR_EXTENSION", "result_artifact":"src/C/q3/output/behavior_model_status.json", "validation_artifact":"src/C/q3/output/behavior_loro_predictions.csv", "optional":true}
+  ],
+  "requirements":{"baseline_comparison_required":true,"uncertainty_analysis_required":true,"tradeoff_analysis_required":false,"dynamic_validation_required":false},
+  "decision_scope":"Trial-level cross-sectional cognitive state and EEG/behavior validation. Clinical diagnostic performance is outside the evidence supplied by the current four files."
+}

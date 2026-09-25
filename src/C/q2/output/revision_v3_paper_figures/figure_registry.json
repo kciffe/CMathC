@@ -345,6 +345,41 @@
           "B_Task-2 的差异波相关接近零，不能将主图中 ERP 拟合较好解读为左右效应拟合稳定。"
         ]
       }
+    },
+    {
+      "figure_id": "exploratory_lr_local_window",
+      "claim": "在四份记录中，按同一批 Stage1 试次搜索得到的单电极短窗平均振幅阈值，训练内准确率为 61.3%–72.2%；最佳电极与时间窗因记录而异。",
+      "evidence": [
+        "四记录 0–800 ms 的右减左 ERP 差波形及选中窗口",
+        "选中电极的单试次窗口均值分布、阈值和训练内分类分数"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.pdf",
+        "svg": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.svg",
+        "png": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.png",
+        "metadata": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.figure.json"
+      },
+      "contract": {
+        "source_paths": [
+          "src/C/q2/output/14_exploratory_local_window_decoder/局部时间窗最佳训练内结果.csv",
+          "src/C/q1/output/8riemann_denoise/*_clean.mat"
+        ],
+        "target_venue": "CMathc question 2 paper draft",
+        "column": "double",
+        "figure_role": "model-result",
+        "model_name": "single-channel local-window threshold classifier",
+        "scenario": "Stage1 cue-locked EEG; per-record exploratory fit on all trials",
+        "parameter_source": "per-record channel, window, polarity, and threshold selected on all trials",
+        "randomness": "window scan deterministic; point jitter uses seed 20260925",
+        "n_definition": "four MAT records; 54, 80, 83, and 80 trials respectively",
+        "statistic": "training-set apparent accuracy and balanced accuracy",
+        "uncertainty": "no held-out uncertainty interval; feature selection and scoring use the same trials",
+        "review_risks": [
+          "Training scores are optimistic and are not independent test performance.",
+          "Best electrode and window are not shared across records.",
+          "EEG amplitudes retain source-data units and are not asserted to be microvolts."
+        ]
+      }
     }
   ]
 }

@@ -47,8 +47,49 @@ def balanced_accuracy(actual: np.ndarray, predicted: np.ndarray) -> float:
     return float(np.mean(recalls)) if recalls else np.nan
 
 
-def validate_stage(frame: pd.DataFrame, stage: str, feature_columns: list[str]) -> tuple[pd.DataFrame, list[dict]]:
+def area_under_curve(actual: np.ndarray, probability_positive: np.ndarray) -> float:
+    actual = np.asarray(actual, dtype=int)
+    scores = np.asarray(probability_positive, dtype=float)
+    positive = actual == 1
+    n_positive = int(positive.sum())
+    n_negative = int((~positive).sum())
+    if not n_positive or not n_negative:
+        return float("nan")
+    order = np.argsort(scores, kind="mergesort")
+    ordered_scores = scores[order]
+    ranks = np.empty(len(scores), dtype=float)
+    start = 0
+    while start < len(scores):
+        stop = start + 1
+        while stop < len(scores) and ordered_scores[stop] == ordered_scores[start]:
+            stop += 1
+        ranks[order[start:stop]] = (start + 1 + stop) / 2.0
+        start = stop
+    return float((ranks[positive].sum() - n_positive * (n_positive + 1) / 2) / (n_positive * n_negative))
+
+
+def macro_f1(actual: np.ndarray, predicted: np.ndarray) -> float:
+    scores = []
+    for label in (-1, 1):
+        tp = int(np.sum((actual == label) & (predicted == label)))
+        fp = int(np.sum((actual != label) & (predicted == label)))
+        fn = int(np.sum((actual == label) & (predicted != label)))
+        denominator = 2 * tp + fp + fn
+        scores.append(2 * tp / denominator if denominator else 0.0)
+    return float(np.mean(scores))
+
+
+def validate_stage(
+    frame: pd.DataFrame,
+    stage: str,
+    feature_columns: list[str],
+    variant: str | None = None,
+) -> tuple[pd.DataFrame, list[dict]]:
     stage_frame = frame.loc[frame["stage"] == stage].copy()
+    if variant is not None:
+        stage_frame = stage_frame.loc[stage_frame["analysis_variant"] == variant].copy()
+    if "qc_valid" in stage_frame:
+        stage_frame = stage_frame.loc[stage_frame["qc_valid"].fillna(False).astype(bool)].copy()
     stage_frame["cue_side"] = pd.to_numeric(stage_frame["cue_side"], errors="coerce")
     stage_frame[feature_columns] = stage_frame[feature_columns].apply(
         pd.to_numeric, errors="coerce"
@@ -64,7 +105,7 @@ def validate_stage(frame: pd.DataFrame, stage: str, feature_columns: list[str]) 
         y_test_side = test["cue_side"].to_numpy(dtype=int)
         if np.unique(y_train_side).size < 2 or np.unique(y_test_side).size < 2:
             folds.append(
-                {"stage": stage, "held_out_record": held_out_record, "status": "skipped_single_class"}
+                {"stage": stage, "analysis_variant": variant or "nominal", "held_out_record": held_out_record, "status": "skipped_single_class"}
             )
             continue
 
@@ -86,6 +127,7 @@ def validate_stage(frame: pd.DataFrame, stage: str, feature_columns: list[str]) 
         )
         fold = {
             "stage": stage,
+            "analysis_variant": variant or "nominal",
             "held_out_record": held_out_record,
             "status": "ok",
             "n_train": int(len(train)),
@@ -94,6 +136,12 @@ def validate_stage(frame: pd.DataFrame, stage: str, feature_columns: list[str]) 
             "right_test_n": int(np.sum(y_test_side == 1)),
             "accuracy": accuracy,
             "balanced_accuracy": bal_acc,
+            "auc": area_under_curve((y_test_side > 0).astype(int), probabilities),
+            "macro_f1": macro_f1(y_test_side, predicted_side),
+            "confusion_true_left_pred_left": int(np.sum((y_test_side == -1) & (predicted_side == -1))),
+            "confusion_true_left_pred_right": int(np.sum((y_test_side == -1) & (predicted_side == 1))),
+            "confusion_true_right_pred_left": int(np.sum((y_test_side == 1) & (predicted_side == -1))),
+            "confusion_true_right_pred_right": int(np.sum((y_test_side == 1) & (predicted_side == 1))),
             "training_majority_baseline_accuracy": majority_baseline,
         }
         folds.append(fold)
@@ -102,6 +150,7 @@ def validate_stage(frame: pd.DataFrame, stage: str, feature_columns: list[str]) 
                 "record": row.record,
                 "original_trial_index": int(row.original_trial_index),
                 "stage": stage,
+                "analysis_variant": variant or "nominal",
                 "true_cue_side": int(row.cue_side),
                 "predicted_cue_side": int(predicted_side[index]),
                 "probability_right": float(probabilities[index]),
@@ -121,6 +170,8 @@ def within_record_diagnostic(
 ) -> pd.DataFrame:
     """Check within-record cue-side signal; this is secondary and optimistic."""
     stage_frame = frame.loc[frame["stage"] == stage].copy()
+    if "qc_valid" in stage_frame:
+        stage_frame = stage_frame.loc[stage_frame["qc_valid"].fillna(False).astype(bool)].copy()
     stage_frame["cue_side"] = pd.to_numeric(stage_frame["cue_side"], errors="coerce")
     stage_frame[feature_columns] = stage_frame[feature_columns].apply(
         pd.to_numeric, errors="coerce"
@@ -242,75 +293,117 @@ def write_interpretation(
     behavior_status: dict,
 ) -> None:
     trial_table = pd.read_csv(output_dir / "trial_table.csv", encoding="utf-8-sig")
-    retained_trials = trial_table.loc[trial_table["eeg_trial_available"].astype(bool)]
-    left_n = int((retained_trials["cue_side"] == -1).sum())
-    right_n = int((retained_trials["cue_side"] == 1).sum())
-    feature_columns = [
-        *[f"erp_mean_{channel}" for channel in EEG_CHANNELS],
-        *[f"log_{band}_power_{channel}" for band in ("theta", "alpha", "beta") for channel in EEG_CHANNELS],
-        "AI_alpha",
+    core = features.loc[
+        features["stage"].isin(("cue_locked", "target_locked"))
+        & features["qc_valid"].fillna(False)
     ]
-    validation_features = features.loc[features["stage"].isin(("cue_locked", "target_locked"))]
-    missing_values = int(validation_features[feature_columns].isna().sum().sum())
+    left_n = int((core.loc[core["stage"] == "cue_locked", "cue_side"] == -1).sum())
+    right_n = int((core.loc[core["stage"] == "cue_locked", "cue_side"] == 1).sum())
+    missing_values = int(core["erp_mean_F3"].isna().sum())
+    q1_matched_n = int(
+        core.loc[core["stage"] == "cue_locked", "q1_quality_pass"].fillna(False).sum()
+    )
+    q1_cue = core.loc[
+        (core["stage"] == "cue_locked") & core["q1_quality_pass"].fillna(False)
+    ]
+    q1_left_n = int((q1_cue["cue_side"] == -1).sum())
+    q1_right_n = int((q1_cue["cue_side"] == 1).sum())
     response_n = int(trial_table["choice_side"].notna().sum())
-    omission_n = int(trial_table["is_omission"].fillna(False).sum())
     response_rt = pd.to_numeric(trial_table["reaction_time_s"], errors="coerce")
     response_rt_median = float(response_rt.median()) if response_rt.notna().any() else np.nan
     rt_short_n = int((response_rt.notna() & (response_rt < 0.10)).sum())
     behavior_balanced_accuracy = behavior_status.get("mean_balanced_accuracy")
+    behavior_comparison = behavior_status.get("model_comparison", {})
+    behavior_comparison_ba = behavior_comparison.get("mean_balanced_accuracy", {})
+    cue_choice_alignment = behavior_comparison.get(
+        "cue_choice_alignment_by_filename_task_code", []
+    )
+    cue_choice_alignment_text = "; ".join(
+        f"code {int(row['filename_task_code_candidate'])}: "
+        f"{row['n_cue_choice_same_side']}/{row['n_trials']} same-side "
+        f"({row['cue_choice_same_side_fraction']:.1%})"
+        for row in cue_choice_alignment
+        if pd.notna(row.get("filename_task_code_candidate"))
+    )
+    quality_agreement_text = "not available"
+    quality_agreement_path = output_dir / "quality_agreement.csv"
+    if quality_agreement_path.exists():
+        quality_agreement = pd.read_csv(quality_agreement_path, encoding="utf-8-sig")
+        quality_agreement_text = "; ".join(
+            f"{row.stage}: Q1/raw-QC both pass {int(row.q1_pass_raw_qc_pass)}, "
+            f"Q1 fail/raw-QC pass {int(row.q1_fail_raw_qc_pass)}, "
+            f"both fail {int(row.q1_fail_raw_qc_fail)}"
+            for row in quality_agreement.itertuples(index=False)
+        )
+    validation_summary = json.loads(
+        (output_dir / "validation_summary.json").read_text(encoding="utf-8")
+    )
+    matched_delta = validation_summary.get("q1_matched_delta_vs_legacy", {})
+    timing_rows = validation_summary.get("target_timing_sensitivity", [])
+    timing_values = [row["mean_balanced_accuracy"] for row in timing_rows if row.get("mean_balanced_accuracy") is not None]
     sign_consistency: dict[str, str] = {}
     for stage in ("cue_locked", "target_locked"):
-        per_record = effects.loc[
-            (effects["stage"] == stage) & (effects["record"] != "ALL_RECORDS")
-        ]
+        per_record = effects.loc[(effects["stage"] == stage) & (effects["record"] != "ALL_RECORDS")]
         consistent = 0
-        feature_count = 0
+        n_features = 0
         for _, values in per_record.groupby("feature"):
             signs = np.sign(values["right_minus_left"].to_numpy(dtype=float))
             if len(signs) == 4:
-                feature_count += 1
+                n_features += 1
                 consistent += int(np.all(signs != 0) and np.all(signs == signs[0]))
-        sign_consistency[stage] = f"{consistent}/{feature_count}"
+        sign_consistency[stage] = f"{consistent}/{n_features}"
 
     def score_text(stage: str) -> str:
         result = stage_summaries[stage]
         return (
             f"balanced accuracy {result['mean_balanced_accuracy']:.3f}, "
-            f"accuracy {result['mean_accuracy']:.3f}"
+            f"accuracy {result['mean_accuracy']:.3f}, AUC {result['mean_auc']:.3f}, "
+            f"macro-F1 {result['mean_macro_f1']:.3f}"
             if result["mean_balanced_accuracy"] is not None
             else "no valid held-out folds"
         )
 
     lines = [
-        "# Q3 validation result and possible explanations",
+        "# Q3 raw EEG validation results and possible explanations",
         "",
         "## Observed result",
         "",
-        f"- VisCue events: {len(trial_table)}; Q1 quality-retained, timestamp-matched EEG trials: {int(trial_table['eeg_trial_available'].sum())}.",
-        f"- Retained cue labels: left {left_n}, right {right_n}; missing values among the 13 validation features: {missing_values}.",
+        f"- Raw VisCue trials: {len(trial_table)}; cue epochs passing raw artifact QC: {stage_summaries['cue_locked']['n_qc_pass']}; Q1-clean matched sensitivity sample: {q1_matched_n} (left {q1_left_n}, right {q1_right_n}).",
+        f"- Q1/raw-QC agreement: {quality_agreement_text}.",
+        f"- Missing primary ERP amplitude values after QC: {missing_values}.",
         f"- Leave-one-record-out cue-side prediction: cue-locked {score_text('cue_locked')}; target-locked {score_text('target_locked')}.",
+        f"- On the Q1-matched {q1_cue.shape[0]}-trial sample, the new raw-filter balanced accuracy was {matched_delta.get('cue_locked', {}).get('new_raw_filter_q1_matched_balanced_accuracy'):.3f} for cue and {matched_delta.get('target_locked', {}).get('new_raw_filter_q1_matched_balanced_accuracy'):.3f} for target; changes from the old Q1-clean baseline were {matched_delta.get('cue_locked', {}).get('delta'):+.3f} and {matched_delta.get('target_locked', {}).get('delta'):+.3f}.",
+        f"- Target-offset sensitivity (2.0-2.4 s) balanced accuracy ranged from {min(timing_values):.3f} to {max(timing_values):.3f}; this is a timing robustness range, not an offset-selection procedure." if timing_values else "- Target-offset sensitivity: no valid grouped folds.",
         f"- Across-record feature-effect direction agrees in all four records for {sign_consistency['cue_locked']} cue-locked features and {sign_consistency['target_locked']} target-locked features.",
-        f"- Channel 9 response markers: {response_n} choices, {omission_n} trials without a marker; median RT from the scheduled target anchor {response_rt_median:.3f} s, with {rt_short_n} RTs under 100 ms.",
+        f"- Channel 9 markers: {response_n}; median time from the assumed cue+2.2 s target anchor is {response_rt_median:.3f} s, with {rt_short_n} under 100 ms. This is not treated as validated RT.",
         f"- Channel 9 choice Logistic, leave-one-record-out balanced accuracy: {behavior_balanced_accuracy:.3f}."
         if behavior_balanced_accuracy is not None
         else f"- Behavior model: {behavior_status.get('status', 'not run')}.",
+        f"- Choice baseline comparison: cue/task-code BA {behavior_comparison_ba.get('cue_plus_task_code'):.3f}; cue/task-code+EEG BA {behavior_comparison_ba.get('cue_task_plus_EEG'):.3f}; EEG increment {behavior_comparison.get('EEG_increment_over_cue_task'):+.3f}."
+        if behavior_comparison_ba.get("cue_plus_task_code") is not None
+        and behavior_comparison_ba.get("cue_task_plus_EEG") is not None
+        else "- Choice baseline comparison: not available.",
+        f"- Cue/choice same-side fraction by filename task-code candidate: {cue_choice_alignment_text}. This is not correctness; task mapping is unverified."
+        if cue_choice_alignment_text
+        else "- Cue/choice same-side fraction: not available.",
         "",
-        "The current EEG cue-side decoding effect is weak: both primary balanced accuracies are near 0.5. The channel-9 choice model is reported separately and does not establish correctness or clinical diagnosis.",
+        "The main results use raw continuous EEG filtered in separate 0.5-30 Hz ERP and 1-80 Hz time-frequency branches. The Q1-clean epochs are used only for mapping and a matched-sample comparison. Leave-one-record-out is the main validation; it is not leave-one-participant-out because file-to-participant identity is unverified.",
         "",
-        "## Plausible causes (hypotheses)",
+        "## Plausible explanations if performance is weak (hypotheses)",
         "",
-        "1. **Recording-to-recording variation.** The cue-side feature differences do not keep a common direction across the four records. The repeated within-record diagnostic is higher for a few record/stage pairs and near or below chance for others, which is consistent with session-specific effects that do not transfer reliably.",
-        "2. **Limited usable sample size.** Q1 retained 297 of 400 raw cue trials (54–83 trials per recording). With 13 EEG features and only four held-out recordings, the cross-record estimate has substantial sampling uncertainty.",
-        "3. **Restricted scalp coverage and bandwidth.** The analysis uses only F3/Fz/F4 and Q1's 0.2–24 Hz clean signal. It cannot capture posterior scalp patterns often used for P300 analysis or activity above 24 Hz.",
-        "4. **Target-stage timing is assumed.** Target-locked features use cue time + 2.2 s from the experimental schedule; this offset was not verified from an allowed event channel. Timing variation would blur target-locked responses.",
-        "5. **Conditions remain unresolved.** Task type and participant grouping could not be verified from the allowed signals, so potentially different conditions are pooled and each recording file is only a proxy for a held-out group.",
-        "6. **The RT anchor may not match the recorded action clock.** 399 of 400 RTs are under 100 ms when target time is set to cue + 2.2 s. This could reflect a schedule-to-marker mismatch or channel timing semantics; until verified, it does not support a DDM fit.",
+        "1. **Recording shift.** Four held-out records provide only four independent validation groups; electrode offsets, session state, or participant differences can overwhelm cue-locked effects.",
+        "2. **Short windows and single-trial noise.** Cue (0.5 s) and target (0.8 s) windows contain few cycles at theta/alpha frequencies, while single-trial frontal ERP peaks are noisy.",
+        "3. **Frontal-only coverage.** F3/Fz/F4 cannot measure posterior visual topography or support reliable localization of LGN, hippocampal, or PFC generators.",
+        "4. **Target timing assumption.** The target event is not independently marked; the offset sensitivity table should be read as a robustness check, not as a search for the best event time.",
+        "5. **Artifact exclusions.** The raw QC removes event windows with hard clipping, non-finite samples, or flatline; remaining unflagged movement or muscle artifacts may still reduce signal quality.",
+        "6. **Unverified file/task mapping.** Task-1/Task-2 is retained as a filename code candidate only; project semantics and participant identity are not assumed.",
+        "7. **No added choice information from EEG in this split.** The cue/task-code baseline and cue/task-code-plus-EEG balanced accuracies should be compared directly. If they are similar, this may mean the three-channel proxies add little across recordings, or that the provisional channel-9 label is strongly tied to cue/task coding; it does not prove a cognitive mechanism.",
         "",
-        "These are plausible explanations, not established causes. Cue-to-Q1 timestamp matches were one-to-one, sampling intervals matched the stated 256 Hz rate, all planned cue/target windows had full coverage, and those validation features had no missing values; this makes obvious cue mapping or feature-window truncation errors less likely.",
+        "These are hypotheses, not established causes. PLV and theta-gamma PAC are marked unavailable because the short windows do not support reliable estimates without surrogate validation. ICA is not claimed: the available signal has three EEG electrodes and no separate EOG reference.",
         "",
         "## Interpretation boundary",
         "",
-        "Channel 9 supplies response direction and timing only; it is never an EEG feature. Correctness remains unassigned because target-side truth is not verified for all tasks. The target offset remains a protocol assumption. RTs near 15 ms from that anchor are flagged, so the DDM is skipped and the choice-only logistic model is used instead.",
+        "Channel 9 supplies response direction and event time only; it is never an EEG feature or V/H/P input. Correctness and omission rate remain unverified because the response event semantics, target-side truth, and deadline are not independently established. The DDM is skipped because the assumed target-time anchor yields implausibly short RTs. V/H/P are anchored functional proxies, not localized brain sources.",
         "",
     ]
     (output_dir / "validation_interpretation.md").write_text("\n".join(lines), encoding="utf-8")
@@ -330,16 +423,35 @@ def main() -> None:
         *[f"log_beta_power_{channel}" for channel in EEG_CHANNELS],
         "AI_alpha",
     ]
-    effects = descriptive_effects(features, feature_columns)
+    analysis_features = features.loc[
+        features["stage"].isin(("cue_locked", "target_locked"))
+        & features["qc_valid"].fillna(False).astype(bool)
+    ].copy()
+    q1_matched_features = analysis_features.loc[
+        analysis_features["q1_quality_pass"].fillna(False).astype(bool)
+    ].copy()
+    effects = descriptive_effects(analysis_features, feature_columns)
     write_csv(effects, output_dir / "eeg_condition_effects.csv")
 
     all_predictions: list[pd.DataFrame] = []
     all_folds: list[dict] = []
+    q1_matched_stage_summaries: dict[str, dict] = {}
     for stage in ("cue_locked", "target_locked"):
-        predictions, folds = validate_stage(features, stage, feature_columns)
+        predictions, folds = validate_stage(analysis_features, stage, feature_columns)
         if not predictions.empty:
             all_predictions.append(predictions)
         all_folds.extend(folds)
+        _, matched_folds = validate_stage(q1_matched_features, stage, feature_columns)
+        valid_matched = [row for row in matched_folds if row.get("status") == "ok"]
+        q1_matched_stage_summaries[stage] = {
+            "n_qc_pass_q1_trials": int((q1_matched_features["stage"] == stage).sum()),
+            "valid_record_folds": len(valid_matched),
+            "mean_accuracy": float(np.mean([row["accuracy"] for row in valid_matched])) if valid_matched else None,
+            "mean_balanced_accuracy": float(np.mean([row["balanced_accuracy"] for row in valid_matched])) if valid_matched else None,
+            "mean_auc": float(np.mean([row["auc"] for row in valid_matched])) if valid_matched else None,
+            "mean_macro_f1": float(np.mean([row["macro_f1"] for row in valid_matched])) if valid_matched else None,
+            "folds": matched_folds,
+        }
     predictions_table = (
         pd.concat(all_predictions, ignore_index=True)
         if all_predictions
@@ -351,7 +463,7 @@ def main() -> None:
     write_csv(pd.DataFrame(all_folds), output_dir / "eeg_heldout_record_metrics.csv")
 
     within_record_tables = [
-        within_record_diagnostic(features, stage, feature_columns)
+        within_record_diagnostic(analysis_features, stage, feature_columns)
         for stage in ("cue_locked", "target_locked")
     ]
     within_record = pd.concat(within_record_tables, ignore_index=True)
@@ -361,13 +473,62 @@ def main() -> None:
     for stage in ("cue_locked", "target_locked"):
         valid = [row for row in all_folds if row.get("stage") == stage and row.get("status") == "ok"]
         stage_summaries[stage] = {
+            "n_qc_pass": int((analysis_features["stage"] == stage).sum()),
+            "n_q1_matched": int((q1_matched_features["stage"] == stage).sum()),
             "valid_record_folds": len(valid),
             "mean_accuracy": float(np.mean([row["accuracy"] for row in valid])) if valid else None,
             "mean_balanced_accuracy": float(np.mean([row["balanced_accuracy"] for row in valid]))
             if valid
             else None,
+            "mean_auc": float(np.mean([row["auc"] for row in valid])) if valid else None,
+            "mean_macro_f1": float(np.mean([row["macro_f1"] for row in valid])) if valid else None,
             "folds": valid,
         }
+
+    sensitivity_rows: list[dict] = []
+    sensitivity_variants = sorted(
+        features.loc[features["stage"] == "target_offset_sensitivity", "analysis_variant"].dropna().unique()
+    )
+    for variant in sensitivity_variants:
+        variant_predictions, variant_folds = validate_stage(
+            features, "target_offset_sensitivity", feature_columns, variant=variant
+        )
+        valid_variant = [row for row in variant_folds if row.get("status") == "ok"]
+        sensitivity_rows.append(
+            {
+                "analysis_variant": variant,
+                "target_offset_s": float(variant.rsplit("_", 1)[-1].replace("s", "")),
+                "n_qc_pass_trials": int(len(variant_predictions)),
+                "valid_record_folds": len(valid_variant),
+                "mean_accuracy": float(np.mean([row["accuracy"] for row in valid_variant])) if valid_variant else None,
+                "mean_balanced_accuracy": float(np.mean([row["balanced_accuracy"] for row in valid_variant])) if valid_variant else None,
+                "mean_auc": float(np.mean([row["auc"] for row in valid_variant])) if valid_variant else None,
+                "mean_macro_f1": float(np.mean([row["macro_f1"] for row in valid_variant])) if valid_variant else None,
+                "folds": variant_folds,
+            }
+        )
+    nominal_target = stage_summaries["target_locked"]
+    sensitivity_rows.append(
+        {
+            "analysis_variant": "target_offset_2.2s",
+            "target_offset_s": 2.2,
+            "n_qc_pass_trials": int(nominal_target["n_qc_pass"]),
+            "valid_record_folds": int(nominal_target["valid_record_folds"]),
+            "mean_accuracy": nominal_target["mean_accuracy"],
+            "mean_balanced_accuracy": nominal_target["mean_balanced_accuracy"],
+            "mean_auc": nominal_target["mean_auc"],
+            "mean_macro_f1": nominal_target["mean_macro_f1"],
+            "folds": nominal_target["folds"],
+        }
+    )
+    sensitivity_rows.sort(key=lambda row: row["target_offset_s"])
+    sensitivity_frame = pd.DataFrame(
+        [
+            {key: value for key, value in row.items() if key != "folds"}
+            for row in sensitivity_rows
+        ]
+    )
+    write_csv(sensitivity_frame, output_dir / "target_timing_sensitivity.csv")
 
     behavior_status_path = output_dir / "behavior_model_status.json"
     if behavior_status_path.exists():
@@ -378,16 +539,38 @@ def main() -> None:
 
     summary = {
         "EEG_validation_target": "VisCue direction (-1/+1), not choice, correctness, RT, or omission",
+        "feature_source": "raw continuous F3/Fz/F4; ERP 0.5-30 Hz branch and TF 1-80 Hz branch; Q1 clean is mapping/quality reference only",
+        "artifact_qc": "event epochs flagged for non-finite samples, a flat channel, or absolute amplitude >= 999.5 raw data units; branch and joint pass counts are in raw_feature_qc_summary.json",
         "CV": "leave one recording file out; all scaling estimated from training records only",
         "record_identity": "the four recording files are held out individually; independent participant grouping is unverified",
         "feature_count": len(feature_columns),
         "stage_results": stage_summaries,
+        "q1_quality_matched_sensitivity": q1_matched_stage_summaries,
+        "legacy_q1_baseline_reference": json.loads((output_dir / "legacy_q1_baseline_reference.json").read_text(encoding="utf-8")),
+        "target_timing_sensitivity": sensitivity_rows,
         "within_record_diagnostic": within_record.to_dict(orient="records"),
         "within_record_diagnostic_caveat": "random trial folds share each recording/session across train and test and can be optimistic; do not use as the main generalization result",
         "behavior_validation": behavior_status,
-        "target_locking": "target event is fixed cue + 2.2 s by schedule assumption; Action/TgtAct marks responses, not a separate target display",
-        "channel_9_scope": "used for response direction/time/omission labels; excluded from EEG feature arrays and predictors",
+        "target_locking": "nominal event is fixed cue + 2.2 s by schedule assumption; sensitivity offsets span 2.0-2.4 s",
+        "channel_9_scope": "used for event/response direction and endpoint metadata only; excluded from EEG feature arrays and predictors",
         "interpretation_limit": "EEG classification estimates cue-side decodability; behavior logistic predicts channel-9 choice and is not a correctness or clinical diagnosis result",
+    }
+    baseline = summary["legacy_q1_baseline_reference"].get("stage_results", {})
+    summary["q1_matched_delta_vs_legacy"] = {
+        stage: {
+            "new_raw_filter_q1_matched_balanced_accuracy": q1_matched_stage_summaries[stage]["mean_balanced_accuracy"],
+            "legacy_q1_clean_balanced_accuracy": baseline.get(stage, {}).get("mean_balanced_accuracy"),
+            "delta": (
+                q1_matched_stage_summaries[stage]["mean_balanced_accuracy"]
+                - baseline[stage]["mean_balanced_accuracy"]
+            )
+            if q1_matched_stage_summaries[stage]["mean_balanced_accuracy"] is not None
+            and stage in baseline
+            and baseline[stage].get("mean_balanced_accuracy") is not None
+            else None,
+            "n_q1_matched_qc_trials": q1_matched_stage_summaries[stage]["n_qc_pass_q1_trials"],
+        }
+        for stage in ("cue_locked", "target_locked")
     }
     write_json(summary, output_dir / "validation_summary.json")
     write_interpretation(

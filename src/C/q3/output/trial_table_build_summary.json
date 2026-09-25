@@ -1,0 +1,10 @@
+{
+  "raw_cue_trial_count": 400,
+  "q1_timestamp_matched_count": 297,
+  "q1_quality_pass_count": 297,
+  "channel9_marker_count": 400,
+  "channel9_no_marker_count": 0,
+  "q1_usage": "event timestamp mapping and quality labels only; no Q1 EEG samples are read or used as Q3 feature input",
+  "channel9_usage": "event direction/time metadata; never included in EEG feature values",
+  "behavior_label_caveat": "channel-9 marker absence is not declared a behavioral omission without a verified response deadline"
+}

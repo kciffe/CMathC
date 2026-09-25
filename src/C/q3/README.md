@@ -1,6 +1,6 @@
-# Q3 EEG analysis
+# Q3 EEG cognitive model
 
-This pipeline uses F3/Fz/F4 as EEG features, VisCue and TimeStamp for cue alignment, and the ninth Action/TgtAct channel for response direction and timing. Channel 9 never enters an EEG feature array or predictor. Q3 does not import the Q2 simulation chain.
+This pipeline follows the latest Q3 solution with a separate raw-EEG analysis path. It uses F3/Fz/F4 for EEG features, VisCue for cue-side labels, and channel 9/TimeStamp for response-event metadata. Channel 9 is never included in EEG feature arrays or V/H/P state predictors. Q3 does not import the Q2 simulation chain.
 
 ## Run order
 
@@ -9,35 +9,42 @@ From the repository root:
 ```powershell
 python src/C/q3/01_audit_events.py
 python src/C/q3/02_extract_trials.py
+python src/C/q3/02b_preprocess_raw.py
 python src/C/q3/03_extract_features.py
 python src/C/q3/04_cognitive_state.py
 python src/C/q3/05_behavior_model.py
 python src/C/q3/06_validate.py
+python src/C/q3/07_ablation.py
 ```
 
-The scripts write intermediate tables, summaries, and figures to `src/C/q3/output/`.
+The scripts write tables, summaries, and figures to `src/C/q3/output/`. Run `python -m pytest src/C/q3/tests -q` for the Q3 unit tests.
 
-## Data and interpretation
+## Signal and event handling
 
-- Raw VisCue events are detected from the allowed cue signal. Q1 retained trials are matched to them by the event timestamp and cue direction, not by the post-screening row number.
-- Channel 9 preserves each response onset's `response_raw` value and adds `response_code`: any negative raw code becomes -2, zero remains 0, and any positive raw code becomes +2. The zero-to-nonzero edge marks an event; a sustained marker is not counted repeatedly.
-- `choice_side` is stored as -1/+1 for modeling. A missing marker is recorded as a no-response trial. Correctness stays blank until the task's target-side truth is verified.
-- EEG features are extracted from Q1's quality-retained `clean.mat` epochs, which were filtered at 0.2–24 Hz and downsampled to 128 Hz. Only the original `F3`, `Fz`, and `F4` signals are selected. Gamma power and theta-gamma coupling are outside the retained bandwidth.
-- The target stage is locked to cue time + 2.2 seconds, based on the 0.2 s cue and approximately 2 s wait in the task description. No separate target-display marker is present, so this remains a schedule assumption.
-- The pre-response window ends about 100 ms before the channel 9 onset. It is extracted from a single uniformly filtered pass over each full continuous EEG record; it is never stitched to a Q1 epoch. These response-locked features are exploratory and excluded from choice prediction because their endpoint depends on response time.
-- `V/H/P` are predefined feature composites: frontal ERP candidate amplitude, frontal log theta power, and frontal log beta power. These are functional proxies, not identified brain-region sources or a dynamic state-transition model.
-- Task type and participant identity are not inferred from recording filenames. Validation holds out each recording file in turn; it cannot establish leave-participant-out generalization.
-- The main cue-side validation is leave-one-record-out. An additional repeated within-record split is written as a diagnostic only; it can be optimistic because train and test trials come from the same recording.
-- ERP outputs are frontal ERP/P300 candidates. Three frontal electrodes cannot establish the standard parietal P300 topography.
-- DDM is gated on RT quality and deadline information. The current RTs are mostly close to the scheduled target anchor, so they are flagged and choice-only logistic regression is used as the fallback.
+- The raw data contain 400 VisCue trials across four files at 256 Hz. Q1-clean output is used for event timestamp mapping and a same-trial quality comparison; it is not the source of the main EEG features.
+- `02b_preprocess_raw.py` reads only raw F3/Fz/F4 EEG channels and filters each complete record before epoching. The ERP branch is zero-phase 0.5-30 Hz; the time-frequency branch is zero-phase 1-80 Hz. ICA is not claimed because there are only three EEG channels and no separate EOG reference.
+- Cue epochs cover [-0.10, 0.50) s relative to VisCue. Target epochs cover [-0.10, 0.80) s relative to cue+2.2 s. The target time has no independent event marker, so target-offset sensitivity is checked from 2.0 to 2.4 s.
+- Channel 9 preserves its original event values and maps negative codes to -2, zero to 0, positive to +2. Only zero-to-nonzero edges count as events. It supplies side/time metadata and the response-endpoint window; it is excluded from all EEG features.
+- The pre-response signal window is [cue, channel-9 event time - 0.10 s], with cumulative and terminal-500-ms summaries. The marker semantics and the cue+2.2 s target-time anchor must be verified before interpreting these as behavioral RT windows.
+- The raw QC flags windows with non-finite samples, a flat channel, or any absolute value at/above 999.5 raw data units. The source unit is not independently documented. Each stage keeps its QC flag and exclusion reason; no epoch is silently deleted.
+- PLV and theta-gamma PAC remain uncomputed because the event windows are short and no validated surrogate test is available. Gamma power is exploratory.
 
-## Optional independent behavior labels
+## Model and validation
 
-Optional independently verified correctness or deadline information can be placed in `src/C/q3/input/behavior_labels.csv`, keyed by `record` and `original_trial_index`:
+- `V/H/P` are transparent observed feature proxies: frontal ERP candidate amplitude, frontal log theta power, and frontal log beta power. A free latent loading matrix is not fitted because three electrodes do not establish an identifiable source model. Path coefficients are descriptive OLS estimates, not source activity.
+- `Task-1`/`Task-2` is stored only as a filename-code candidate. Its formal mapping to project types and participant identity are not verified.
+- EEG cue-side validation uses leave-one-record-out folds and training-fold scaling. Results include the full raw-QC sample and the 297-trial Q1-quality-matched sample. The target-offset table is a robustness check, not a procedure for selecting the most favorable time.
+- V/H/P ablations compare cue prediction and leave-one-feature-out reconstruction. AIC/BIC are auxiliary fit summaries, not significance tests.
+- Correctness and omission status are not inferred from channel 9 alone. All 400 files contain a nonzero channel-9 marker, but this does not prove that the protocol had no behavioral omissions.
+- DDM is skipped while the assumed target anchor yields a median interval near 15 ms and no verified response deadline is available. The choice-only Logistic result is exploratory and does not represent accuracy or diagnosis.
 
-```text
-record,original_trial_index,correct,deadline_s
-VisualCogA_Task-1,0,,1.5
-```
+## Main output files
 
-The current choice label comes from channel 9, so an external choice file is not needed. External columns are preserved with an `external_` prefix and do not overwrite channel 9 values.
+- `output/raw_signal_processing.json`, `output/raw_feature_qc_summary.json`: filtering and QC settings/counts.
+- `output/trial_features.csv`, `output/feature_definitions.csv`: one row per trial and event/response window.
+- `output/state_scores.csv`, `output/cognitive_path_coefficients.csv`, `output/state_condition_effects.csv`: anchored states and descriptive task/cue summaries.
+- `output/validation_summary.json`, `output/validation_interpretation.md`: grouped prediction, matched-sample comparison, timing sensitivity, and interpretation limits.
+- `output/quality_agreement.csv`, `output/behavior_cue_choice_alignment.csv`, `output/behavior_model_comparison.csv`: Q1/raw-QC agreement and response-choice model diagnostics.
+- `output/ablation_summary.json`, `output/ablation_report.md`, `output/ablation_effects.png`: V/H/P ablation results.
+- `output/legacy_q1_baseline_reference.json`: archived pre-update baseline used for direct comparison.
+- `output/legacy_q1_pipeline/`: preserved outputs from the superseded Q1-derived feature pipeline; not used by current Q3 scripts.

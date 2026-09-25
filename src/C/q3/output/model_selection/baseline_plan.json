@@ -1,0 +1,8 @@
+{
+  "eeg_condition_baseline": "Current direct EEG-feature L2 logistic leave-one-file-out cue-side model; compare all new state models on identical trials and folds.",
+  "feature_reconstruction_baseline": "Training-fold mean feature vector and predefined V/H/P proxy regression; score held-out standardized RMSE and predictive log likelihood.",
+  "choice_baseline": "Cue-side plus verified task-type logistic model; compare against the same model augmented with EEG-derived states to measure incremental EEG value.",
+  "rt_baseline": "Training-fold median RT only after target time has been verified; use grouped leave-one-file/subject-out validation, never random 7:3 splitting.",
+  "current_reference_metrics": {"cue_locked_eeg_balanced_accuracy":0.460072, "target_locked_eeg_balanced_accuracy":0.507646, "channel9_choice_balanced_accuracy":0.506191, "matched_eeg_trials":297, "raw_cue_trials":400},
+  "uncertainty": "Report each held-out file, fold range and sample counts; use group/block-aware intervals only when group count supports them."
+}

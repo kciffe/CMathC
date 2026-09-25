@@ -1,229 +1,1240 @@
 {
   "EEG_validation_target": "VisCue direction (-1/+1), not choice, correctness, RT, or omission",
+  "feature_source": "raw continuous F3/Fz/F4; ERP 0.5-30 Hz branch and TF 1-80 Hz branch; Q1 clean is mapping/quality reference only",
+  "artifact_qc": "event epochs flagged for non-finite samples, a flat channel, or absolute amplitude >= 999.5 raw data units; branch and joint pass counts are in raw_feature_qc_summary.json",
   "CV": "leave one recording file out; all scaling estimated from training records only",
   "record_identity": "the four recording files are held out individually; independent participant grouping is unverified",
   "feature_count": 13,
   "stage_results": {
     "cue_locked": {
+      "n_qc_pass": 387,
+      "n_q1_matched": 297,
       "valid_record_folds": 4,
-      "mean_accuracy": 0.4490671017402945,
-      "mean_balanced_accuracy": 0.4600721735723301,
+      "mean_accuracy": 0.46728035165679177,
+      "mean_balanced_accuracy": 0.4601094303048512,
+      "mean_auc": 0.48341780819424973,
+      "mean_macro_f1": 0.44900202825364266,
       "folds": [
         {
           "stage": "cue_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 287,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.49,
+          "balanced_accuracy": 0.4907407407407407,
+          "auc": 0.5157004830917874,
+          "macro_f1": 0.4895405865278751,
+          "confusion_true_left_pred_left": 26,
+          "confusion_true_left_pred_right": 28,
+          "confusion_true_right_pred_left": 23,
+          "confusion_true_right_pred_right": 23,
+          "training_majority_baseline_accuracy": 0.5087108013937283
+        },
+        {
+          "stage": "cue_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 291,
+          "n_test": 96,
+          "left_test_n": 54,
+          "right_test_n": 42,
+          "accuracy": 0.4479166666666667,
+          "balanced_accuracy": 0.41666666666666663,
+          "auc": 0.4426807760141093,
+          "macro_f1": 0.3924776119402985,
+          "confusion_true_left_pred_left": 36,
+          "confusion_true_left_pred_right": 18,
+          "confusion_true_right_pred_left": 35,
+          "confusion_true_right_pred_right": 7,
+          "training_majority_baseline_accuracy": 0.5017182130584192
+        },
+        {
+          "stage": "cue_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 289,
+          "n_test": 98,
+          "left_test_n": 46,
+          "right_test_n": 52,
+          "accuracy": 0.47959183673469385,
+          "balanced_accuracy": 0.47951505016722407,
+          "auc": 0.4974916387959866,
+          "macro_f1": 0.4791036998436686,
+          "confusion_true_left_pred_left": 22,
+          "confusion_true_left_pred_right": 24,
+          "confusion_true_right_pred_left": 27,
+          "confusion_true_right_pred_right": 25,
+          "training_majority_baseline_accuracy": 0.532871972318339
+        },
+        {
+          "stage": "cue_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 294,
+          "n_test": 93,
+          "left_test_n": 46,
+          "right_test_n": 47,
+          "accuracy": 0.45161290322580644,
+          "balanced_accuracy": 0.45351526364477335,
+          "auc": 0.47779833487511564,
+          "macro_f1": 0.4348862147027285,
+          "confusion_true_left_pred_left": 29,
+          "confusion_true_left_pred_right": 17,
+          "confusion_true_right_pred_left": 34,
+          "confusion_true_right_pred_right": 13,
+          "training_majority_baseline_accuracy": 0.5238095238095238
+        }
+      ]
+    },
+    "target_locked": {
+      "n_qc_pass": 396,
+      "n_q1_matched": 297,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.528061224489796,
+      "mean_balanced_accuracy": 0.5224995399195834,
+      "mean_auc": 0.5256555984691247,
+      "mean_macro_f1": 0.5091665572949008,
+      "folds": [
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.49,
+          "balanced_accuracy": 0.4891304347826087,
+          "auc": 0.4943639291465378,
+          "macro_f1": 0.48872180451127817,
+          "confusion_true_left_pred_left": 27,
+          "confusion_true_left_pred_right": 27,
+          "confusion_true_right_pred_left": 24,
+          "confusion_true_right_pred_right": 22,
+          "training_majority_baseline_accuracy": 0.5135135135135135
+        },
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 55,
+          "right_test_n": 43,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.4784355179704017,
+          "auc": 0.4515856236786469,
+          "macro_f1": 0.47085399449035814,
+          "confusion_true_left_pred_left": 36,
+          "confusion_true_left_pred_right": 19,
+          "confusion_true_right_pred_left": 30,
+          "confusion_true_right_pred_right": 13,
+          "training_majority_baseline_accuracy": 0.5067114093959731
+        },
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 47,
+          "right_test_n": 51,
+          "accuracy": 0.6122448979591837,
+          "balanced_accuracy": 0.6124322069253233,
+          "auc": 0.6182728410513142,
+          "macro_f1": 0.6120833333333333,
+          "confusion_true_left_pred_left": 29,
+          "confusion_true_left_pred_right": 18,
+          "confusion_true_right_pred_left": 20,
+          "confusion_true_right_pred_right": 31,
+          "training_majority_baseline_accuracy": 0.5335570469798657
+        },
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 50,
+          "right_test_n": 50,
+          "accuracy": 0.51,
+          "balanced_accuracy": 0.51,
+          "auc": 0.5384,
+          "macro_f1": 0.4650070968446337,
+          "confusion_true_left_pred_left": 40,
+          "confusion_true_left_pred_right": 10,
+          "confusion_true_right_pred_left": 39,
+          "confusion_true_right_pred_right": 11,
+          "training_majority_baseline_accuracy": 0.527027027027027
+        }
+      ]
+    }
+  },
+  "q1_quality_matched_sensitivity": {
+    "cue_locked": {
+      "n_qc_pass_q1_trials": 297,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.4890060240963855,
+      "mean_balanced_accuracy": 0.4867748606218495,
+      "mean_auc": 0.48520969987699897,
+      "mean_macro_f1": 0.48380189350207703,
+      "folds": [
+        {
+          "stage": "cue_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogA_Task-1",
           "status": "ok",
           "n_train": 243,
           "n_test": 54,
           "left_test_n": 29,
           "right_test_n": 25,
-          "accuracy": 0.3888888888888889,
-          "balanced_accuracy": 0.40068965517241384,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.49310344827586206,
+          "auc": 0.5186206896551724,
+          "macro_f1": 0.4914544820369724,
+          "confusion_true_left_pred_left": 17,
+          "confusion_true_left_pred_right": 12,
+          "confusion_true_right_pred_left": 15,
+          "confusion_true_right_pred_right": 10,
           "training_majority_baseline_accuracy": 0.5061728395061729
         },
         {
           "stage": "cue_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogA_Task-2",
           "status": "ok",
           "n_train": 217,
           "n_test": 80,
           "left_test_n": 45,
           "right_test_n": 35,
-          "accuracy": 0.425,
-          "balanced_accuracy": 0.44126984126984126,
+          "accuracy": 0.4875,
+          "balanced_accuracy": 0.4777777777777778,
+          "auc": 0.44761904761904764,
+          "macro_f1": 0.47762382544991244,
+          "confusion_true_left_pred_left": 25,
+          "confusion_true_left_pred_right": 20,
+          "confusion_true_right_pred_left": 21,
+          "confusion_true_right_pred_right": 14,
           "training_majority_baseline_accuracy": 0.5069124423963134
         },
         {
           "stage": "cue_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogB_Task-1",
           "status": "ok",
           "n_train": 214,
           "n_test": 83,
           "left_test_n": 41,
           "right_test_n": 42,
-          "accuracy": 0.46987951807228917,
-          "balanced_accuracy": 0.47067363530778167,
+          "accuracy": 0.5060240963855421,
+          "balanced_accuracy": 0.5063879210220674,
+          "auc": 0.5069686411149826,
+          "macro_f1": 0.5057371096586782,
+          "confusion_true_left_pred_left": 22,
+          "confusion_true_left_pred_right": 19,
+          "confusion_true_right_pred_left": 22,
+          "confusion_true_right_pred_right": 20,
           "training_majority_baseline_accuracy": 0.5186915887850467
         },
         {
           "stage": "cue_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogB_Task-2",
           "status": "ok",
           "n_train": 217,
           "n_test": 80,
           "left_test_n": 37,
           "right_test_n": 43,
-          "accuracy": 0.5125,
-          "balanced_accuracy": 0.5276555625392835,
+          "accuracy": 0.4625,
+          "balanced_accuracy": 0.46983029541169075,
+          "auc": 0.4676304211187932,
+          "macro_f1": 0.46039215686274515,
+          "confusion_true_left_pred_left": 21,
+          "confusion_true_left_pred_right": 16,
+          "confusion_true_right_pred_left": 27,
+          "confusion_true_right_pred_right": 16,
           "training_majority_baseline_accuracy": 0.5299539170506913
         }
       ]
     },
     "target_locked": {
+      "n_qc_pass_q1_trials": 297,
       "valid_record_folds": 4,
-      "mean_accuracy": 0.505912539045069,
-      "mean_balanced_accuracy": 0.5076462203452834,
+      "mean_accuracy": 0.5135542168674698,
+      "mean_balanced_accuracy": 0.5104496858316758,
+      "mean_auc": 0.5403063844841184,
+      "mean_macro_f1": 0.5003150847317189,
       "folds": [
         {
           "stage": "target_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogA_Task-1",
           "status": "ok",
           "n_train": 243,
           "n_test": 54,
           "left_test_n": 29,
           "right_test_n": 25,
-          "accuracy": 0.48148148148148145,
-          "balanced_accuracy": 0.47862068965517246,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.4986206896551724,
+          "auc": 0.5158620689655172,
+          "macro_f1": 0.4984520123839009,
+          "confusion_true_left_pred_left": 15,
+          "confusion_true_left_pred_right": 14,
+          "confusion_true_right_pred_left": 13,
+          "confusion_true_right_pred_right": 12,
           "training_majority_baseline_accuracy": 0.5061728395061729
         },
         {
           "stage": "target_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogA_Task-2",
           "status": "ok",
           "n_train": 217,
           "n_test": 80,
           "left_test_n": 45,
           "right_test_n": 35,
-          "accuracy": 0.5125,
-          "balanced_accuracy": 0.5095238095238095,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.47619047619047616,
+          "auc": 0.5155555555555555,
+          "macro_f1": 0.4666666666666667,
+          "confusion_true_left_pred_left": 30,
+          "confusion_true_left_pred_right": 15,
+          "confusion_true_right_pred_left": 25,
+          "confusion_true_right_pred_right": 10,
           "training_majority_baseline_accuracy": 0.5069124423963134
         },
         {
           "stage": "target_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogB_Task-1",
           "status": "ok",
           "n_train": 214,
           "n_test": 83,
           "left_test_n": 41,
           "right_test_n": 42,
-          "accuracy": 0.5421686746987951,
-          "balanced_accuracy": 0.5418118466898955,
+          "accuracy": 0.5542168674698795,
+          "balanced_accuracy": 0.5528455284552846,
+          "auc": 0.6219512195121951,
+          "macro_f1": 0.5476506112829578,
+          "confusion_true_left_pred_left": 18,
+          "confusion_true_left_pred_right": 23,
+          "confusion_true_right_pred_left": 14,
+          "confusion_true_right_pred_right": 28,
           "training_majority_baseline_accuracy": 0.5186915887850467
         },
         {
           "stage": "target_locked",
+          "analysis_variant": "nominal",
           "held_out_record": "VisualCogB_Task-2",
           "status": "ok",
           "n_train": 217,
           "n_test": 80,
           "left_test_n": 37,
           "right_test_n": 43,
-          "accuracy": 0.4875,
-          "balanced_accuracy": 0.5006285355122564,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.51414204902577,
+          "auc": 0.5078566939032055,
+          "macro_f1": 0.48849104859335035,
+          "confusion_true_left_pred_left": 26,
+          "confusion_true_left_pred_right": 11,
+          "confusion_true_right_pred_left": 29,
+          "confusion_true_right_pred_right": 14,
           "training_majority_baseline_accuracy": 0.5299539170506913
         }
       ]
     }
   },
+  "legacy_q1_baseline_reference": {
+    "source": "pre-latest-solution Q3 pipeline, generated before raw dual-branch implementation",
+    "feature_source": "Q1 0.2-24 Hz clean epochs at 128 Hz",
+    "cv": "leave one recording file out; all scaling estimated from training records only",
+    "stage_results": {
+      "cue_locked": {
+        "valid_record_folds": 4,
+        "mean_accuracy": 0.4490671017402945,
+        "mean_balanced_accuracy": 0.4600721735723301,
+        "folds": [
+          {
+            "stage": "cue_locked",
+            "held_out_record": "VisualCogA_Task-1",
+            "status": "ok",
+            "n_train": 243,
+            "n_test": 54,
+            "left_test_n": 29,
+            "right_test_n": 25,
+            "accuracy": 0.3888888888888889,
+            "balanced_accuracy": 0.40068965517241384,
+            "training_majority_baseline_accuracy": 0.5061728395061729
+          },
+          {
+            "stage": "cue_locked",
+            "held_out_record": "VisualCogA_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "left_test_n": 45,
+            "right_test_n": 35,
+            "accuracy": 0.425,
+            "balanced_accuracy": 0.44126984126984126,
+            "training_majority_baseline_accuracy": 0.5069124423963134
+          },
+          {
+            "stage": "cue_locked",
+            "held_out_record": "VisualCogB_Task-1",
+            "status": "ok",
+            "n_train": 214,
+            "n_test": 83,
+            "left_test_n": 41,
+            "right_test_n": 42,
+            "accuracy": 0.46987951807228917,
+            "balanced_accuracy": 0.47067363530778167,
+            "training_majority_baseline_accuracy": 0.5186915887850467
+          },
+          {
+            "stage": "cue_locked",
+            "held_out_record": "VisualCogB_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "left_test_n": 37,
+            "right_test_n": 43,
+            "accuracy": 0.5125,
+            "balanced_accuracy": 0.5276555625392835,
+            "training_majority_baseline_accuracy": 0.5299539170506913
+          }
+        ]
+      },
+      "target_locked": {
+        "valid_record_folds": 4,
+        "mean_accuracy": 0.505912539045069,
+        "mean_balanced_accuracy": 0.5076462203452834,
+        "folds": [
+          {
+            "stage": "target_locked",
+            "held_out_record": "VisualCogA_Task-1",
+            "status": "ok",
+            "n_train": 243,
+            "n_test": 54,
+            "left_test_n": 29,
+            "right_test_n": 25,
+            "accuracy": 0.48148148148148145,
+            "balanced_accuracy": 0.47862068965517246,
+            "training_majority_baseline_accuracy": 0.5061728395061729
+          },
+          {
+            "stage": "target_locked",
+            "held_out_record": "VisualCogA_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "left_test_n": 45,
+            "right_test_n": 35,
+            "accuracy": 0.5125,
+            "balanced_accuracy": 0.5095238095238095,
+            "training_majority_baseline_accuracy": 0.5069124423963134
+          },
+          {
+            "stage": "target_locked",
+            "held_out_record": "VisualCogB_Task-1",
+            "status": "ok",
+            "n_train": 214,
+            "n_test": 83,
+            "left_test_n": 41,
+            "right_test_n": 42,
+            "accuracy": 0.5421686746987951,
+            "balanced_accuracy": 0.5418118466898955,
+            "training_majority_baseline_accuracy": 0.5186915887850467
+          },
+          {
+            "stage": "target_locked",
+            "held_out_record": "VisualCogB_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "left_test_n": 37,
+            "right_test_n": 43,
+            "accuracy": 0.4875,
+            "balanced_accuracy": 0.5006285355122564,
+            "training_majority_baseline_accuracy": 0.5299539170506913
+          }
+        ]
+      }
+    },
+    "behavior_validation": {
+      "status": "choice_logistic_fitted_ddm_skipped_rt_quality_gate",
+      "model": "L2-regularized binary logistic regression",
+      "n_joined_trials": 297,
+      "n_records": 4,
+      "predictors": [
+        "V_visual_like_raw",
+        "H_memory_like_raw",
+        "P_control_like_raw"
+      ],
+      "target": "channel 9 response direction normalized to choice side -1/+1",
+      "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
+      "rt_quality": {
+        "response_trials": 400,
+        "no_response_marker_trials": 0,
+        "rt_observed_trials": 400,
+        "rt_at_least_minimum_for_ddm": 1,
+        "rt_below_minimum_for_ddm": 399,
+        "rt_median_s": 0.0148437500000113,
+        "minimum_rt_gate_s": 0.1,
+        "deadline_known": false
+      },
+      "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
+      "ddm_reason": "This implementation uses a choice-only logistic fallback. RTs relative to the scheduled cue+2.2 s target are mostly below 100 ms; the target-time anchor is not separately marked.",
+      "cross_validation": "leave-one-record-out; standardization fitted on training records only",
+      "folds": [
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 243,
+          "n_test": 54,
+          "accuracy": 0.5370370370370371,
+          "balanced_accuracy": 0.549655172413793
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.5125,
+          "balanced_accuracy": 0.49937146448774355
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 214,
+          "n_test": 83,
+          "accuracy": 0.4578313253012048,
+          "balanced_accuracy": 0.45876887340301975
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.5375,
+          "balanced_accuracy": 0.516970458830924
+        }
+      ],
+      "mean_balanced_accuracy": 0.5061914922838701,
+      "correctness": "left unassigned; target-side truth is not available for every task",
+      "omissions": "no response marker within the cue-to-next-cue trial interval is recorded as a no-response trial",
+      "pre_response_EEG": "not used as a predictor because its time window is aligned using the response time"
+    },
+    "limitations": "Baseline retained only for comparison; it is not the current primary analysis."
+  },
+  "target_timing_sensitivity": [
+    {
+      "analysis_variant": "target_offset_2.0s",
+      "target_offset_s": 2.0,
+      "n_qc_pass_trials": 395,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.5187360614348833,
+      "mean_balanced_accuracy": 0.5200764680702918,
+      "mean_auc": 0.5498360013404253,
+      "mean_macro_f1": 0.5069895404367216,
+      "folds": [
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.0s",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 295,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.51,
+          "balanced_accuracy": 0.5044283413848631,
+          "auc": 0.5233494363929146,
+          "macro_f1": 0.5039983804028747,
+          "confusion_true_left_pred_left": 31,
+          "confusion_true_left_pred_right": 23,
+          "confusion_true_right_pred_left": 26,
+          "confusion_true_right_pred_right": 20,
+          "training_majority_baseline_accuracy": 0.5152542372881356
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.0s",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 97,
+          "left_test_n": 55,
+          "right_test_n": 42,
+          "accuracy": 0.4845360824742268,
+          "balanced_accuracy": 0.48917748917748916,
+          "auc": 0.5151515151515151,
+          "macro_f1": 0.48404255319148937,
+          "confusion_true_left_pred_left": 25,
+          "confusion_true_left_pred_right": 30,
+          "confusion_true_right_pred_left": 20,
+          "confusion_true_right_pred_right": 22,
+          "training_majority_baseline_accuracy": 0.5067114093959731
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.0s",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 297,
+          "n_test": 98,
+          "left_test_n": 47,
+          "right_test_n": 51,
+          "accuracy": 0.5204081632653061,
+          "balanced_accuracy": 0.5267000417188152,
+          "auc": 0.5544430538172715,
+          "macro_f1": 0.5118177000529942,
+          "confusion_true_left_pred_left": 32,
+          "confusion_true_left_pred_right": 15,
+          "confusion_true_right_pred_left": 32,
+          "confusion_true_right_pred_right": 19,
+          "training_majority_baseline_accuracy": 0.5353535353535354
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.0s",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 295,
+          "n_test": 100,
+          "left_test_n": 50,
+          "right_test_n": 50,
+          "accuracy": 0.56,
+          "balanced_accuracy": 0.5599999999999999,
+          "auc": 0.6064,
+          "macro_f1": 0.5280995280995281,
+          "confusion_true_left_pred_left": 41,
+          "confusion_true_left_pred_right": 9,
+          "confusion_true_right_pred_left": 35,
+          "confusion_true_right_pred_right": 15,
+          "training_majority_baseline_accuracy": 0.5288135593220339
+        }
+      ]
+    },
+    {
+      "analysis_variant": "target_offset_2.1s",
+      "target_offset_s": 2.1,
+      "n_qc_pass_trials": 396,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.5456122448979592,
+      "mean_balanced_accuracy": 0.5411043907264473,
+      "mean_auc": 0.5565211710065914,
+      "mean_macro_f1": 0.5310369564114695,
+      "folds": [
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.1s",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.54,
+          "balanced_accuracy": 0.537037037037037,
+          "auc": 0.533011272141707,
+          "macro_f1": 0.537037037037037,
+          "confusion_true_left_pred_left": 31,
+          "confusion_true_left_pred_right": 23,
+          "confusion_true_right_pred_left": 23,
+          "confusion_true_right_pred_right": 23,
+          "training_majority_baseline_accuracy": 0.5135135135135135
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.1s",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 55,
+          "right_test_n": 43,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.4809725158562368,
+          "auc": 0.48921775898520087,
+          "macro_f1": 0.47593582887700536,
+          "confusion_true_left_pred_left": 35,
+          "confusion_true_left_pred_right": 20,
+          "confusion_true_right_pred_left": 29,
+          "confusion_true_right_pred_right": 14,
+          "training_majority_baseline_accuracy": 0.5067114093959731
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.1s",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 47,
+          "right_test_n": 51,
+          "accuracy": 0.6224489795918368,
+          "balanced_accuracy": 0.6264080100125157,
+          "auc": 0.6178556528994577,
+          "macro_f1": 0.6205128205128205,
+          "confusion_true_left_pred_left": 34,
+          "confusion_true_left_pred_right": 13,
+          "confusion_true_right_pred_left": 24,
+          "confusion_true_right_pred_right": 27,
+          "training_majority_baseline_accuracy": 0.5335570469798657
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.1s",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 50,
+          "right_test_n": 50,
+          "accuracy": 0.52,
+          "balanced_accuracy": 0.52,
+          "auc": 0.586,
+          "macro_f1": 0.49066213921901525,
+          "confusion_true_left_pred_left": 38,
+          "confusion_true_left_pred_right": 12,
+          "confusion_true_right_pred_left": 36,
+          "confusion_true_right_pred_right": 14,
+          "training_majority_baseline_accuracy": 0.527027027027027
+        }
+      ]
+    },
+    {
+      "analysis_variant": "target_offset_2.2s",
+      "target_offset_s": 2.2,
+      "n_qc_pass_trials": 396,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.528061224489796,
+      "mean_balanced_accuracy": 0.5224995399195834,
+      "mean_auc": 0.5256555984691247,
+      "mean_macro_f1": 0.5091665572949008,
+      "folds": [
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.49,
+          "balanced_accuracy": 0.4891304347826087,
+          "auc": 0.4943639291465378,
+          "macro_f1": 0.48872180451127817,
+          "confusion_true_left_pred_left": 27,
+          "confusion_true_left_pred_right": 27,
+          "confusion_true_right_pred_left": 24,
+          "confusion_true_right_pred_right": 22,
+          "training_majority_baseline_accuracy": 0.5135135135135135
+        },
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 55,
+          "right_test_n": 43,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.4784355179704017,
+          "auc": 0.4515856236786469,
+          "macro_f1": 0.47085399449035814,
+          "confusion_true_left_pred_left": 36,
+          "confusion_true_left_pred_right": 19,
+          "confusion_true_right_pred_left": 30,
+          "confusion_true_right_pred_right": 13,
+          "training_majority_baseline_accuracy": 0.5067114093959731
+        },
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 47,
+          "right_test_n": 51,
+          "accuracy": 0.6122448979591837,
+          "balanced_accuracy": 0.6124322069253233,
+          "auc": 0.6182728410513142,
+          "macro_f1": 0.6120833333333333,
+          "confusion_true_left_pred_left": 29,
+          "confusion_true_left_pred_right": 18,
+          "confusion_true_right_pred_left": 20,
+          "confusion_true_right_pred_right": 31,
+          "training_majority_baseline_accuracy": 0.5335570469798657
+        },
+        {
+          "stage": "target_locked",
+          "analysis_variant": "nominal",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 50,
+          "right_test_n": 50,
+          "accuracy": 0.51,
+          "balanced_accuracy": 0.51,
+          "auc": 0.5384,
+          "macro_f1": 0.4650070968446337,
+          "confusion_true_left_pred_left": 40,
+          "confusion_true_left_pred_right": 10,
+          "confusion_true_right_pred_left": 39,
+          "confusion_true_right_pred_right": 11,
+          "training_majority_baseline_accuracy": 0.527027027027027
+        }
+      ]
+    },
+    {
+      "analysis_variant": "target_offset_2.3s",
+      "target_offset_s": 2.3,
+      "n_qc_pass_trials": 396,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.4979081632653061,
+      "mean_balanced_accuracy": 0.4927362832026618,
+      "mean_auc": 0.5069910605950037,
+      "mean_macro_f1": 0.4851418067098528,
+      "folds": [
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.3s",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.42,
+          "balanced_accuracy": 0.4227053140096618,
+          "auc": 0.4504830917874396,
+          "macro_f1": 0.42,
+          "confusion_true_left_pred_left": 21,
+          "confusion_true_left_pred_right": 33,
+          "confusion_true_right_pred_left": 25,
+          "confusion_true_right_pred_right": 21,
+          "training_majority_baseline_accuracy": 0.5135135135135135
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.3s",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 55,
+          "right_test_n": 43,
+          "accuracy": 0.5102040816326531,
+          "balanced_accuracy": 0.4875264270613108,
+          "auc": 0.47610993657505285,
+          "macro_f1": 0.4789543642002658,
+          "confusion_true_left_pred_left": 37,
+          "confusion_true_left_pred_right": 18,
+          "confusion_true_right_pred_left": 30,
+          "confusion_true_right_pred_right": 13,
+          "training_majority_baseline_accuracy": 0.5067114093959731
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.3s",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 47,
+          "right_test_n": 51,
+          "accuracy": 0.5714285714285714,
+          "balanced_accuracy": 0.5707133917396746,
+          "auc": 0.5769712140175219,
+          "macro_f1": 0.5707133917396746,
+          "confusion_true_left_pred_left": 26,
+          "confusion_true_left_pred_right": 21,
+          "confusion_true_right_pred_left": 21,
+          "confusion_true_right_pred_right": 30,
+          "training_majority_baseline_accuracy": 0.5335570469798657
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.3s",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 50,
+          "right_test_n": 50,
+          "accuracy": 0.49,
+          "balanced_accuracy": 0.49,
+          "auc": 0.5244,
+          "macro_f1": 0.4708994708994709,
+          "confusion_true_left_pred_left": 34,
+          "confusion_true_left_pred_right": 16,
+          "confusion_true_right_pred_left": 35,
+          "confusion_true_right_pred_right": 15,
+          "training_majority_baseline_accuracy": 0.527027027027027
+        }
+      ]
+    },
+    {
+      "analysis_variant": "target_offset_2.4s",
+      "target_offset_s": 2.4,
+      "n_qc_pass_trials": 396,
+      "valid_record_folds": 4,
+      "mean_accuracy": 0.4901020408163266,
+      "mean_balanced_accuracy": 0.48297107158870034,
+      "mean_auc": 0.47266831913798146,
+      "mean_macro_f1": 0.4718826432705222,
+      "folds": [
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.4s",
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 54,
+          "right_test_n": 46,
+          "accuracy": 0.44,
+          "balanced_accuracy": 0.4412238325281803,
+          "auc": 0.45893719806763283,
+          "macro_f1": 0.43977591036414565,
+          "confusion_true_left_pred_left": 23,
+          "confusion_true_left_pred_right": 31,
+          "confusion_true_right_pred_left": 25,
+          "confusion_true_right_pred_right": 21,
+          "training_majority_baseline_accuracy": 0.5135135135135135
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.4s",
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 55,
+          "right_test_n": 43,
+          "accuracy": 0.4897959183673469,
+          "balanced_accuracy": 0.45665961945031713,
+          "auc": 0.4452431289640592,
+          "macro_f1": 0.4289044289044289,
+          "confusion_true_left_pred_left": 40,
+          "confusion_true_left_pred_right": 15,
+          "confusion_true_right_pred_left": 35,
+          "confusion_true_right_pred_right": 8,
+          "training_majority_baseline_accuracy": 0.5067114093959731
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.4s",
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 298,
+          "n_test": 98,
+          "left_test_n": 47,
+          "right_test_n": 51,
+          "accuracy": 0.5306122448979592,
+          "balanced_accuracy": 0.5340008343763037,
+          "auc": 0.4876929495202336,
+          "macro_f1": 0.5288461538461539,
+          "confusion_true_left_pred_left": 29,
+          "confusion_true_left_pred_right": 18,
+          "confusion_true_right_pred_left": 28,
+          "confusion_true_right_pred_right": 23,
+          "training_majority_baseline_accuracy": 0.5335570469798657
+        },
+        {
+          "stage": "target_offset_sensitivity",
+          "analysis_variant": "target_offset_2.4s",
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 296,
+          "n_test": 100,
+          "left_test_n": 50,
+          "right_test_n": 50,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.5,
+          "auc": 0.4988,
+          "macro_f1": 0.4900040799673603,
+          "confusion_true_left_pred_left": 32,
+          "confusion_true_left_pred_right": 18,
+          "confusion_true_right_pred_left": 32,
+          "confusion_true_right_pred_right": 18,
+          "training_majority_baseline_accuracy": 0.527027027027027
+        }
+      ]
+    }
+  ],
   "within_record_diagnostic": [
     {
       "stage": "cue_locked",
       "record": "VisualCogA_Task-1",
       "status": "ok",
-      "left_n": 29,
-      "right_n": 25,
+      "left_n": 54,
+      "right_n": 46,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.5986206896551725,
-      "sd_across_repeats": 0.03960166304854963,
+      "mean_balanced_accuracy": 0.3847020933977455,
+      "sd_across_repeats": 0.04740961836622044,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "cue_locked",
       "record": "VisualCogA_Task-2",
       "status": "ok",
-      "left_n": 45,
-      "right_n": 35,
+      "left_n": 54,
+      "right_n": 42,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.5079365079365079,
-      "sd_across_repeats": 0.040956619006060596,
+      "mean_balanced_accuracy": 0.5175925925925926,
+      "sd_across_repeats": 0.03413080063789517,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "cue_locked",
       "record": "VisualCogB_Task-1",
       "status": "ok",
-      "left_n": 41,
-      "right_n": 42,
+      "left_n": 46,
+      "right_n": 52,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.5227351916376307,
-      "sd_across_repeats": 0.03180795319350052,
+      "mean_balanced_accuracy": 0.48189799331103683,
+      "sd_across_repeats": 0.024143192756355437,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "cue_locked",
       "record": "VisualCogB_Task-2",
       "status": "ok",
-      "left_n": 37,
-      "right_n": 43,
+      "left_n": 46,
+      "right_n": 47,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.5353551225644249,
-      "sd_across_repeats": 0.03926188386628571,
+      "mean_balanced_accuracy": 0.4910268270120259,
+      "sd_across_repeats": 0.02790323553462295,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "target_locked",
       "record": "VisualCogA_Task-1",
       "status": "ok",
-      "left_n": 29,
-      "right_n": 25,
+      "left_n": 54,
+      "right_n": 46,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.45331034482758614,
-      "sd_across_repeats": 0.06235527834287647,
+      "mean_balanced_accuracy": 0.5036634460547504,
+      "sd_across_repeats": 0.04213311251923428,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "target_locked",
       "record": "VisualCogA_Task-2",
       "status": "ok",
-      "left_n": 45,
-      "right_n": 35,
+      "left_n": 55,
+      "right_n": 43,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.5928571428571427,
-      "sd_across_repeats": 0.03586388421490478,
+      "mean_balanced_accuracy": 0.53553911205074,
+      "sd_across_repeats": 0.017526598494565296,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "target_locked",
       "record": "VisualCogB_Task-1",
       "status": "ok",
-      "left_n": 41,
-      "right_n": 42,
+      "left_n": 47,
+      "right_n": 51,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.45783972125435535,
-      "sd_across_repeats": 0.03667839834837876,
+      "mean_balanced_accuracy": 0.5438464747601167,
+      "sd_across_repeats": 0.03999374603997081,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     },
     {
       "stage": "target_locked",
       "record": "VisualCogB_Task-2",
       "status": "ok",
-      "left_n": 37,
-      "right_n": 43,
+      "left_n": 50,
+      "right_n": 50,
       "folds": 5,
       "repeats": 10,
-      "mean_balanced_accuracy": 0.45182275298554375,
-      "sd_across_repeats": 0.03757279530176974,
+      "mean_balanced_accuracy": 0.562,
+      "sd_across_repeats": 0.02043961295567453,
       "interpretation": "within-record diagnostic only; not a cross-record generalization estimate"
     }
   ],
   "within_record_diagnostic_caveat": "random trial folds share each recording/session across train and test and can be optimistic; do not use as the main generalization result",
   "behavior_validation": {
-    "status": "choice_logistic_fitted_ddm_skipped_rt_quality_gate",
+    "status": "choice_logistic_comparison_fitted_ddm_skipped_rt_quality_gate",
     "model": "L2-regularized binary logistic regression",
-    "n_joined_trials": 297,
+    "n_joined_trials": 387,
+    "raw_qc_passed_trials": 387,
+    "q1_quality_matched_sensitivity": {
+      "cue_plus_task_code": {
+        "n_trials": 297,
+        "valid_record_folds": 4,
+        "mean_balanced_accuracy": 0.7446821314872931,
+        "folds": [
+          {
+            "held_out_record": "VisualCogA_Task-1",
+            "status": "ok",
+            "n_train": 243,
+            "n_test": 54,
+            "accuracy": 1.0,
+            "balanced_accuracy": 1.0,
+            "model": "cue_plus_task_code"
+          },
+          {
+            "held_out_record": "VisualCogA_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "accuracy": 0.5375,
+            "balanced_accuracy": 0.5,
+            "model": "cue_plus_task_code"
+          },
+          {
+            "held_out_record": "VisualCogB_Task-1",
+            "status": "ok",
+            "n_train": 214,
+            "n_test": 83,
+            "accuracy": 0.9759036144578314,
+            "balanced_accuracy": 0.9759001161440186,
+            "model": "cue_plus_task_code"
+          },
+          {
+            "held_out_record": "VisualCogB_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.502828409805154,
+            "model": "cue_plus_task_code"
+          }
+        ]
+      },
+      "EEG_state_only": {
+        "n_trials": 297,
+        "valid_record_folds": 4,
+        "mean_balanced_accuracy": 0.4830157277487944,
+        "folds": [
+          {
+            "held_out_record": "VisualCogA_Task-1",
+            "status": "ok",
+            "n_train": 243,
+            "n_test": 54,
+            "accuracy": 0.42592592592592593,
+            "balanced_accuracy": 0.4572413793103448,
+            "model": "EEG_state_only"
+          },
+          {
+            "held_out_record": "VisualCogA_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "accuracy": 0.425,
+            "balanced_accuracy": 0.42928975487115023,
+            "model": "EEG_state_only"
+          },
+          {
+            "held_out_record": "VisualCogB_Task-1",
+            "status": "ok",
+            "n_train": 214,
+            "n_test": 83,
+            "accuracy": 0.5421686746987951,
+            "balanced_accuracy": 0.5386178861788617,
+            "model": "EEG_state_only"
+          },
+          {
+            "held_out_record": "VisualCogB_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "accuracy": 0.5125,
+            "balanced_accuracy": 0.506913890634821,
+            "model": "EEG_state_only"
+          }
+        ]
+      },
+      "cue_task_plus_EEG": {
+        "n_trials": 297,
+        "valid_record_folds": 4,
+        "mean_balanced_accuracy": 0.7403609498405301,
+        "folds": [
+          {
+            "held_out_record": "VisualCogA_Task-1",
+            "status": "ok",
+            "n_train": 243,
+            "n_test": 54,
+            "accuracy": 1.0,
+            "balanced_accuracy": 1.0,
+            "model": "cue_task_plus_EEG"
+          },
+          {
+            "held_out_record": "VisualCogA_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "accuracy": 0.5,
+            "balanced_accuracy": 0.47077309868007544,
+            "model": "cue_task_plus_EEG"
+          },
+          {
+            "held_out_record": "VisualCogB_Task-1",
+            "status": "ok",
+            "n_train": 214,
+            "n_test": 83,
+            "accuracy": 0.9759036144578314,
+            "balanced_accuracy": 0.9759001161440186,
+            "model": "cue_task_plus_EEG"
+          },
+          {
+            "held_out_record": "VisualCogB_Task-2",
+            "status": "ok",
+            "n_train": 217,
+            "n_test": 80,
+            "accuracy": 0.525,
+            "balanced_accuracy": 0.5147705845380264,
+            "model": "cue_task_plus_EEG"
+          }
+        ]
+      }
+    },
     "n_records": 4,
-    "predictors": [
-      "V_visual_like_raw",
-      "H_memory_like_raw",
-      "P_control_like_raw"
-    ],
+    "predictors": {
+      "cue_plus_task_baseline": [
+        "cue_side",
+        "filename_task_code_candidate",
+        "cue_by_task_code_candidate"
+      ],
+      "EEG_state_only": [
+        "V_visual_like_raw",
+        "H_memory_like_raw",
+        "P_control_like_raw"
+      ],
+      "cue_task_plus_EEG": [
+        "cue_side",
+        "filename_task_code_candidate",
+        "cue_by_task_code_candidate",
+        "V_visual_like_raw",
+        "H_memory_like_raw",
+        "P_control_like_raw"
+      ]
+    },
     "target": "channel 9 response direction normalized to choice side -1/+1",
     "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
     "rt_quality": {
@@ -238,47 +1249,711 @@
     },
     "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
     "ddm_reason": "This implementation uses a choice-only logistic fallback. RTs relative to the scheduled cue+2.2 s target are mostly below 100 ms; the target-time anchor is not separately marked.",
-    "cross_validation": "leave-one-record-out; standardization fitted on training records only",
+    "cross_validation": "leave-one-record-out; standardization fitted on training records only; primary set uses raw-signal QC, with Q1-retained sensitivity subset",
+    "model_comparison": {
+      "folds": [
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 287,
+          "n_test": 100,
+          "accuracy": 1.0,
+          "balanced_accuracy": 1.0,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 291,
+          "n_test": 96,
+          "accuracy": 0.5208333333333334,
+          "balanced_accuracy": 0.5,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 289,
+          "n_test": 98,
+          "accuracy": 0.9795918367346939,
+          "balanced_accuracy": 0.9795150501672241,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 294,
+          "n_test": 93,
+          "accuracy": 0.5376344086021505,
+          "balanced_accuracy": 0.5391509433962265,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 287,
+          "n_test": 100,
+          "accuracy": 0.45,
+          "balanced_accuracy": 0.47946859903381644,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 291,
+          "n_test": 96,
+          "accuracy": 0.4895833333333333,
+          "balanced_accuracy": 0.48652173913043484,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 289,
+          "n_test": 98,
+          "accuracy": 0.5306122448979592,
+          "balanced_accuracy": 0.5125418060200669,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 294,
+          "n_test": 93,
+          "accuracy": 0.4838709677419355,
+          "balanced_accuracy": 0.4797169811320755,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 287,
+          "n_test": 100,
+          "accuracy": 1.0,
+          "balanced_accuracy": 1.0,
+          "model": "cue_task_plus_EEG"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 291,
+          "n_test": 96,
+          "accuracy": 0.5520833333333334,
+          "balanced_accuracy": 0.532608695652174,
+          "model": "cue_task_plus_EEG"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 289,
+          "n_test": 98,
+          "accuracy": 0.9795918367346939,
+          "balanced_accuracy": 0.9795150501672241,
+          "model": "cue_task_plus_EEG"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 294,
+          "n_test": 93,
+          "accuracy": 0.4946236559139785,
+          "balanced_accuracy": 0.47688679245283017,
+          "model": "cue_task_plus_EEG"
+        }
+      ],
+      "cue_choice_alignment_by_filename_task_code": [
+        {
+          "filename_task_code_candidate": 1,
+          "n_trials": 198,
+          "n_cue_choice_same_side": 196,
+          "cue_choice_same_side_fraction": 0.98989898989899,
+          "interpretation": "descriptive only; not response correctness; filename task mapping unverified"
+        },
+        {
+          "filename_task_code_candidate": 2,
+          "n_trials": 189,
+          "n_cue_choice_same_side": 87,
+          "cue_choice_same_side_fraction": 0.4603174603174603,
+          "interpretation": "descriptive only; not response correctness; filename task mapping unverified"
+        }
+      ],
+      "mean_balanced_accuracy": {
+        "cue_plus_task_code": 0.7546664983908626,
+        "EEG_state_only": 0.4895622813290984,
+        "cue_task_plus_EEG": 0.747252634568057
+      },
+      "EEG_increment_over_cue_task": -0.007413863822805622,
+      "task_code_source": "filename suffix only; formal Project-1/Project-2 mapping unverified"
+    },
     "folds": [
       {
         "held_out_record": "VisualCogA_Task-1",
         "status": "ok",
-        "n_train": 243,
-        "n_test": 54,
-        "accuracy": 0.5370370370370371,
-        "balanced_accuracy": 0.549655172413793
+        "n_train": 287,
+        "n_test": 100,
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "model": "cue_task_plus_EEG"
       },
       {
         "held_out_record": "VisualCogA_Task-2",
         "status": "ok",
-        "n_train": 217,
-        "n_test": 80,
-        "accuracy": 0.5125,
-        "balanced_accuracy": 0.49937146448774355
+        "n_train": 291,
+        "n_test": 96,
+        "accuracy": 0.5520833333333334,
+        "balanced_accuracy": 0.532608695652174,
+        "model": "cue_task_plus_EEG"
       },
       {
         "held_out_record": "VisualCogB_Task-1",
         "status": "ok",
-        "n_train": 214,
-        "n_test": 83,
-        "accuracy": 0.4578313253012048,
-        "balanced_accuracy": 0.45876887340301975
+        "n_train": 289,
+        "n_test": 98,
+        "accuracy": 0.9795918367346939,
+        "balanced_accuracy": 0.9795150501672241,
+        "model": "cue_task_plus_EEG"
       },
       {
         "held_out_record": "VisualCogB_Task-2",
         "status": "ok",
-        "n_train": 217,
-        "n_test": 80,
-        "accuracy": 0.5375,
-        "balanced_accuracy": 0.516970458830924
+        "n_train": 294,
+        "n_test": 93,
+        "accuracy": 0.4946236559139785,
+        "balanced_accuracy": 0.47688679245283017,
+        "model": "cue_task_plus_EEG"
       }
     ],
-    "mean_balanced_accuracy": 0.5061914922838701,
+    "mean_balanced_accuracy": 0.747252634568057,
     "correctness": "left unassigned; target-side truth is not available for every task",
-    "omissions": "no response marker within the cue-to-next-cue trial interval is recorded as a no-response trial",
-    "pre_response_EEG": "not used as a predictor because its time window is aligned using the response time"
+    "omissions": "all trials have a channel-9 marker; this does not establish that the protocol had no behavioral omissions",
+    "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time"
   },
-  "target_locking": "target event is fixed cue + 2.2 s by schedule assumption; Action/TgtAct marks responses, not a separate target display",
-  "channel_9_scope": "used for response direction/time/omission labels; excluded from EEG feature arrays and predictors",
-  "interpretation_limit": "EEG classification estimates cue-side decodability; behavior logistic predicts channel-9 choice and is not a correctness or clinical diagnosis result"
+  "target_locking": "nominal event is fixed cue + 2.2 s by schedule assumption; sensitivity offsets span 2.0-2.4 s",
+  "channel_9_scope": "used for event/response direction and endpoint metadata only; excluded from EEG feature arrays and predictors",
+  "interpretation_limit": "EEG classification estimates cue-side decodability; behavior logistic predicts channel-9 choice and is not a correctness or clinical diagnosis result",
+  "q1_matched_delta_vs_legacy": {
+    "cue_locked": {
+      "new_raw_filter_q1_matched_balanced_accuracy": 0.4867748606218495,
+      "legacy_q1_clean_balanced_accuracy": 0.4600721735723301,
+      "delta": 0.02670268704951939,
+      "n_q1_matched_qc_trials": 297
+    },
+    "target_locked": {
+      "new_raw_filter_q1_matched_balanced_accuracy": 0.5104496858316758,
+      "legacy_q1_clean_balanced_accuracy": 0.5076462203452834,
+      "delta": 0.0028034654863924313,
+      "n_q1_matched_qc_trials": 297
+    }
+  },
+  "VHP_ablation": {
+    "classification": [
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-0_V",
+        "accuracy": 0.4797467648371263,
+        "balanced_accuracy": 0.49765494998419874,
+        "auc": 0.5192801878016149,
+        "training_aic_approx": 311.5871060112738,
+        "training_bic_approx": 318.39652209399543
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-0_VplusGamma",
+        "accuracy": 0.47650881302989734,
+        "balanced_accuracy": 0.502486864898311,
+        "auc": 0.5127118664227237,
+        "training_aic_approx": 313.2763916614088,
+        "training_bic_approx": 323.4905157854913
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-A1_no_H",
+        "accuracy": 0.49860692771084336,
+        "balanced_accuracy": 0.5041338613117223,
+        "auc": 0.5208114483916897,
+        "training_aic_approx": 312.760731875329,
+        "training_bic_approx": 322.9748559994115
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-A2_no_P",
+        "accuracy": 0.4952560240963855,
+        "balanced_accuracy": 0.5069051969088643,
+        "auc": 0.5133945665220725,
+        "training_aic_approx": 313.12951265955206,
+        "training_bic_approx": 323.34363678363457
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-A3_no_T",
+        "accuracy": 0.4826402833556448,
+        "balanced_accuracy": 0.4865785531108648,
+        "auc": 0.506121612462978,
+        "training_aic_approx": 314.33916980702935,
+        "training_bic_approx": 327.95800197247263
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "accuracy": 0.4919023315484159,
+        "balanced_accuracy": 0.5080619329376346,
+        "auc": 0.49817430878064206,
+        "training_aic_approx": 317.71033808764577,
+        "training_bic_approx": 338.1385863358107
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "accuracy": 0.47962823516287373,
+        "balanced_accuracy": 0.49640985641386604,
+        "auc": 0.5090696338171254,
+        "training_aic_approx": 315.877396435912,
+        "training_bic_approx": 332.9009366427161
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-0_V",
+        "accuracy": 0.4777819611780455,
+        "balanced_accuracy": 0.49116626259134133,
+        "auc": 0.48362243932109167,
+        "training_aic_approx": 310.90065852905224,
+        "training_bic_approx": 317.7100746117739
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-0_VplusGamma",
+        "accuracy": 0.478013442659527,
+        "balanced_accuracy": 0.5076447039457777,
+        "auc": 0.4904215762638905,
+        "training_aic_approx": 312.3712322335413,
+        "training_bic_approx": 322.5853563576238
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-A1_no_H",
+        "accuracy": 0.5360302320392681,
+        "balanced_accuracy": 0.5369561701093475,
+        "auc": 0.5442935387796224,
+        "training_aic_approx": 309.9253855333333,
+        "training_bic_approx": 320.13950965741583
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-A2_no_P",
+        "accuracy": 0.4901717983043284,
+        "balanced_accuracy": 0.5028128647593412,
+        "auc": 0.5171724253809062,
+        "training_aic_approx": 311.40644074912484,
+        "training_bic_approx": 321.62056487320734
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-A3_no_T",
+        "accuracy": 0.5208654060687193,
+        "balanced_accuracy": 0.5243186508739934,
+        "auc": 0.5441605505345799,
+        "training_aic_approx": 309.59636042748116,
+        "training_bic_approx": 323.21519259292444
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "accuracy": 0.5165634761267291,
+        "balanced_accuracy": 0.5256262101481848,
+        "auc": 0.5369343062288081,
+        "training_aic_approx": 312.7035754416264,
+        "training_bic_approx": 333.13182368979136
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "accuracy": 0.5088088464970995,
+        "balanced_accuracy": 0.5194242818564117,
+        "auc": 0.5439904005165022,
+        "training_aic_approx": 311.0419880714323,
+        "training_bic_approx": 328.06552827823646
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-0_V",
+        "accuracy": 0.4980828258722844,
+        "balanced_accuracy": 0.4940032622155656,
+        "auc": 0.5044504648941127,
+        "training_aic_approx": 405.6224200861084,
+        "training_bic_approx": 412.9638260552995
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-0_VplusGamma",
+        "accuracy": 0.49314975587008997,
+        "balanced_accuracy": 0.4779135332153371,
+        "auc": 0.4745938106445353,
+        "training_aic_approx": 406.82068515090333,
+        "training_bic_approx": 417.83279410469004
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-A1_no_H",
+        "accuracy": 0.5110208881939873,
+        "balanced_accuracy": 0.5044949001644191,
+        "auc": 0.5217421738389978,
+        "training_aic_approx": 405.78976203696783,
+        "training_bic_approx": 416.80187099075454
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-A2_no_P",
+        "accuracy": 0.47726965382927367,
+        "balanced_accuracy": 0.47326934936786924,
+        "auc": 0.47250738841280004,
+        "training_aic_approx": 407.2322794157547,
+        "training_bic_approx": 418.2443883695414
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-A3_no_T",
+        "accuracy": 0.5102969332894448,
+        "balanced_accuracy": 0.5030975540630952,
+        "auc": 0.5053890962482545,
+        "training_aic_approx": 407.3891729049692,
+        "training_bic_approx": 422.0719848433514
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "accuracy": 0.4672229536976081,
+        "balanced_accuracy": 0.47514194892201367,
+        "auc": 0.4857103818424355,
+        "training_aic_approx": 409.8240906358599,
+        "training_bic_approx": 431.8483085434332
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "accuracy": 0.477378140772438,
+        "balanced_accuracy": 0.48941018873373177,
+        "auc": 0.504164851605493,
+        "training_aic_approx": 408.9374838314682,
+        "training_bic_approx": 427.29099875444604
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-0_V",
+        "accuracy": 0.5126530612244897,
+        "balanced_accuracy": 0.4969031399263957,
+        "auc": 0.4793476881226971,
+        "training_aic_approx": 414.988790905741,
+        "training_bic_approx": 422.37624384657045
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-0_VplusGamma",
+        "accuracy": 0.5151020408163265,
+        "balanced_accuracy": 0.5146424788806887,
+        "auc": 0.5177697660809317,
+        "training_aic_approx": 415.8307744899373,
+        "training_bic_approx": 426.9119539011815
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-A1_no_H",
+        "accuracy": 0.5381632653061225,
+        "balanced_accuracy": 0.5334573909162659,
+        "auc": 0.5620010940120256,
+        "training_aic_approx": 411.88427736237827,
+        "training_bic_approx": 422.96545677362246
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-A2_no_P",
+        "accuracy": 0.5354591836734695,
+        "balanced_accuracy": 0.5331458990471994,
+        "auc": 0.5403598761340933,
+        "training_aic_approx": 415.3878137779038,
+        "training_bic_approx": 426.46899318914797
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-A3_no_T",
+        "accuracy": 0.5431122448979592,
+        "balanced_accuracy": 0.5393747248928744,
+        "auc": 0.5683956308140637,
+        "training_aic_approx": 410.82629081680693,
+        "training_bic_approx": 425.60119669846586
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "accuracy": 0.5203571428571429,
+        "balanced_accuracy": 0.521675536170459,
+        "auc": 0.5645532713772433,
+        "training_aic_approx": 414.3126028078315,
+        "training_bic_approx": 436.4749616303199
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "accuracy": 0.5278061224489796,
+        "balanced_accuracy": 0.5295422538169887,
+        "auc": 0.5686167216762678,
+        "training_aic_approx": 412.6129475913393,
+        "training_bic_approx": 431.081579943413
+      }
+    ],
+    "feature_reconstruction": [
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-0_V",
+        "heldout_rmse_standardized": 0.9497184390795333,
+        "training_aic": 604.4827835279752,
+        "training_bic": 614.6969076520578
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-0_VplusGamma",
+        "heldout_rmse_standardized": 0.9227569144529724,
+        "training_aic": 595.4054330407284,
+        "training_bic": 609.0242652061718
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-A1_no_H",
+        "heldout_rmse_standardized": 0.862903843123173,
+        "training_aic": 561.979688795145,
+        "training_bic": 575.5985209605882
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-A2_no_P",
+        "heldout_rmse_standardized": 0.8489202436001368,
+        "training_aic": 550.3062781298142,
+        "training_bic": 563.9251102952575
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-A3_no_T",
+        "heldout_rmse_standardized": 0.7651974155903492,
+        "training_aic": 509.76605748686893,
+        "training_bic": 526.789597693673
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.7639201651626598,
+        "training_aic": 509.421131259519,
+        "training_bic": 533.2540875490448
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.763374778722495,
+        "training_aic": 509.0916163393494,
+        "training_bic": 529.5198645875143
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-0_V",
+        "heldout_rmse_standardized": 0.9977605958616709,
+        "training_aic": 607.6355780123578,
+        "training_bic": 617.8497021364402
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-0_VplusGamma",
+        "heldout_rmse_standardized": 0.9746371245730922,
+        "training_aic": 599.2437065119846,
+        "training_bic": 612.8625386774279
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-A1_no_H",
+        "heldout_rmse_standardized": 0.9034178778530397,
+        "training_aic": 562.5822534394066,
+        "training_bic": 576.2010856048499
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-A2_no_P",
+        "heldout_rmse_standardized": 0.9204214419976543,
+        "training_aic": 568.0698203646555,
+        "training_bic": 581.6886525300988
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-A3_no_T",
+        "heldout_rmse_standardized": 0.8323282751084677,
+        "training_aic": 525.2344458790548,
+        "training_bic": 542.2579860858589
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.8345416489722008,
+        "training_aic": 523.4453594099261,
+        "training_bic": 547.278315699452
+      },
+      {
+        "sample": "q1_quality_matched",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.8335616718966141,
+        "training_aic": 523.0487950661043,
+        "training_bic": 543.4770433142692
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-0_V",
+        "heldout_rmse_standardized": 1.02552537968341,
+        "training_aic": 805.2147127734594,
+        "training_bic": 816.226821727246
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-0_VplusGamma",
+        "heldout_rmse_standardized": 1.0244307752953064,
+        "training_aic": 775.1557426448728,
+        "training_bic": 789.8385545832551
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-A1_no_H",
+        "heldout_rmse_standardized": 1.0200447821192247,
+        "training_aic": 780.7818730196278,
+        "training_bic": 795.46468495801
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-A2_no_P",
+        "heldout_rmse_standardized": 0.9514138230646283,
+        "training_aic": 755.6326474800125,
+        "training_bic": 770.3154594183948
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-A3_no_T",
+        "heldout_rmse_standardized": 0.9490642820026061,
+        "training_aic": 731.8438641322294,
+        "training_bic": 750.1973790552073
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "heldout_rmse_standardized": 1.0010231864670005,
+        "training_aic": 710.0057238967688,
+        "training_bic": 735.7006447889378
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "cue_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.9541637586735826,
+        "training_aic": 730.4237531032462,
+        "training_bic": 752.4479710108196
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-0_V",
+        "heldout_rmse_standardized": 1.0149988638672245,
+        "training_aic": 824.0305114854751,
+        "training_bic": 835.1116908967194
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-0_VplusGamma",
+        "heldout_rmse_standardized": 0.9876675007700969,
+        "training_aic": 811.0902135815357,
+        "training_bic": 825.8651194631947
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-A1_no_H",
+        "heldout_rmse_standardized": 0.9256052283569736,
+        "training_aic": 767.1538437183956,
+        "training_bic": 781.9287496000545
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-A2_no_P",
+        "heldout_rmse_standardized": 0.9353515837695863,
+        "training_aic": 770.2886789996647,
+        "training_bic": 785.0635848813237
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-A3_no_T",
+        "heldout_rmse_standardized": 0.8562737128833443,
+        "training_aic": 717.9007799961871,
+        "training_bic": 736.3694123482607
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_gamma_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.8590985830721315,
+        "training_aic": 714.7596764050006,
+        "training_bic": 740.6157616979036
+      },
+      {
+        "sample": "raw_qc_pass",
+        "stage": "target_locked",
+        "model": "Model-F_VHP_plus_Tcandidate",
+        "heldout_rmse_standardized": 0.8562351044469868,
+        "training_aic": 716.055259988855,
+        "training_bic": 738.2176188113434
+      }
+    ],
+    "limitations": "The reconstruction procedure excludes each target EEG feature from the corresponding proxy anchor before estimating that held-out target; it assesses cross-record association, not latent-source recovery."
+  }
 }

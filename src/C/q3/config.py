@@ -33,6 +33,8 @@ RESPONSE_CHANNEL_NAMES = frozenset(("Action", "TgtAct"))
 RAW_SAMPLE_RATE_HZ = 256.0
 Q1_SAMPLE_RATE_HZ = 128.0
 FILTER_BAND_HZ = (0.2, 24.0)
+ERP_FILTER_BAND_HZ = (0.5, 30.0)
+TF_FILTER_BAND_HZ = (1.0, 80.0)
 
 # The target time follows the cue-duration plus wait schedule. No separate
 # target-display marker is recorded in the permitted signals.
@@ -50,10 +52,15 @@ ERP_BASELINE_WINDOW_S = (-0.20, 0.0)
 ERP_CANDIDATE_WINDOW_S = (0.25, 0.50)
 ERP_PEAK_WINDOW_S = (0.25, 0.60)
 POWER_WINDOW_S = (0.10, 0.75)
+RAW_CUE_EPOCH_WINDOW_S = (-0.10, 0.50)
+RAW_TARGET_EPOCH_WINDOW_S = (-0.10, 0.80)
+TARGET_OFFSET_SENSITIVITY_S = (2.0, 2.1, 2.2, 2.3, 2.4)
+HARD_CLIP_THRESHOLD_RAW = 999.5
 BANDS_HZ = {
     "theta": (4.0, 8.0),
     "alpha": (8.0, 13.0),
-    "beta": (13.0, 24.0),
+    "beta": (13.0, 30.0),
+    "gamma": (30.0, 80.0),
 }
 
 RANDOM_SEED = 20260925

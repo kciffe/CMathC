@@ -1,0 +1,60 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "在四份记录中，按同一批 Stage1 试次搜索得到的单电极短窗平均振幅阈值，训练内准确率为 61.3%–72.2%；最佳电极与时间窗因记录而异。",
+    "evidence": [
+      "四记录 0–800 ms 的右减左 ERP 差波形及选中窗口",
+      "选中电极的单试次窗口均值分布、阈值和训练内分类分数"
+    ],
+    "source_paths": [
+      "src/C/q2/output/14_exploratory_local_window_decoder/局部时间窗最佳训练内结果.csv",
+      "src/C/q1/output/8riemann_denoise/*_clean.mat"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-result",
+    "model_name": "single-channel local-window threshold classifier",
+    "scenario": "Stage1 cue-locked EEG; per-record exploratory fit on all trials",
+    "parameter_source": "per-record channel, window, polarity, and threshold selected on all trials",
+    "randomness": "window scan deterministic; point jitter uses seed 20260925",
+    "n_definition": "four MAT records; 54, 80, 83, and 80 trials respectively",
+    "statistic": "training-set apparent accuracy and balanced accuracy",
+    "uncertainty": "no held-out uncertainty interval; feature selection and scoring use the same trials",
+    "review_risks": [
+      "Training scores are optimistic and are not independent test performance.",
+      "Best electrode and window are not shared across records.",
+      "EEG amplitudes retain source-data units and are not asserted to be microvolts."
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [
+      "axis 'VisualCogA_Task-1：右−左 ERP' is missing an x or y label",
+      "legend is fully inside the data region: VisualCogA_Task-1：右−左 ERP",
+      "axis 'F4 125–219 ms；BA=72.5%，准确率=72.2%' is missing an x or y label",
+      "legend is fully inside the data region: F4 125–219 ms；BA=72.5%，准确率=72.2%",
+      "axis 'VisualCogA_Task-2：右−左 ERP' is missing an x or y label",
+      "axis 'Fz 266–281 ms；BA=63.0%，准确率=61.3%' is missing an x or y label",
+      "axis 'VisualCogB_Task-1：右−左 ERP' is missing an x or y label",
+      "axis 'Fz 359–555 ms；BA=67.5%，准确率=67.5%' is missing an x or y label"
+    ],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 188.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-result",
+      "visible_text_count": 127,
+      "axes_count": 8,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}

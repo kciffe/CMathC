@@ -1,308 +1,356 @@
-"""Extract event-locked frontal EEG features from the Q1 clean epochs."""
+"""Extract per-trial features from the raw-data ERP and time-frequency branches."""
 
 from __future__ import annotations
 
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
-from scipy.signal import welch
 
-from common import ensure_output_dir, write_csv
-from config import (
-    BANDS_HZ,
-    EEG_CHANNELS,
-    ERP_BASELINE_WINDOW_S,
-    ERP_CANDIDATE_WINDOW_S,
-    ERP_PEAK_WINDOW_S,
-    FILTER_BAND_HZ,
-    POWER_WINDOW_S,
-    Q1_SAMPLE_RATE_HZ,
-    TARGET_OFFSET_S,
-)
+from common import ensure_output_dir, write_csv, write_json
+from config import EEG_CHANNELS, HARD_CLIP_THRESHOLD_RAW
+from signal_processing import summarize_epoch_features, summarize_window_features
 
 
-def _window_mask(time: np.ndarray, event_offset_s: float, window: tuple[float, float]) -> np.ndarray:
-    start, end = window
-    return (time >= event_offset_s + start) & (time < event_offset_s + end)
-
-
-def _bandpower(signal: np.ndarray, sample_rate_hz: float, band: tuple[float, float]) -> float:
-    values = np.asarray(signal, dtype=np.float64)
-    values = values[np.isfinite(values)]
-    if values.size < 32 or np.std(values) == 0:
-        return np.nan
-    nperseg = min(values.size, 256)
-    frequencies, power = welch(
-        values,
-        fs=sample_rate_hz,
-        nperseg=nperseg,
-        noverlap=nperseg // 2,
-        detrend="constant",
-        scaling="density",
-    )
-    selected = (frequencies >= band[0]) & (frequencies <= band[1])
-    if selected.sum() < 2:
-        return np.nan
-    return float(np.trapezoid(power[selected], frequencies[selected]))
-
-
-def _stage_features(
-    eeg: np.ndarray,
-    time: np.ndarray,
-    event_offset_s: float,
-    sample_rate_hz: float,
-) -> tuple[dict[str, float | int], dict[str, int]]:
-    baseline_mask = _window_mask(time, event_offset_s, ERP_BASELINE_WINDOW_S)
-    candidate_mask = _window_mask(time, event_offset_s, ERP_CANDIDATE_WINDOW_S)
-    peak_mask = _window_mask(time, event_offset_s, ERP_PEAK_WINDOW_S)
-    power_mask = _window_mask(time, event_offset_s, POWER_WINDOW_S)
-    window_counts = {
-        "baseline": int(baseline_mask.sum()),
-        "erp_candidate": int(candidate_mask.sum()),
-        "erp_peak": int(peak_mask.sum()),
-        "power": int(power_mask.sum()),
-    }
-    result: dict[str, float | int] = {}
-
-    for channel_index, channel in enumerate(EEG_CHANNELS):
-        values = eeg[channel_index]
-        if not (baseline_mask.any() and candidate_mask.any() and peak_mask.any() and power_mask.any()):
-            for feature in (
-                "erp_mean",
-                "erp_area",
-                "erp_peak",
-                "erp_peak_latency_s",
-                "log_theta_power",
-                "log_alpha_power",
-                "log_beta_power",
-            ):
-                result[f"{feature}_{channel}"] = np.nan
-            continue
-
-        baseline = float(np.mean(values[baseline_mask]))
-        candidate = values[candidate_mask] - baseline
-        candidate_time = time[candidate_mask] - event_offset_s
-        peak_values = values[peak_mask] - baseline
-        peak_time = time[peak_mask] - event_offset_s
-        peak_index = int(np.argmax(peak_values))
-        result[f"erp_mean_{channel}"] = float(np.mean(candidate))
-        result[f"erp_area_{channel}"] = float(np.trapezoid(candidate, candidate_time))
-        result[f"erp_peak_{channel}"] = float(peak_values[peak_index])
-        result[f"erp_peak_latency_s_{channel}"] = float(peak_time[peak_index])
-
-        segment = values[power_mask]
-        for band_name, bounds in BANDS_HZ.items():
-            power = _bandpower(segment, sample_rate_hz, bounds)
-            result[f"log_{band_name}_power_{channel}"] = (
-                float(np.log(max(power, np.finfo(float).tiny))) if np.isfinite(power) else np.nan
-            )
-
-    if all(np.isfinite(result.get(f"log_alpha_power_{channel}", np.nan)) for channel in ("F3", "F4")):
-        result["AI_alpha"] = float(result["log_alpha_power_F4"] - result["log_alpha_power_F3"])
-    else:
-        result["AI_alpha"] = np.nan
-    return result, window_counts
-
-
-def _pre_response_features(
-    eeg: np.ndarray, sample_rate_hz: float
-) -> dict[str, float]:
-    result: dict[str, float] = {}
-    if eeg.ndim != 2 or eeg.shape[0] != len(EEG_CHANNELS) or not np.isfinite(eeg).all():
-        return result
-    for channel_index, channel in enumerate(EEG_CHANNELS):
-        values = eeg[channel_index]
-        result[f"pre_response_mean_{channel}"] = float(np.mean(values))
-        result[f"pre_response_sd_{channel}"] = float(np.std(values, ddof=1))
-        for band_name, bounds in BANDS_HZ.items():
-            power = _bandpower(values, sample_rate_hz, bounds)
-            result[f"log_{band_name}_power_{channel}"] = (
-                float(np.log(max(power, np.finfo(float).tiny))) if np.isfinite(power) else np.nan
-            )
-    if all(np.isfinite(result.get(f"log_alpha_power_{channel}", np.nan)) for channel in ("F3", "F4")):
-        result["AI_alpha"] = float(result["log_alpha_power_F4"] - result["log_alpha_power_F3"])
-    else:
-        result["AI_alpha"] = np.nan
-    return result
+def _nan_features(feature_names: list[str]) -> dict[str, float]:
+    return {name: float("nan") for name in feature_names}
 
 
 def feature_definitions() -> pd.DataFrame:
     rows = [
         {
-            "feature_family": "frontal ERP/P300 candidate",
-            "feature": "erp_mean_{F3,Fz,F4}",
-            "definition": "mean EEG in 0.25-0.50 s after event minus pre-event baseline mean",
-            "window_s": str(ERP_CANDIDATE_WINDOW_S),
-            "interpretation_limit": "frontal P300 candidate; not a standard midline/parietal P300 measurement",
+            "feature_family": "frontal ERP candidate",
+            "feature": "erp_mean_{F3,Fz,F4}, erp_peak_{F3,Fz,F4}, erp_peak_latency_s_{F3,Fz,F4}",
+            "definition": "baseline-corrected mean and positive peak in 250-500 ms after the event",
+            "window_s": "baseline [-0.10,0.00); candidate [0.25,0.50)",
+            "interpretation_limit": "frontal ERP/P300 candidate; three frontal electrodes do not establish the standard parietal P300 topography",
         },
         {
-            "feature_family": "frontal ERP/P300 candidate",
-            "feature": "erp_peak_{F3,Fz,F4}, erp_peak_latency_s_{F3,Fz,F4}",
-            "definition": "largest baseline-corrected positive sample and its latency",
-            "window_s": str(ERP_PEAK_WINDOW_S),
-            "interpretation_limit": "single-trial peak is noise-sensitive; candidate feature only",
+            "feature_family": "frontal ERP asymmetry",
+            "feature": "AI_erp_F4_minus_F3",
+            "definition": "(mean_F4 - mean_F3) / (abs(mean_F4) + abs(mean_F3) + epsilon), based on baseline-corrected 250-500 ms means",
+            "window_s": "[0.25,0.50)",
+            "interpretation_limit": "three frontal electrodes only; exploratory lateralization index",
         },
         {
-            "feature_family": "frontal ERP/P300 candidate",
-            "feature": "erp_area_{F3,Fz,F4}",
-            "definition": "trapezoidal integral of baseline-corrected EEG",
-            "window_s": str(ERP_CANDIDATE_WINDOW_S),
-            "interpretation_limit": "signal units times seconds; source units are inherited from Q1 MAT",
-        },
-        {
-            "feature_family": "log band power",
-            "feature": "log_theta/alpha/beta_power_{F3,Fz,F4}",
-            "definition": "natural log of Welch-integrated band power",
-            "window_s": str(POWER_WINDOW_S),
-            "interpretation_limit": f"Q1 processing band is {FILTER_BAND_HZ[0]}-{FILTER_BAND_HZ[1]} Hz; gamma/PAC excluded",
+            "feature_family": "time-frequency log band power",
+            "feature": "log_{theta,alpha,beta,gamma}_power_{F3,Fz,F4}",
+            "definition": "natural log of Welch-integrated power in theta 4-8, alpha 8-13, beta 13-30, gamma 30-80 Hz",
+            "window_s": "post-event portion of cue [0,0.50) or target [0,0.80) epoch",
+            "interpretation_limit": "one short trial window; theta/alpha power has low frequency resolution and gamma is exploratory",
         },
         {
             "feature_family": "frontal alpha asymmetry",
-            "feature": "AI_alpha",
+            "feature": "AI_alpha_log_F4_minus_F3",
             "definition": "log(P_alpha,F4) - log(P_alpha,F3)",
-            "window_s": str(POWER_WINDOW_S),
+            "window_s": "post-event portion of cue or target epoch",
             "interpretation_limit": "three frontal electrodes only; not a whole-scalp lateralization estimate",
         },
         {
-            "feature_family": "pre-response EEG",
-            "feature": "pre_response_mean/sd_{F3,Fz,F4}, log_theta/alpha/beta_power_{F3,Fz,F4}, AI_alpha",
-            "definition": "features from a full-continuous-record filtered interval ending about 100 ms before the channel 9 response marker",
-            "window_s": "[-1.10, -0.10) relative to response onset",
-            "interpretation_limit": "response-locked exploratory features; excluded from behavior prediction because their window endpoint depends on response time",
+            "feature_family": "response-endpoint cumulative window",
+            "feature": "pre_response_cumulative_* and pre_response_terminal_500ms_*",
+            "definition": "mean, standard deviation, and log band power over [cue, marker-100 ms] and its final 500 ms",
+            "window_s": "variable length; endpoint is the channel-9 event time minus 100 ms",
+            "interpretation_limit": "response/event semantics need protocol verification; excluded from choice prediction because the endpoint is action-conditioned",
         },
     ]
     return pd.DataFrame(rows)
 
 
+def _read_archive(path):
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Missing {path.name}; run 02b_preprocess_raw.py after 02_extract_trials.py"
+        )
+    return np.load(path, allow_pickle=False)
+
+
 def main() -> None:
     output_dir = ensure_output_dir()
-    trials_path = output_dir / "q3_eeg_trials.npz"
-    if not trials_path.exists():
-        raise FileNotFoundError("Run 02_extract_trials.py first to create q3_eeg_trials.npz")
-    archive = np.load(trials_path, allow_pickle=False)
-    signals = archive["signal"]
-    times = archive["relative_time"]
-    records = archive["record"].astype(str)
-    raw_indices = archive["original_trial_index"]
-    q1_indices = archive["q1_trial_index"]
-    cue_sides = archive["cue_side"]
-    cue_times = archive["cue_time_s"]
-    q1_keys = archive["q1_trial_key"].astype(str)
+    event_archive = _read_archive(output_dir / "q3_raw_event_epochs.npz")
+    n_rows = int(event_archive["sample_count"].size)
+    event_rows: list[dict] = []
+    all_feature_names: set[str] = set()
 
-    feature_rows: list[dict] = []
-    for index in range(signals.shape[0]):
-        for stage, event_offset in (("cue_locked", 0.0), ("target_locked", TARGET_OFFSET_S)):
-            features, counts = _stage_features(
-                signals[index], times[index], event_offset, Q1_SAMPLE_RATE_HZ
-            )
-            feature_rows.append(
-                {
-                    "record": records[index],
-                    "original_trial_index": int(raw_indices[index]),
-                    "q1_trial_index": int(q1_indices[index]),
-                    "q1_trial_key": q1_keys[index],
-                    "cue_time_s": float(cue_times[index]),
-                    "cue_side": int(cue_sides[index]),
-                    "cue_side_text": "left" if cue_sides[index] < 0 else "right",
-                    "task_type": "unresolved_from_allowed_channels",
-                    "stage": stage,
-                    "event_offset_from_cue_s": float(event_offset),
-                    "event_time_s": float(cue_times[index] + event_offset),
-                    "erp_baseline_samples": counts["baseline"],
-                    "erp_candidate_samples": counts["erp_candidate"],
-                    "erp_peak_samples": counts["erp_peak"],
-                    "power_samples": counts["power"],
-                    "q1_sample_rate_hz": Q1_SAMPLE_RATE_HZ,
-                    **features,
+    for index in range(n_rows):
+        length = int(event_archive["sample_count"][index])
+        erp = event_archive["erp_signal"][index, :, :length].astype(np.float64)
+        tf = event_archive["tf_signal"][index, :, :length].astype(np.float64)
+        relative_time = event_archive["relative_time_s"][index, :length].astype(np.float64)
+        feature_values: dict[str, float] = {}
+        qc = {
+            "qc_valid": False,
+            "erp_qc_valid": False,
+            "tf_qc_valid": False,
+            "erp_hard_clip": False,
+            "tf_hard_clip": False,
+            "erp_nonfinite": False,
+            "tf_nonfinite": False,
+        }
+        if length:
+            try:
+                feature_values, epoch_qc = summarize_epoch_features(
+                    erp, tf, relative_time, float(event_archive["sample_rate_hz"][index])
+                )
+                qc = {
+                    "qc_valid": bool(epoch_qc["valid"]),
+                    "erp_qc_valid": bool(epoch_qc["erp_valid"]),
+                    "tf_qc_valid": bool(epoch_qc["tf_valid"]),
+                    "erp_hard_clip": bool(epoch_qc["erp_hard_clip"]),
+                    "tf_hard_clip": bool(epoch_qc["tf_hard_clip"]),
+                    "erp_nonfinite": bool(epoch_qc["erp_nonfinite"]),
+                    "tf_nonfinite": bool(epoch_qc["tf_nonfinite"]),
                 }
-            )
+                if not qc["erp_qc_valid"]:
+                    for name in list(feature_values):
+                        if name.startswith(("erp_", "AI_erp")):
+                            feature_values[name] = float("nan")
+                if not qc["tf_qc_valid"]:
+                    for name in list(feature_values):
+                        if name.startswith(("log_", "AI_alpha")):
+                            feature_values[name] = float("nan")
+            except ValueError:
+                feature_values = {}
+        all_feature_names.update(feature_values)
 
-    response_path = output_dir / "response_locked_eeg.npz"
-    if not response_path.exists():
-        raise FileNotFoundError("Run 02_extract_trials.py first to create response_locked_eeg.npz")
-    response_archive = np.load(response_path, allow_pickle=False)
-    response_features = response_archive["signal"]
-    response_times = response_archive["relative_time"]
-    response_records = response_archive["record"].astype(str)
-    response_indices = response_archive["original_trial_index"]
-    response_codes = response_archive["response_code"]
-    response_times_abs = response_archive["response_time_s"]
-    response_rates = response_archive["sample_rate_hz"]
-    trial_table = pd.read_csv(output_dir / "trial_table.csv", encoding="utf-8-sig")
-    trial_lookup = {
-        (str(row.record), int(row.original_trial_index)): row
-        for row in trial_table.itertuples(index=False)
-    }
-    for index, signal in enumerate(response_features):
-        if int(response_codes[index]) == 0 or not np.isfinite(signal).all():
-            continue
-        record = response_records[index]
-        original_index = int(response_indices[index])
-        trial = trial_lookup[(record, original_index)]
-        rel_time = response_times[index]
-        features = _pre_response_features(signal, float(response_rates[index]))
-        response_start = float(rel_time[0])
-        response_end = float(rel_time[-1])
-        feature_rows.append(
+        record = str(event_archive["record"][index])
+        task_text = record.rsplit("Task-", maxsplit=1)[-1]
+        filename_task_code = int(task_text) if task_text in {"1", "2"} else np.nan
+        q1_index = int(event_archive["q1_trial_index"][index])
+        q1_drop = int(event_archive["q1_final_drop"][index])
+        q1_quality_pass = bool(q1_index >= 0 and q1_drop == 0)
+        event_rows.append(
             {
                 "record": record,
-                "original_trial_index": original_index,
-                "q1_trial_index": int(trial.q1_trial_index)
-                if pd.notna(trial.q1_trial_index)
-                else np.nan,
-                "q1_trial_key": str(trial.q1_trial_key),
-                "cue_time_s": float(trial.cue_time_s),
-                "cue_side": int(trial.cue_side),
-                "cue_side_text": str(trial.cue_side_text),
-                "task_type": str(trial.task_type),
-                "stage": "pre_response_100ms_end",
-                "event_offset_from_cue_s": float(response_times_abs[index] - trial.cue_time_s),
-                "event_time_s": float(response_times_abs[index]),
-                "response_time_s": float(response_times_abs[index]),
-                "response_code": int(response_codes[index]),
-                "response_side": str(trial.response_side),
-                "choice_side": int(trial.choice_side),
-                "reaction_time_s": float(trial.reaction_time_s)
-                if pd.notna(trial.reaction_time_s)
-                else np.nan,
-                "rt_status": str(trial.rt_status),
-                "is_omission": bool(trial.is_omission),
-                "correct": np.nan,
-                "erp_baseline_samples": 0,
-                "erp_candidate_samples": 0,
-                "erp_peak_samples": 0,
-                "power_samples": int(signal.shape[1]),
-                "power_window_start_relative_response_s": response_start,
-                "power_window_end_relative_response_s": response_end,
-                "q1_sample_rate_hz": float(response_rates[index]),
-                **features,
+                "original_trial_index": int(event_archive["original_trial_index"][index]),
+                "q1_trial_index": q1_index if q1_index >= 0 else np.nan,
+                "q1_quality_pass": q1_quality_pass,
+                "q1_final_drop": q1_drop if q1_drop >= 0 else np.nan,
+                "eeg_quality": str(event_archive["eeg_quality"][index]),
+                "cue_time_s": float(event_archive["cue_time_s"][index]),
+                "event_time_s": float(event_archive["event_time_s"][index]),
+                "event_offset_from_cue_s": float(event_archive["event_offset_from_cue_s"][index]),
+                "target_offset_s": float(event_archive["target_offset_s"][index]),
+                "cue_side": int(event_archive["cue_side"][index]),
+                "response_code": int(event_archive["response_code"][index]),
+                "choice_side": int(np.sign(event_archive["response_code"][index])),
+                "stage": str(event_archive["stage"][index]),
+                "analysis_variant": str(event_archive["analysis_variant"][index]),
+                "filename_task_code_candidate": filename_task_code,
+                "task_mapping_status": "filename suffix only; project/task semantics not independently verified",
+                "sample_rate_hz": float(event_archive["sample_rate_hz"][index]),
+                "window_n_samples": length,
+                "window_duration_s": length / float(event_archive["sample_rate_hz"][index]),
+                "erp_filter_band_hz": "0.5-30",
+                "tf_filter_band_hz": "1-80",
+                "hard_clip_threshold_raw_value": HARD_CLIP_THRESHOLD_RAW,
+                **qc,
+                **feature_values,
             }
         )
 
-    feature_table = pd.DataFrame(feature_rows)
+    # Normalize the feature schema across rows, including rows with failed QC.
+    core_feature_names = {
+        f"{base}_{channel}"
+        for channel in EEG_CHANNELS
+        for base in (
+            "erp_candidate_mean",
+            "erp_mean",
+            "erp_candidate_area",
+            "erp_peak",
+            "erp_peak_latency_s",
+        )
+    }
+    core_feature_names.update(
+        f"log_{band}_power_{channel}"
+        for channel in EEG_CHANNELS
+        for band in ("theta", "alpha", "beta", "gamma")
+    )
+    core_feature_names.update({"AI_erp_F4_minus_F3", "AI_alpha_log_F4_minus_F3", "AI_alpha"})
+    for row in event_rows:
+        for name in core_feature_names:
+            row.setdefault(name, float("nan"))
+    event_features = pd.DataFrame(event_rows)
+
+    pre_archive = _read_archive(output_dir / "q3_pre_response_epochs.npz")
+    pre_rows: list[dict] = []
+    for index in range(pre_archive["sample_count"].size):
+        length = int(pre_archive["sample_count"][index])
+        record = str(pre_archive["record"][index])
+        task_text = record.rsplit("Task-", maxsplit=1)[-1]
+        filename_task_code = int(task_text) if task_text in {"1", "2"} else np.nan
+        row: dict = {
+            "record": record,
+            "original_trial_index": int(pre_archive["original_trial_index"][index]),
+            "q1_trial_index": int(pre_archive["q1_trial_index"][index])
+            if int(pre_archive["q1_trial_index"][index]) >= 0
+            else np.nan,
+            "q1_quality_pass": bool(
+                int(pre_archive["q1_trial_index"][index]) >= 0
+                and int(pre_archive["q1_final_drop"][index]) == 0
+            ),
+            "q1_final_drop": int(pre_archive["q1_final_drop"][index])
+            if int(pre_archive["q1_final_drop"][index]) >= 0
+            else np.nan,
+            "eeg_quality": str(pre_archive["eeg_quality"][index]),
+            "cue_time_s": float(pre_archive["cue_time_s"][index]),
+            "event_time_s": float(pre_archive["endpoint_time_s"][index]),
+            "event_offset_from_cue_s": float(
+                pre_archive["endpoint_time_s"][index] - pre_archive["cue_time_s"][index]
+            )
+            if np.isfinite(pre_archive["endpoint_time_s"][index])
+            else np.nan,
+            "target_offset_s": np.nan,
+            "cue_side": int(pre_archive["cue_side"][index]),
+            "response_code": int(pre_archive["response_code"][index]),
+            "choice_side": int(np.sign(pre_archive["response_code"][index])),
+            "stage": "pre_response_endpoint",
+            "analysis_variant": "cue_to_marker_minus_100ms",
+            "filename_task_code_candidate": filename_task_code,
+            "task_mapping_status": "filename suffix only; project/task semantics not independently verified",
+            "sample_rate_hz": float(pre_archive["sample_rate_hz"][index]),
+            "window_n_samples": length,
+            "window_duration_s": float(pre_archive["window_duration_s"][index]),
+            "response_time_s": float(pre_archive["response_time_s"][index]),
+            "endpoint_status": str(pre_archive["endpoint_status"][index]),
+        }
+        if length >= 32:
+            erp_signal = pre_archive["erp_signal"][index, :, :length]
+            tf_signal = pre_archive["tf_signal"][index, :, :length]
+            cumulative_features, erp_qc = summarize_window_features(
+                erp_signal, row["sample_rate_hz"], "pre_response_cumulative"
+            )
+            cumulative_tf_features, tf_qc = summarize_window_features(
+                tf_signal, row["sample_rate_hz"], "pre_response_cumulative_tf"
+            )
+            terminal_length = min(length, int(round(0.5 * row["sample_rate_hz"])))
+            terminal_features, terminal_erp_qc = summarize_window_features(
+                erp_signal[:, -terminal_length:], row["sample_rate_hz"], "pre_response_terminal_500ms"
+            )
+            terminal_tf_features, terminal_tf_qc = summarize_window_features(
+                tf_signal[:, -terminal_length:], row["sample_rate_hz"], "pre_response_terminal_500ms_tf"
+            )
+            if not erp_qc["valid"]:
+                cumulative_features = {
+                    key: (float("nan") if key.startswith("pre_response_cumulative_") else value)
+                    for key, value in cumulative_features.items()
+                }
+            if not tf_qc["valid"]:
+                cumulative_tf_features = {
+                    key: float("nan") for key in cumulative_tf_features
+                }
+            if not terminal_erp_qc["valid"]:
+                terminal_features = {key: float("nan") for key in terminal_features}
+            if not terminal_tf_qc["valid"]:
+                terminal_tf_features = {key: float("nan") for key in terminal_tf_features}
+            row.update(cumulative_features)
+            row.update(cumulative_tf_features)
+            row.update(terminal_features)
+            row.update(terminal_tf_features)
+            row.update(
+                {
+                    "qc_valid": bool(erp_qc["valid"] and tf_qc["valid"]),
+                    "erp_qc_valid": bool(erp_qc["valid"]),
+                    "tf_qc_valid": bool(tf_qc["valid"]),
+                    "erp_hard_clip": bool(erp_qc["hard_clip"]),
+                    "tf_hard_clip": bool(tf_qc["hard_clip"]),
+                    "terminal_erp_qc_valid": bool(terminal_erp_qc["valid"]),
+                    "terminal_tf_qc_valid": bool(terminal_tf_qc["valid"]),
+                }
+            )
+        else:
+            row.update(
+                {
+                    "qc_valid": False,
+                    "erp_qc_valid": False,
+                    "tf_qc_valid": False,
+                    "erp_hard_clip": False,
+                    "tf_hard_clip": False,
+                    "terminal_erp_qc_valid": False,
+                    "terminal_tf_qc_valid": False,
+                }
+            )
+        pre_rows.append(row)
+
+    pre_features = pd.DataFrame(pre_rows)
+    feature_table = pd.concat([event_features, pre_features], ignore_index=True, sort=False)
     write_csv(feature_table, output_dir / "trial_features.csv")
     write_csv(feature_definitions(), output_dir / "feature_definitions.csv")
 
-    # A compact distribution plot exposes sample size and cue-side overlap.
-    target = feature_table.loc[feature_table["stage"] == "target_locked"]
-    plot_columns = ["erp_mean_Fz", "log_theta_power_Fz", "log_alpha_power_Fz", "AI_alpha"]
+    qc_summary = {
+        "event_stage_rows": int(len(event_features)),
+        "cue_rows": int((event_features["stage"] == "cue_locked").sum()),
+        "nominal_target_rows": int((event_features["stage"] == "target_locked").sum()),
+        "target_offset_sensitivity_rows": int((event_features["stage"] == "target_offset_sensitivity").sum()),
+        "event_qc_pass_rows": int(event_features["qc_valid"].fillna(False).sum()),
+        "event_erp_qc_pass_rows": int(event_features["erp_qc_valid"].fillna(False).sum()),
+        "event_tf_qc_pass_rows": int(event_features["tf_qc_valid"].fillna(False).sum()),
+        "event_hard_clip_erp_rows": int(event_features["erp_hard_clip"].fillna(False).sum()),
+        "event_hard_clip_tf_rows": int(event_features["tf_hard_clip"].fillna(False).sum()),
+        "q1_quality_pass_nominal_cue_target": int(
+            event_features.loc[event_features["stage"].isin(("cue_locked", "target_locked")), "q1_quality_pass"].sum()
+        ),
+        "pre_response_rows": int(len(pre_features)),
+        "pre_response_qc_pass_rows": int(pre_features["qc_valid"].fillna(False).sum()),
+        "hard_clip_threshold_raw_value": HARD_CLIP_THRESHOLD_RAW,
+        "note": "Hard clipping at the observed raw-value cap/non-finite/flatline are audited; source units are not independently verified, and no ICA is claimed for three EEG-only channels.",
+    }
+    write_json(qc_summary, output_dir / "raw_feature_qc_summary.json")
+    nominal_quality = event_features.loc[
+        event_features["stage"].isin(("cue_locked", "target_locked"))
+    ].copy()
+    nominal_quality["q1_quality_pass"] = nominal_quality["q1_quality_pass"].fillna(False).astype(bool)
+    nominal_quality["qc_valid"] = nominal_quality["qc_valid"].fillna(False).astype(bool)
+    agreement_rows = []
+    for stage, group in nominal_quality.groupby("stage"):
+        agreement_rows.append(
+            {
+                "stage": stage,
+                "n_trials": int(len(group)),
+                "q1_pass_raw_qc_pass": int((group["q1_quality_pass"] & group["qc_valid"]).sum()),
+                "q1_pass_raw_qc_fail": int((group["q1_quality_pass"] & ~group["qc_valid"]).sum()),
+                "q1_fail_raw_qc_pass": int((~group["q1_quality_pass"] & group["qc_valid"]).sum()),
+                "q1_fail_raw_qc_fail": int((~group["q1_quality_pass"] & ~group["qc_valid"]).sum()),
+            }
+        )
+    write_csv(pd.DataFrame(agreement_rows), output_dir / "quality_agreement.csv")
+    write_json(
+        {
+            "status": "not_computed",
+            "features": ["PLV", "theta-gamma PAC"],
+            "reason": "Short 0.5-0.8 s event windows and three frontal electrodes do not support reliable connectivity estimates without validated surrogate tests; no values were fabricated.",
+        },
+        output_dir / "exploratory_connectivity_status.json",
+    )
+
+    nominal_target = event_features.loc[
+        (event_features["stage"] == "target_locked") & event_features["qc_valid"].fillna(False)
+    ]
     fig, axes = plt.subplots(2, 2, figsize=(10, 7), constrained_layout=True)
-    for ax, column in zip(axes.flat, plot_columns):
+    for ax, column in zip(
+        axes.flat,
+        ("erp_mean_Fz", "log_theta_power_Fz", "log_alpha_power_Fz", "AI_erp_F4_minus_F3"),
+    ):
+        if column not in nominal_target:
+            ax.text(0.5, 0.5, "Feature unavailable", ha="center", va="center")
+            ax.set_axis_off()
+            continue
         values = [
-            target.loc[target["cue_side"] == side, column].dropna().to_numpy()
+            nominal_target.loc[nominal_target["cue_side"] == side, column].dropna().to_numpy()
             for side in (-1, 1)
         ]
-        ax.boxplot(values, tick_labels=["Left cue", "Right cue"], showfliers=False)
+        if all(len(group) for group in values):
+            ax.boxplot(values, tick_labels=["Left cue", "Right cue"], showfliers=False)
+        else:
+            ax.text(0.5, 0.5, "Insufficient QC-passed trials", ha="center", va="center")
         ax.set_title(column)
         ax.set_ylabel("Feature value")
         ax.grid(axis="y", alpha=0.25)
-    fig.suptitle("Target-locked frontal EEG features by VisCue direction")
+    fig.suptitle("Raw continuous EEG target-locked features by VisCue direction")
     fig.savefig(output_dir / "features_by_cue_side.png", dpi=180)
     plt.close(fig)
-
     print(
-        f"Wrote {len(feature_table)} trial-stage rows: Q1 clean cue/target windows "
-        "plus continuous-record response-preceding windows."
+        f"Wrote {len(feature_table)} feature rows from raw EEG; "
+        f"event QC passed {qc_summary['event_qc_pass_rows']}/{qc_summary['event_stage_rows']}."
     )
 
 

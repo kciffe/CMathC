@@ -55,7 +55,12 @@ def fit_logistic(x: np.ndarray, y: np.ndarray, l2: float = 1.0) -> np.ndarray:
     return np.asarray(result.x, dtype=float)
 
 
-def grouped_choice_cv(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict], pd.DataFrame]:
+def grouped_choice_cv(
+    frame: pd.DataFrame,
+    predictor_columns: list[str] | None = None,
+    model_name: str = "EEG_state_only",
+) -> tuple[pd.DataFrame, list[dict], pd.DataFrame]:
+    predictor_columns = predictor_columns or STATE_FEATURES
     predictions: list[dict] = []
     folds: list[dict] = []
     parameter_rows: list[dict] = []
@@ -67,8 +72,8 @@ def grouped_choice_cv(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict], pd
                 {"held_out_record": held_out_record, "status": "skipped_single_class"}
             )
             continue
-        x_train_raw = train[STATE_FEATURES].to_numpy(dtype=float)
-        x_test_raw = test[STATE_FEATURES].to_numpy(dtype=float)
+        x_train_raw = train[predictor_columns].to_numpy(dtype=float)
+        x_test_raw = test[predictor_columns].to_numpy(dtype=float)
         center = np.mean(x_train_raw, axis=0)
         scale = np.std(x_train_raw, axis=0)
         scale[~np.isfinite(scale) | (scale <= np.finfo(float).eps)] = 1.0
@@ -84,9 +89,10 @@ def grouped_choice_cv(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict], pd
                 "coefficient": float(coefficients[0]),
                 "training_center": np.nan,
                 "training_scale": np.nan,
+                "model": model_name,
             }
         )
-        for feature_index, feature_name in enumerate(STATE_FEATURES):
+        for feature_index, feature_name in enumerate(predictor_columns):
             parameter_rows.append(
                 {
                     "held_out_record": held_out_record,
@@ -94,6 +100,7 @@ def grouped_choice_cv(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict], pd
                     "coefficient": float(coefficients[feature_index + 1]),
                     "training_center": float(center[feature_index]),
                     "training_scale": float(scale[feature_index]),
+                    "model": model_name,
                 }
             )
         probability = expit(np.column_stack([np.ones(len(test)), x_test]) @ coefficients)
@@ -108,6 +115,7 @@ def grouped_choice_cv(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict], pd
                 "predicted_choice_side": int(predicted_side[index]),
                 "probability_right": float(probability[index]),
                 "held_out_record": held_out_record,
+                "model": model_name,
             }
             for index, row in enumerate(test.itertuples(index=False))
         )
@@ -127,6 +135,7 @@ def grouped_choice_cv(frame: pd.DataFrame) -> tuple[pd.DataFrame, list[dict], pd
                 "n_test": int(len(test)),
                 "accuracy": accuracy,
                 "balanced_accuracy": float(balanced_accuracy),
+                "model": model_name,
             }
         )
     return pd.DataFrame(predictions), folds, pd.DataFrame(parameter_rows)
@@ -145,15 +154,29 @@ def main() -> None:
     cue_state = state.loc[state["stage"] == "cue_locked"].copy()
     key_columns = ["record", "original_trial_index"]
     model_data = trials.merge(
-        cue_state[key_columns + STATE_FEATURES],
+        cue_state[
+            key_columns
+            + STATE_FEATURES
+            + ["qc_valid", "filename_task_code_candidate"]
+        ],
         on=key_columns,
         how="inner",
         validate="one_to_one",
     )
     model_data["choice_side"] = model_data["choice_side"].map(parse_choice)
     model_data = model_data.replace([np.inf, -np.inf], np.nan)
-    model_data = model_data.dropna(subset=["choice_side", *STATE_FEATURES]).copy()
-    model_data = model_data.loc[model_data["eeg_trial_available"].astype(bool)]
+    model_data["cue_by_task_code_candidate"] = model_data["cue_side"] * (
+        pd.to_numeric(model_data["filename_task_code_candidate"], errors="coerce") - 1.5
+    )
+    baseline_predictors = [
+        "cue_side",
+        "filename_task_code_candidate",
+        "cue_by_task_code_candidate",
+    ]
+    combined_predictors = [*baseline_predictors, *STATE_FEATURES]
+    model_data = model_data.dropna(subset=["choice_side", *combined_predictors]).copy()
+    model_data = model_data.loc[model_data["qc_valid"].fillna(False).astype(bool)]
+    q1_matched_data = model_data.loc[model_data["q1_quality_pass"].fillna(False).astype(bool)].copy()
 
     rt_values = pd.to_numeric(trials["reaction_time_s"], errors="coerce")
     plausible_rt = rt_values.ge(MIN_DDM_RT_S) & np.isfinite(rt_values)
@@ -169,6 +192,23 @@ def main() -> None:
         if "deadline_s" in trials
         else False,
     }
+    cue_choice_alignment = []
+    for task_code, group in model_data.groupby("filename_task_code_candidate", dropna=False):
+        cue_choice_alignment.append(
+            {
+                "filename_task_code_candidate": task_code,
+                "n_trials": int(len(group)),
+                "n_cue_choice_same_side": int((group["cue_side"] == group["choice_side"]).sum()),
+                "cue_choice_same_side_fraction": float(
+                    (group["cue_side"] == group["choice_side"]).mean()
+                ),
+                "interpretation": "descriptive only; not response correctness; filename task mapping unverified",
+            }
+        )
+    write_csv(
+        pd.DataFrame(cue_choice_alignment),
+        output_dir / "behavior_cue_choice_alignment.csv",
+    )
 
     if (
         len(model_data) < 12
@@ -176,43 +216,109 @@ def main() -> None:
         or model_data["record"].nunique() < 2
     ):
         status = {
-            "status": "insufficient_matched_choice_labels",
+            "status": "insufficient_raw_qc_passed_choice_labels",
             "n_joined_trials": int(len(model_data)),
             "n_choice_classes": int(model_data["choice_side"].nunique()),
             "n_records": int(model_data["record"].nunique()),
-            "reason": "Need at least 12 EEG-quality-retained trials, both response choices, and at least two recordings for grouped validation.",
+            "reason": "Need at least 12 raw-QC-passed trials, both response choices, and at least two recordings for grouped validation.",
             "rt_quality": rt_counts,
         }
         write_json(status, status_path)
         print("Behavior model skipped: too few matched response labels or only one choice class.")
         return
 
-    predictions, folds, parameters = grouped_choice_cv(model_data)
+    baseline_predictions, baseline_folds, baseline_parameters = grouped_choice_cv(
+        model_data, baseline_predictors, "cue_plus_task_code"
+    )
+    state_predictions, state_folds, state_parameters = grouped_choice_cv(
+        model_data, STATE_FEATURES, "EEG_state_only"
+    )
+    predictions, folds, parameters = grouped_choice_cv(
+        model_data, combined_predictors, "cue_task_plus_EEG"
+    )
     write_csv(predictions, output_dir / "behavior_choice_predictions.csv")
-    write_csv(parameters, output_dir / "behavior_model_fold_parameters.csv")
+    write_csv(
+        pd.concat([baseline_parameters, state_parameters, parameters], ignore_index=True),
+        output_dir / "behavior_model_fold_parameters.csv",
+    )
+    comparison_folds = [*baseline_folds, *state_folds, *folds]
+    write_csv(pd.DataFrame(comparison_folds), output_dir / "behavior_model_comparison.csv")
+    write_csv(
+        pd.concat([baseline_predictions, state_predictions, predictions], ignore_index=True),
+        output_dir / "behavior_model_comparison_predictions.csv",
+    )
     valid_folds = [fold for fold in folds if fold["status"] == "ok"]
+    valid_baseline = [fold for fold in baseline_folds if fold["status"] == "ok"]
+    valid_state = [fold for fold in state_folds if fold["status"] == "ok"]
+    q1_match_results: dict = {}
+    if (
+        len(q1_matched_data) >= 12
+        and q1_matched_data["choice_side"].nunique() >= 2
+        and q1_matched_data["record"].nunique() >= 2
+    ):
+        for name, predictors in (
+            ("cue_plus_task_code", baseline_predictors),
+            ("EEG_state_only", STATE_FEATURES),
+            ("cue_task_plus_EEG", combined_predictors),
+        ):
+            _, q1_match_folds, _ = grouped_choice_cv(q1_matched_data, predictors, name)
+            q1_valid = [fold for fold in q1_match_folds if fold["status"] == "ok"]
+            q1_match_results[name] = {
+                "n_trials": int(len(q1_matched_data)),
+                "valid_record_folds": len(q1_valid),
+                "mean_balanced_accuracy": float(np.mean([fold["balanced_accuracy"] for fold in q1_valid]))
+                if q1_valid
+                else None,
+                "folds": q1_match_folds,
+            }
     status = {
-        "status": "choice_logistic_fitted_ddm_skipped_rt_quality_gate",
+        "status": "choice_logistic_comparison_fitted_ddm_skipped_rt_quality_gate",
         "model": "L2-regularized binary logistic regression",
         "n_joined_trials": int(len(model_data)),
+        "raw_qc_passed_trials": int(len(model_data)),
+        "q1_quality_matched_sensitivity": q1_match_results,
         "n_records": int(model_data["record"].nunique()),
-        "predictors": STATE_FEATURES,
+        "predictors": {
+            "cue_plus_task_baseline": baseline_predictors,
+            "EEG_state_only": STATE_FEATURES,
+            "cue_task_plus_EEG": combined_predictors,
+        },
         "target": "channel 9 response direction normalized to choice side -1/+1",
         "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
         "rt_quality": rt_counts,
         "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
         "ddm_reason": "This implementation uses a choice-only logistic fallback. RTs relative to the scheduled cue+2.2 s target are mostly below 100 ms; the target-time anchor is not separately marked.",
-        "cross_validation": "leave-one-record-out; standardization fitted on training records only",
+        "cross_validation": "leave-one-record-out; standardization fitted on training records only; primary set uses raw-signal QC, with Q1-retained sensitivity subset",
+        "model_comparison": {
+            "folds": comparison_folds,
+            "cue_choice_alignment_by_filename_task_code": cue_choice_alignment,
+            "mean_balanced_accuracy": {
+                "cue_plus_task_code": float(np.mean([fold["balanced_accuracy"] for fold in valid_baseline])) if valid_baseline else None,
+                "EEG_state_only": float(np.mean([fold["balanced_accuracy"] for fold in valid_state])) if valid_state else None,
+                "cue_task_plus_EEG": float(np.mean([fold["balanced_accuracy"] for fold in valid_folds])) if valid_folds else None,
+            },
+            "EEG_increment_over_cue_task": (
+                float(np.mean([fold["balanced_accuracy"] for fold in valid_folds]))
+                - float(np.mean([fold["balanced_accuracy"] for fold in valid_baseline]))
+            )
+            if valid_folds and valid_baseline
+            else None,
+            "task_code_source": "filename suffix only; formal Project-1/Project-2 mapping unverified",
+        },
         "folds": folds,
         "mean_balanced_accuracy": float(np.mean([fold["balanced_accuracy"] for fold in valid_folds]))
         if valid_folds
         else None,
         "correctness": "left unassigned; target-side truth is not available for every task",
-        "omissions": "no response marker within the cue-to-next-cue trial interval is recorded as a no-response trial",
-        "pre_response_EEG": "not used as a predictor because its time window is aligned using the response time",
+        "omissions": "all trials have a channel-9 marker; this does not establish that the protocol had no behavioral omissions",
+        "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time",
     }
     write_json(status, status_path)
-    print(f"Choice logistic model used {len(model_data)} channel-9-labeled EEG trials.")
+    print(
+        f"Choice models used {len(model_data)} raw-QC channel-9-labeled trials; "
+        f"cue/task BA={status['model_comparison']['mean_balanced_accuracy']['cue_plus_task_code']:.3f}, "
+        f"cue/task+EEG BA={status['model_comparison']['mean_balanced_accuracy']['cue_task_plus_EEG']:.3f}."
+    )
 
 
 if __name__ == "__main__":
