@@ -8,7 +8,7 @@ Q2_ROOT = Path(__file__).resolve().parents[1]
 INPUT_ROOT = Q2_ROOT / "input"
 REAL_ROOT = Q2_ROOT.parent / "q1" / "output" / "8riemann_denoise"
 OUTPUT_ROOT = Q2_ROOT / "output" / "revision_v3"
-SOURCE_MAPPING_SCHEMA = "contralateral_visual_field_5source_midline_opponent_v1"
+SOURCE_MAPPING_SCHEMA = "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2"
 SEED = 20260924
 
 TIME_MS = np.arange(801, dtype=np.float64)
@@ -45,6 +45,9 @@ WC_FIXED = {"w_ee": 1.4, "w_ei": 1.1, "w_ie": 1.0, "w_ii": 0.8,
             "tau_i_early": 10.0, "delay_early": 8.0,
             "tau_i_ratio": 0.55, "delay_shape": 33.0,
             "w_feedforward_e": 0.9, "w_feedforward_i": 0.45}
+# The template-preference population receives the same fixed mean of the two
+# early visual-field channels; L/R here denotes template preference, not field.
+SHAPE_FEEDFORWARD_FIELD_WEIGHTS = (0.5, 0.5)
 PARAM_BOUNDS = {"tau_s": (20.0, 100.0), "g_i": (0.5, 1.5), "tau_a": (40.0, 160.0)}
 PARAM_DEFAULTS = {"tau_s": 40.0, "g_i": 1.0, "tau_a": 80.0}
 FIT_STARTS = (np.array([40.0, 1.0, 80.0]), np.array([28.0, 0.7, 55.0]), np.array([75.0, 1.3, 135.0]))
@@ -74,7 +77,7 @@ PERMUTATION_REPEATS = 1999
 
 
 def require_current_source_mapping_manifest(path=None):
-    """Refuse downstream use of fits created with the old six-source map."""
+    """Refuse downstream use of fits made with incompatible routing semantics."""
     manifest_path = OUTPUT_ROOT / "manifest.json" if path is None else Path(path)
     if not manifest_path.exists():
         raise RuntimeError(
@@ -83,6 +86,6 @@ def require_current_source_mapping_manifest(path=None):
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     if manifest.get("source_mapping_schema") != SOURCE_MAPPING_SCHEMA:
         raise RuntimeError(
-            "saved revision_v3 fits use an older source mapping; "
+            "saved revision_v3 fits use older source or feedforward routing semantics; "
             "rerun revision_v3/run_v3.py before consuming them")
     return manifest

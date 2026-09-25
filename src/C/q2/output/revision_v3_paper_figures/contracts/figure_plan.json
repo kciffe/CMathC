@@ -175,10 +175,10 @@
   },
   {
     "figure_id": "03_v3_population_dynamics",
-    "claim": "V3 将视觉输入传入早期、形状和方向三个功能群体，内部左右通道响应可在时间上分化。",
+    "claim": "V3 将视觉输入传入三组功能群体；早期与构型组保留视野通道，模板偏好组接收固定双视野汇总输入并由模板驱动形成偏好差。",
     "evidence": [
       "三组 E/I 活动时程",
-      "每组 E 群体左通道减右通道"
+      "前两组视野通道差及模板偏好通道差"
     ],
     "files": {
       "pdf": "output\\revision_v3_paper_figures\\03_v3_population_dynamics.pdf",
@@ -195,7 +195,7 @@
         "output/revision_v3/drive_scales.csv",
         "revision_v3/model.py"
       ],
-      "statistic": "E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。",
+      "statistic": "E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。第三组左右通道表示模板偏好，不是视野位置。",
       "n_definition": "无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
       "review_risks": [
         "功能群体是模型变量，不应直接等同于 V1/IT/PFC 的实测活动。"
@@ -204,7 +204,7 @@
   },
   {
     "figure_id": "04_v3_simulated_eeg",
-    "claim": "V3 的几何导联场将六个源代理映射为 F3/Fz/F4 相对传感器曲线。",
+    "claim": "V3 的几何导联近似将五个源代理映射为 F3/Fz/F4 相对传感器曲线。",
     "evidence": [
       "左/右 cue 的 F3/Fz/F4 模型波形",
       "模型右减左波形"
@@ -235,9 +235,9 @@
   },
   {
     "figure_id": "导联矩阵热图",
-    "claim": "V3 用固定规范头部几何导联矩阵将六个源代理映射到 F3/Fz/F4。",
+    "claim": "V3 用外表面电极、内层功能源的固定规范几何映射，将五个源代理投影到 F3/Fz/F4。",
     "evidence": [
-      "保存的 3×6 传感器 × 源导联系数矩阵"
+      "保存的 3×5 传感器 × 源导联系数矩阵及源深度审计"
     ],
     "files": {
       "pdf": "output\\revision_v3_paper_figures\\导联矩阵热图.pdf",
@@ -255,7 +255,7 @@
         "revision_v3/head_model.py"
       ],
       "statistic": "颜色和标注为带符号导联系数；单位 V/(A m)。",
-      "n_definition": "不涉及样本；显示固定的确定性 3×6 映射矩阵。",
+      "n_definition": "不涉及样本；显示固定的确定性 3×5 映射矩阵。",
       "review_risks": [
         "导联矩阵基于规范几何和均匀导体假设，传感器增益未校准为 μV。"
       ]

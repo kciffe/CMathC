@@ -1,6 +1,7 @@
 {
   "schema_version": 1,
   "model": "revision_v3",
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
   "primary_records": [
     "VisualCogA_Task-2",
     "VisualCogB_Task-1",
@@ -14,12 +15,12 @@
       "VisualCogB_Task-2"
     ],
     "parameters": {
-      "tau_s": 100.0,
-      "g_i": 0.6770764465655795,
-      "tau_a": 80.0
+      "tau_s": 84.88042244981412,
+      "g_i": 0.5274121931300612,
+      "tau_a": 140.0
     },
-    "shared_gain_signed": -7.67572376540552,
-    "tau_s_at_upper_bound_for_all_primary_folds": true,
+    "shared_gain_signed": -42.55430525625136,
+    "tau_s_at_upper_bound_for_all_primary_folds": false,
     "fits_converged": false
   },
   "figures": [
@@ -199,10 +200,10 @@
     },
     {
       "figure_id": "03_v3_population_dynamics",
-      "claim": "V3 将视觉输入传入早期、形状和方向三个功能群体，内部左右通道响应可在时间上分化。",
+      "claim": "V3 将视觉输入传入三组功能群体；早期与构型组保留视野通道，模板偏好组接收固定双视野汇总输入并由模板驱动形成偏好差。",
       "evidence": [
         "三组 E/I 活动时程",
-        "每组 E 群体左通道减右通道"
+        "前两组视野通道差及模板偏好通道差"
       ],
       "files": {
         "pdf": "output\\revision_v3_paper_figures\\03_v3_population_dynamics.pdf",
@@ -219,7 +220,7 @@
           "output/revision_v3/drive_scales.csv",
           "revision_v3/model.py"
         ],
-        "statistic": "E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。",
+        "statistic": "E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。第三组左右通道表示模板偏好，不是视野位置。",
         "n_definition": "无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
         "review_risks": [
           "功能群体是模型变量，不应直接等同于 V1/IT/PFC 的实测活动。"
@@ -228,7 +229,7 @@
     },
     {
       "figure_id": "04_v3_simulated_eeg",
-      "claim": "V3 的几何导联场将六个源代理映射为 F3/Fz/F4 相对传感器曲线。",
+      "claim": "V3 的几何导联近似将五个源代理映射为 F3/Fz/F4 相对传感器曲线。",
       "evidence": [
         "左/右 cue 的 F3/Fz/F4 模型波形",
         "模型右减左波形"
@@ -259,9 +260,9 @@
     },
     {
       "figure_id": "导联矩阵热图",
-      "claim": "V3 用固定规范头部几何导联矩阵将六个源代理映射到 F3/Fz/F4。",
+      "claim": "V3 用外表面电极、内层功能源的固定规范几何映射，将五个源代理投影到 F3/Fz/F4。",
       "evidence": [
-        "保存的 3×6 传感器 × 源导联系数矩阵"
+        "保存的 3×5 传感器 × 源导联系数矩阵及源深度审计"
       ],
       "files": {
         "pdf": "output\\revision_v3_paper_figures\\导联矩阵热图.pdf",
@@ -279,7 +280,7 @@
           "revision_v3/head_model.py"
         ],
         "statistic": "颜色和标注为带符号导联系数；单位 V/(A m)。",
-        "n_definition": "不涉及样本；显示固定的确定性 3×6 映射矩阵。",
+        "n_definition": "不涉及样本；显示固定的确定性 3×5 映射矩阵。",
         "review_risks": [
           "导联矩阵基于规范几何和均匀导体假设，传感器增益未校准为 μV。"
         ]
@@ -343,41 +344,6 @@
         "review_risks": [
           "观测模态是 F3/Fz/F4 的线性组合，不代表脑源定位。",
           "B_Task-2 的差异波相关接近零，不能将主图中 ERP 拟合较好解读为左右效应拟合稳定。"
-        ]
-      }
-    },
-    {
-      "figure_id": "exploratory_lr_local_window",
-      "claim": "在四份记录中，按同一批 Stage1 试次搜索得到的单电极短窗平均振幅阈值，训练内准确率为 61.3%–72.2%；最佳电极与时间窗因记录而异。",
-      "evidence": [
-        "四记录 0–800 ms 的右减左 ERP 差波形及选中窗口",
-        "选中电极的单试次窗口均值分布、阈值和训练内分类分数"
-      ],
-      "files": {
-        "pdf": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.pdf",
-        "svg": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.svg",
-        "png": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.png",
-        "metadata": "output\\revision_v3_paper_figures\\左右提示局部特征_探索性拟合.figure.json"
-      },
-      "contract": {
-        "source_paths": [
-          "src/C/q2/output/14_exploratory_local_window_decoder/局部时间窗最佳训练内结果.csv",
-          "src/C/q1/output/8riemann_denoise/*_clean.mat"
-        ],
-        "target_venue": "CMathc question 2 paper draft",
-        "column": "double",
-        "figure_role": "model-result",
-        "model_name": "single-channel local-window threshold classifier",
-        "scenario": "Stage1 cue-locked EEG; per-record exploratory fit on all trials",
-        "parameter_source": "per-record channel, window, polarity, and threshold selected on all trials",
-        "randomness": "window scan deterministic; point jitter uses seed 20260925",
-        "n_definition": "four MAT records; 54, 80, 83, and 80 trials respectively",
-        "statistic": "training-set apparent accuracy and balanced accuracy",
-        "uncertainty": "no held-out uncertainty interval; feature selection and scoring use the same trials",
-        "review_risks": [
-          "Training scores are optimistic and are not independent test performance.",
-          "Best electrode and window are not shared across records.",
-          "EEG amplitudes retain source-data units and are not asserted to be microvolts."
         ]
       }
     }

@@ -50,19 +50,19 @@ V3 Gabor 能量在刺激上方的 4×4 前端网格中呈现左右镜像空间�
 
 ## 03_v3_population_dynamics
 
-V3 将视觉输入传入早期、形状和方向三个功能群体，内部左右通道响应可在时间上分化。
+V3 将视觉输入传入三组功能群体；早期与构型组保留视野通道，模板偏好组接收固定双视野汇总输入并由模板驱动形成偏好差。
 
 文件：`output\revision_v3_paper_figures\03_v3_population_dynamics.pdf`, `output\revision_v3_paper_figures\03_v3_population_dynamics.svg`, `output\revision_v3_paper_figures\03_v3_population_dynamics.png`, `output\revision_v3_paper_figures\03_v3_population_dynamics.figure.json`
 
 ## 04_v3_simulated_eeg
 
-V3 的几何导联场将六个源代理映射为 F3/Fz/F4 相对传感器曲线。
+V3 的几何导联近似将五个源代理映射为 F3/Fz/F4 相对传感器曲线。
 
 文件：`output\revision_v3_paper_figures\04_v3_simulated_eeg.pdf`, `output\revision_v3_paper_figures\04_v3_simulated_eeg.svg`, `output\revision_v3_paper_figures\04_v3_simulated_eeg.png`, `output\revision_v3_paper_figures\04_v3_simulated_eeg.figure.json`
 
 ## 导联矩阵热图
 
-V3 用固定规范头部几何导联矩阵将六个源代理映射到 F3/Fz/F4。
+V3 用外表面电极、内层功能源的固定规范几何映射，将五个源代理投影到 F3/Fz/F4。
 
 文件：`output\revision_v3_paper_figures\导联矩阵热图.pdf`, `output\revision_v3_paper_figures\导联矩阵热图.svg`, `output\revision_v3_paper_figures\导联矩阵热图.png`, `output\revision_v3_paper_figures\导联矩阵热图.figure.json`
 

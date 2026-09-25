@@ -1,7 +1,7 @@
 # Source semantics and geometry audit
 
 This deterministic audit checks the six population input channels, their mapping into five source proxies, and the source/electrode coordinates.
-The detailed machine-readable evidence is in `source_semantics_geometry_audit.json`; `population_to_source_routing.csv` and `leadfield.csv` contain the literal matrices.
+The detailed machine-readable evidence is in `source_semantics_geometry_audit.json`; `population_to_source_routing.csv`, `early_to_template_preference_routing.csv`, and `leadfield.csv` contain the literal routing tables and matrix.
 
 ## Semantic routing
 
@@ -12,6 +12,7 @@ The detailed machine-readable evidence is in `source_semantics_geometry_audit.js
 | Configuration left visual-field half | Right-hemisphere configuration proxy |
 | Configuration right visual-field half | Left-hemisphere configuration proxy |
 | Left-triangle preference minus right-triangle preference | One signed bilateral midline opponent proxy; no hemisphere is inferred from preference |
+| Early left/right visual field to the template-preference group | Both preference channels receive the same pre-fixed 0.5/0.5 field average; template-specific drives carry the preference distinction |
 
 ## Geometry and leadfield
 
@@ -30,6 +31,6 @@ The leadfield uses a homogeneous infinite-conductor point-dipole approximation, 
 
 ## Saved result status
 
-**Existing fitted outputs are stale:** their manifest has no current source-mapping schema. Downstream scripts now reject them; rerun `python src/C/q2/revision_v3/run_v3.py` before using or regenerating fitted curves and figures.
+Fit outputs under `output/revision_v3` have the current mapping schema.
 
 This audit proves the implemented channel routing, matrix dimensions, and geometric radii. It does not prove anatomical localization or physiological validity.

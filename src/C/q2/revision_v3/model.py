@@ -135,6 +135,25 @@ def _causal_history_sample(signal, step, delay_samples):
     return (1.0 - fraction) * current + fraction * previous
 
 
+def _route_early_feedforward(early_activity, step, delay_samples):
+    """Return field-aligned and common bilateral routes from early activity.
+
+    The configuration group receives field-aligned channels. Both channels
+    of the shape-template-preference group receive the same fixed weighted
+    average of left/right visual-field activity; their template drives remain
+    separate and are what encode preference.
+    """
+    field = _causal_history_sample(early_activity, step, delay_samples)
+    weights = np.asarray(config.SHAPE_FEEDFORWARD_FIELD_WEIGHTS, dtype=float)
+    if (field.ndim != 1 or weights.shape != field.shape
+            or not np.isfinite(weights).all() or np.any(weights < 0)
+            or not np.isclose(weights.sum(), 1.0)):
+        raise ValueError("shape feedforward weights must be finite, nonnegative, and sum to one")
+    pooled = float(np.dot(weights, field))
+    preference = np.full(2, pooled, dtype=field.dtype)
+    return field, preference
+
+
 def _wc_populations(drives, time_ms, params):
     dt = float(np.median(np.diff(time_ms)))
     drive = np.empty_like(drives, dtype=np.float32)
@@ -152,10 +171,14 @@ def _wc_populations(drives, time_ms, params):
                    + w["g_p"] * drive[:, :, ti])
         i_input = (w["w_ie"] * e[:, :, ti] - w["w_ii"] * inh[:, :, ti]
                    + w["g_q"] * drive[:, :, ti])
-        feedforward_e = _causal_history_sample(e[0], ti, delayed_steps)
-        feedforward_i = _causal_history_sample(inh[0], ti, delayed_steps)
-        e_input[1:] += w["w_feedforward_e"] * feedforward_e[None, :]
-        i_input[1:] += w["w_feedforward_i"] * feedforward_i[None, :]
+        feedforward_e_field, feedforward_e_preference = _route_early_feedforward(
+            e[0], ti, delayed_steps)
+        feedforward_i_field, feedforward_i_preference = _route_early_feedforward(
+            inh[0], ti, delayed_steps)
+        e_input[1] += w["w_feedforward_e"] * feedforward_e_field
+        e_input[2] += w["w_feedforward_e"] * feedforward_e_preference
+        i_input[1] += w["w_feedforward_i"] * feedforward_i_field
+        i_input[2] += w["w_feedforward_i"] * feedforward_i_preference
         fe = activation(e_input, 5.0, 0.35)
         fi = activation(i_input, 5.0, 0.35)
         e[:, :, ti + 1] = e[:, :, ti] + dt * (-e[:, :, ti] + (1 - e[:, :, ti]) * fe) / tau_e
@@ -254,7 +277,11 @@ def simulate_forward(frontend, params=None, time_ms=None, amplitude=1.0,
                          "left_visual_field": "right_hemisphere",
                          "right_visual_field": "left_hemisphere"},
                      "shape_preference_source_rule": (
-                         "left preference minus right preference -> bilateral midline opponent proxy"),
+                         "left preference minus right preference -> bilateral midline opponent proxy; this is a modeling hypothesis, not an anatomical localization"),
+                     "shape_preference_feedforward_rule": (
+                         "both template-preference channels receive the same fixed weighted pool of early left/right visual-field activity; template-specific drives encode preference"),
+                     "shape_preference_feedforward_weights":
+                         list(config.SHAPE_FEEDFORWARD_FIELD_WEIGHTS),
                      "mode_labels": ("u0_common", "u1_lateral", "u2_shape"),
                      "observation": "geometric leadfield applied to five semantically mapped source-current proxies"})
 

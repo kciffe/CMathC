@@ -145,7 +145,8 @@ def main():
 
     fig.text(0.5, -0.01,
              "左/右视野到左右半球采用对侧路由假设；源坐标为规范化示意坐标。"
-             "导联计算使用均匀无限导体点偶极近似，不是有限球体头模型或个体化源定位。",
+             "模板偏好群体共享 0.5/0.5 双视野前馈；偏好差→中线源是建模假设。"
+             "导联为均匀无限导体近似，不是个体化源定位。",
              ha="center", fontsize=8.2, color=MUTED)
 
     stem = HERE / "revision_v3_源语义与内部源几何"
@@ -154,7 +155,7 @@ def main():
     plt.close(fig)
 
     metadata = {
-        "claim": "图示区分视野左右、三角模板偏好和源半球，并证明电极/参考处于外表面、模型源位于内部。",
+        "claim": "图示区分视野左右、模板偏好和源半球，标明模板偏好群体共享的双视野前馈及中线源假设，并展示源与电极几何。",
         "figure_role": "mechanism_and_geometry_audit",
         "source_paths": [
             "q2/revision_v3/model.py:map_population_to_source_channels",
@@ -162,7 +163,7 @@ def main():
             "q2/output/revision_v3_source_mapping_audit/source_semantics_geometry_audit.json",
         ],
         "units": "coordinates and radii in mm; source currents are relative proxies",
-        "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+        "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
         "source_coordinates_mm": geometry["source_coordinates_mm"],
         "source_radii_mm": geometry["source_radii_mm"],
         "source_depths_mm": geometry["source_depths_mm"],

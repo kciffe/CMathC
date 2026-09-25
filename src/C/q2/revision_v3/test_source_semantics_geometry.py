@@ -9,8 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from head_model import SOURCE_LABELS, build_sensor_leadfield, geometry_manifest
 from config import SOURCE_MAPPING_SCHEMA, require_current_source_mapping_manifest
-from model import (_route_early_feedforward, map_population_to_source_channels,
-                   simulate_forward)
+from model import (ModelParams, _route_early_feedforward, _wc_populations,
+                   map_population_to_source_channels, simulate_forward)
 
 
 def test_shape_preference_feedforward_is_same_fixed_bilateral_visual_field_pool():
@@ -23,6 +23,18 @@ def test_shape_preference_feedforward_is_same_fixed_bilateral_visual_field_pool(
 
     np.testing.assert_array_equal(field_route, [2.0, 6.0])
     np.testing.assert_array_equal(preference_route, [4.0, 4.0])
+
+
+def test_shape_preference_population_does_not_inherit_visual_field_l_r_asymmetry():
+    time = np.arange(161, dtype=float)
+    drives = np.zeros((3, 2, len(time)), dtype=np.float32)
+    drives[0, 0, 5:45] = 0.7
+
+    excitatory, inhibitory, _ = _wc_populations(drives, time, params=ModelParams())
+
+    np.testing.assert_allclose(excitatory[2, 0], excitatory[2, 1], atol=1e-7)
+    np.testing.assert_allclose(inhibitory[2, 0], inhibitory[2, 1], atol=1e-7)
+    assert np.max(excitatory[1, 0]) > np.max(excitatory[1, 1])
 
 
 def test_visual_field_halves_route_to_contralateral_early_and_configuration_sources():
@@ -83,7 +95,7 @@ def test_leadfield_and_full_forward_output_use_five_explicit_source_channels():
     np.testing.assert_allclose(result.eeg, lead @ result.source_proxy, rtol=1e-6, atol=1e-10)
 
 
-def test_downstream_results_reject_pre_correction_six_source_manifest(tmp_path):
+def test_downstream_results_reject_manifest_without_current_routing_schema(tmp_path):
     manifest = tmp_path / "manifest.json"
     manifest.write_text('{"revision":"revision_v3"}', encoding="utf-8")
 

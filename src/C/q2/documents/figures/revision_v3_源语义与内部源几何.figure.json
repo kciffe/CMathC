@@ -1,5 +1,5 @@
 {
-  "claim": "图示区分视野左右、三角模板偏好和源半球，并证明电极/参考处于外表面、模型源位于内部。",
+  "claim": "图示区分视野左右、模板偏好和源半球，标明模板偏好群体共享的双视野前馈及中线源假设，并展示源与电极几何。",
   "figure_role": "mechanism_and_geometry_audit",
   "source_paths": [
     "q2/revision_v3/model.py:map_population_to_source_channels",
@@ -7,7 +7,7 @@
     "q2/output/revision_v3_source_mapping_audit/source_semantics_geometry_audit.json"
   ],
   "units": "coordinates and radii in mm; source currents are relative proxies",
-  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
   "source_coordinates_mm": [
     [
       -10.0,

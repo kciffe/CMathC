@@ -1,15 +1,25 @@
 {
   "revision": "revision_v3",
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
   "python": "3.13.5",
-  "numpy": "2.5.1",
-  "scipy": "1.18.1",
+  "numpy": "2.3.5",
+  "scipy": "1.16.3",
   "output_root": "D:\\8\\Desktop\\CMathc\\src\\C\\q2\\output\\revision_v3",
   "resolution": 128,
   "frontend_feature_stride_ms": 4.0,
   "fit_max_objective_calls_per_start": 60,
   "fit_case_count": 8,
   "mat_record_count": 4,
-  "primary_model": "LGN ON/OFF -> Gabor and fixed shape/opponent templates -> three E/I population pairs -> six filtered E-I source proxies -> geometry-based illustrative leadfield -> Q1 observation operator",
+  "primary_model": "LGN ON/OFF -> Gabor and fixed shape/opponent templates -> three E/I population pairs -> contralateral visual-field routing plus one bilateral midline shape-opponent source -> five internal source proxies -> homogeneous infinite-conductor illustrative leadfield -> Q1 observation operator",
+  "shape_preference_feedforward": {
+    "input": "early visual-field E/I activity after the fixed 33 ms delay",
+    "pool_weights_left_right": [
+      0.5,
+      0.5
+    ],
+    "routing": "the same pooled input is sent to both template-preference channels; template-specific drives encode left/right preference",
+    "midline_opponent_source": "explicit modeling hypothesis, not anatomical localization"
+  },
   "fitting": "leave-one-MAT-out; fixed frontend calibration; fit Stage1 left/right only; one signed shared gain",
   "observation_operator": "0.2-24 Hz 4th-order Butterworth zero-phase; 256-to-128 Hz Fourier resample; per-channel prestimulus baseline; full [-1,3)s epoch",
   "head_model": {
@@ -18,84 +28,127 @@
       "Fz",
       "F4"
     ],
+    "coordinate_axes": {
+      "x": "negative=left, positive=right",
+      "y": "negative=posterior, positive=anterior",
+      "z": "positive=superior"
+    },
+    "head_outer_radius_mm": 90.0,
     "sensor_coordinates_mm": [
       [
-        -35.0,
-        55.0,
-        62.0
+        -35.0129701690574,
+        55.02038169423305,
+        62.02297572804453
       ],
       [
         0.0,
-        66.0,
-        61.0
+        66.09390373125984,
+        61.08678981222501
       ],
       [
-        35.0,
-        55.0,
-        62.0
+        35.0129701690574,
+        55.02038169423305,
+        62.02297572804453
       ]
+    ],
+    "sensor_radii_mm": [
+      90.0,
+      90.0,
+      90.0
     ],
     "reference": "average of approximate left/right mastoid coordinates",
     "reference_coordinates_mm": [
       [
-        -70.0,
-        -50.0,
-        5.0
+        -73.11261550139308,
+        -52.223296786709355,
+        5.222329678670935
       ],
       [
-        70.0,
-        -50.0,
-        5.0
+        73.11261550139308,
+        -52.223296786709355,
+        5.222329678670935
       ]
     ],
+    "reference_radii_mm": [
+      89.99999999999999,
+      89.99999999999999
+    ],
     "sources": [
-      "early_visual_left",
-      "early_visual_right",
-      "shape_left",
-      "shape_right",
-      "orientation_left",
-      "orientation_right"
+      "early_visual_left_hemisphere_from_right_visual_field",
+      "early_visual_right_hemisphere_from_left_visual_field",
+      "configuration_left_hemisphere_from_right_visual_field",
+      "configuration_right_hemisphere_from_left_visual_field",
+      "bilateral_shape_preference_opponent_midline"
     ],
     "source_coordinates_mm": [
       [
-        -12.0,
-        -62.0,
-        58.0
+        -10.0,
+        -58.0,
+        45.0
       ],
       [
-        12.0,
-        -62.0,
-        58.0
+        10.0,
+        -58.0,
+        45.0
       ],
       [
-        -42.0,
-        -20.0,
-        60.0
+        -36.0,
+        -25.0,
+        50.0
       ],
       [
-        42.0,
-        -20.0,
-        60.0
+        36.0,
+        -25.0,
+        50.0
       ],
       [
-        -30.0,
-        18.0,
-        68.0
-      ],
-      [
-        30.0,
-        18.0,
-        68.0
+        0.0,
+        -34.0,
+        56.0
       ]
     ],
-    "source_orientation": "radial",
+    "source_radii_mm": [
+      74.08778576796583,
+      74.08778576796583,
+      66.49060083951716,
+      66.49060083951716,
+      65.5133574166368
+    ],
+    "source_depths_mm": [
+      15.912214232034174,
+      15.912214232034174,
+      23.509399160482843,
+      23.509399160482843,
+      24.486642583363206
+    ],
+    "source_orientation": "radial from head centre; canonical approximation",
+    "visual_field_to_hemisphere": {
+      "left_visual_field": "right_hemisphere (contralateral)",
+      "right_visual_field": "left_hemisphere (contralateral)"
+    },
+    "shape_preference_to_source": "left-template preference minus right-template preference -> one bilateral midline opponent source",
+    "population_channel_semantics": {
+      "early": [
+        "left_visual_field",
+        "right_visual_field"
+      ],
+      "configuration": [
+        "left_visual_field",
+        "right_visual_field"
+      ],
+      "shape_preference": [
+        "left_triangle_template_preference",
+        "right_triangle_template_preference"
+      ]
+    },
     "conductivity_S_per_m": 0.33,
     "leadfield_units": "V/(A m)",
+    "forward_approximation": "homogeneous infinite conductor point dipoles; not a finite spherical head solution",
     "limitations": [
-      "canonical coordinates",
-      "homogeneous conductor",
-      "assumed linked-mastoid reference",
-      "not an individualized head model"
+      "canonical coordinates, not MRI-localized anatomy",
+      "radial dipole directions are an explicit approximation",
+      "assumed linked-mastoid reference; recorded reference metadata not used",
+      "source currents are relative proxies, not calibrated A m"
     ]
   },
   "limitations": [
@@ -106,13 +159,19 @@
     "model ERP fit and real-only LDA answer different questions"
   ],
   "sha256": {
-    "run_v3.py": "5e8f39dc326ef4bf85e67ccd23c30faf8275d9ddd59b2499369de87e096d3727",
-    "config.py": "a660aa115b33cbc032b9b9f69d4dc285fd033482711910f2635acc7f99c39c13",
-    "frontend.py": "ad0e88bd5488616c48d1189d3056c4d41950cae16092ffc0dfceedbd3cc8a819",
-    "model.py": "2cc64f5d9b741574a216be98e338fda7d45ced48ef71495853400c0569acbc9b",
+    "run_v3.py": "48aed0f9de7798cf26a683652e1e91462aae0fa283cadb00b3f760a94574a867",
+    "config.py": "5bc11c0d0126f533b752ea3ba83a5e7327588323868c01f7cfa77d2daa179742",
+    "frontend.py": "06f641dff5fdda3f26731c27c9709a5d8b75ac6191885640c485a6fb034f2279",
+    "model.py": "eaeedad4a0fafe0a57cb1373f871d94a327d57a628de3fd2d4a881463c07cc49",
     "fit.py": "62a4b6bee86e787b0d1b4c0b4287539fdd8a840cfc74e4c0e839392c1ca5784f",
     "real_data.py": "201c4d1c4bdfba25ac5d8ef1bedfe4ccf90ec5820804f0086dbc181cee8b01c1",
     "observation.py": "68fc22b0c96a889d1daaaa0a926463d7ef4cd9398b4a286a8ca08ddbbe28f9c5",
-    "head_model.py": "1968c22664875f5562d2c25f95673cd8e3efb6c2dc49af1f7beadd0cb6178041"
-  }
+    "head_model.py": "c52439da88a5e136a33fbd3fe96f96ddaa290c0bb34166d3365ff0e9e8b4a0ae"
+  },
+  "diagnostic_figures": [
+    "lgn_spatiotemporal.png",
+    "cortical_ei_responses.png",
+    "source_to_electrode_contributions.png"
+  ],
+  "diagnostic_figure_parameters": "generated from this run fit-parameter median; five source contributions checked to sum to the sensor prediction"
 }

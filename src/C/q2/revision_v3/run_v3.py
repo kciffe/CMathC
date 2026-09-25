@@ -295,6 +295,93 @@ def _plot_cascade(result, path):
     plt.close(fig)
 
 
+def _plot_lgn_spatiotemporal(frontend, path):
+    """Plot the fitted representative cue's pooled LGN ON/OFF space-time activity."""
+    t = np.asarray(frontend["time_ms"], dtype=float)
+    fig, axes = plt.subplots(2, 1, figsize=(10, 6.2), sharex=True, constrained_layout=True)
+    for ax, key, title in zip(axes, ("lgn_on", "lgn_off"), ("LGN TCR ON", "LGN TCR OFF")):
+        values = np.asarray(frontend[key], dtype=float)
+        if values.ndim != 3 or values.shape[-1] != len(t):
+            raise ValueError(f"{key} must have shape [8,8,time] matching time_ms")
+        space_time = values.reshape(-1, len(t))
+        vmax = max(float(np.quantile(space_time, .995)), 1e-9)
+        im = ax.imshow(space_time, origin="lower", aspect="auto", interpolation="nearest",
+                       extent=(t[0], t[-1], 0, space_time.shape[0]),
+                       cmap="magma", vmin=0, vmax=vmax)
+        ax.axvline(0, color="white", lw=.8, alpha=.8)
+        ax.axvline(200, color="cyan", lw=.8, ls="--", alpha=.8)
+        ax.set_ylabel("8×8 pooled spatial channel")
+        ax.set_title(title)
+        ax.grid(False)
+        fig.colorbar(im, ax=ax, label="TCR activity (relative)")
+    axes[-1].set_xlabel("Cue-relative time (ms)")
+    fig.suptitle("LGN spatiotemporal response to the standardized left cue\n"
+                 "solid marker: cue onset; dashed marker: 200 ms cue offset")
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
+def _plot_cortical_ei(result, path):
+    """Plot E/I responses for all three groups without averaging L/R channels."""
+    t = result.time_ms
+    titles = ("Early visual-field population", "Spatial-configuration population",
+              "Triangle-template preference population")
+    channel_names = (("left visual field", "right visual field"),
+                     ("left visual field", "right visual field"),
+                     ("left-template preference", "right-template preference"))
+    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True, constrained_layout=True)
+    for pop, ax in enumerate(axes):
+        for state, values, color in (("E", result.excitatory, "#3265a8"),
+                                     ("I", result.inhibitory, "#d78345")):
+            for ch in range(2):
+                ax.plot(t, values[pop, ch], color=color,
+                        linestyle="-" if ch == 0 else "--", linewidth=1.25,
+                        label=f"{state} · {channel_names[pop][ch]}")
+        ax.axvline(0, color="0.5", lw=.8)
+        ax.axvline(200, color="0.5", lw=.8, ls="--")
+        ax.set_ylim(bottom=0)
+        ax.set_ylabel("Activity (0–1)")
+        ax.set_title(titles[pop])
+        ax.grid(alpha=.2)
+        ax.legend(frameon=False, ncol=2, fontsize=8)
+    axes[-1].set_xlabel("Cue-relative time (ms)")
+    fig.suptitle("Three cortical E/I population responses under the fitted parameter median")
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
+def _plot_source_electrode_contributions(result, path):
+    """Plot five signed source contributions to each electrode; verify summation."""
+    lead = np.asarray(result.diagnostics["leadfield"], dtype=float)
+    source = np.asarray(result.source_proxy, dtype=float)
+    gain = float(result.diagnostics["amplitude"])
+    contributions = gain * lead[:, :, None] * source[None, :, :]
+    total = contributions.sum(axis=1)
+    if not np.allclose(total, result.eeg_scaled, rtol=1e-5, atol=1e-8):
+        raise AssertionError("source contributions do not sum to the saved electrode waveform")
+    colors = ("#3265a8", "#64a1c8", "#4b8d62", "#8bb96d", "#9b64a8")
+    plot_labels = ("Early LH ← RVF", "Early RH ← LVF", "Config LH ← RVF",
+                   "Config RH ← LVF", "Template opponent midline")
+    fig, axes = plt.subplots(3, 1, figsize=(10, 8), sharex=True, constrained_layout=True)
+    for sensor, ax in enumerate(axes):
+        for source_i, name in enumerate(plot_labels):
+            ax.plot(result.time_ms, contributions[sensor, source_i], color=colors[source_i],
+                    linewidth=1.0, alpha=.9, label=name)
+        ax.plot(result.time_ms, total[sensor], color="#222222", linewidth=1.8,
+                label="sum = electrode prediction")
+        ax.axvline(0, color="0.5", lw=.8)
+        ax.axvline(200, color="0.5", lw=.8, ls="--")
+        ax.axhline(0, color="0.7", lw=.6)
+        ax.set_ylabel(f"{config.CHANNELS[sensor]}\nrelative units")
+        ax.grid(alpha=.2)
+        if sensor == 0:
+            ax.legend(frameon=False, ncol=3, fontsize=7.5)
+    axes[-1].set_xlabel("Cue-relative time (ms)")
+    fig.suptitle("Five source-to-electrode contributions under the fitted parameter median")
+    fig.savefig(path, dpi=180)
+    plt.close(fig)
+
+
 def _write_readme(out, resolution, stride, scales, fits, metrics, differences,
                   classification, controls, max_nfev):
     nrmse = np.asarray([r["nrmse"] for r in metrics], dtype=float)
@@ -314,7 +401,7 @@ def _write_readme(out, resolution, stride, scales, fits, metrics, differences,
     lines = [
         "# Revision v3：问题二第一小问计算结果", "",
         "## 实现内容", "",
-        "本版本用标准化刺激矩阵作为确定性输入，经 LGN ON/OFF 与 Gabor/形状模板前端、三组 E/I 群体动力学得到五个语义明确的源代理：左右视野分别投射到对侧半球的早期视觉与构型源，以及由左右模板偏好差形成的双侧中线对手源。电极/参考在外表面，源坐标在头内；再以均匀无限导体点偶极近似映射到 F3/Fz/F4。该映射是规范近似，不是有限球体或个体头模型。模型曲线与真实数据统一通过第一问的 0.2–24 Hz 双向四阶滤波、128 Hz 重采样和逐通道基线校正。拟合按留一 MAT 记录进行，尺度由固定左右参考刺激预先计算，不读取留出记录确定尺度。", "",
+        "本版本用标准化刺激矩阵作为确定性输入，经 LGN ON/OFF 与 Gabor/形状模板前端、三组 E/I 群体动力学得到五个语义明确的源代理：左右视野分别投射到对侧半球的早期视觉与构型源，以及由左右模板偏好差形成的双侧中线对手源。模板偏好组接收左右视觉视野早期活动的固定等权平均；中线对手源是低维建模假设，不是解剖定位结论。电极/参考在外表面，源坐标在头内；再以均匀无限导体点偶极近似映射到 F3/Fz/F4。该映射是规范近似，不是有限球体或个体头模型。模型曲线与真实数据统一通过第一问的 0.2–24 Hz 双向四阶滤波、128 Hz 重采样和逐通道基线校正。拟合按留一 MAT 记录进行，尺度由固定左右参考刺激预先计算，不读取留出记录确定尺度。", "",
         "## 本次设置", "",
         f"- 空间网格：{resolution} × {resolution}；前端时间特征步长：{stride:g} ms。",
         f"- 输入群体 RMS 尺度（early/shape/orientation，每个含左右通道）：`{np.asarray(scales).round(6).tolist()}`。",
@@ -339,6 +426,12 @@ def _write_readme(out, resolution, stride, scales, fits, metrics, differences,
         "- `heldout_erp.png`：三通道左右条件的实测与留出模型 ERP。",
         "- `heldout_difference_modes.png`：右减左的 common/lateral/shape 模态。",
         "- `fitted_cascade.png`：拟合参数中位数下的 E/I 群体和观测代理。",
+        "- `lgn_spatiotemporal.png`：代表性左 cue 下 LGN ON/OFF 空间通道随时间的响应图。",
+        "- `cortical_ei_responses.png`：三组 E/I 响应，保留视野位置和模板偏好通道标签。",
+        "- `source_to_electrode_contributions.png`：五源对 F3/Fz/F4 的逐时贡献；代码检查其和等于电极预测。",
+        "- `lgn_spatiotemporal.png`：同一次拟合代表刺激下，8×8 pooled LGN ON/OFF 通道的时空活动。",
+        "- `cortical_ei_responses.png`：三组 E/I 群体逐通道响应；模板偏好通道与视觉视野通道分开标注。",
+        "- `source_to_electrode_contributions.png`：五个源代理对 F3/Fz/F4 的逐源贡献；图中校验各贡献之和等于电极预测。",
         "- `heldout_metrics.csv`、`left_right_difference.csv`、`fixed_feature_lda.csv`、`mechanism_controls.csv`。",
     ]
     (out / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
@@ -457,6 +550,10 @@ def run(resolution=None, max_nfev=60):
     cascade = simulate_forward(median_front, params=median_model_params,
                                amplitude=median_gain, drive_scales=drive_scales)
     _plot_cascade(cascade, out / "fitted_cascade.png")
+    _plot_lgn_spatiotemporal(median_front, out / "lgn_spatiotemporal.png")
+    _plot_cortical_ei(cascade, out / "cortical_ei_responses.png")
+    _plot_source_electrode_contributions(
+        cascade, out / "source_to_electrode_contributions.png")
 
     lead = build_sensor_leadfield()
     _write_csv(out / "leadfield.csv", [
@@ -479,6 +576,15 @@ def run(resolution=None, max_nfev=60):
                 "fit_max_objective_calls_per_start": max_nfev,
                 "fit_case_count": len(fit_cases), "mat_record_count": len(event_rows),
                 "primary_model": "LGN ON/OFF -> Gabor and fixed shape/opponent templates -> three E/I population pairs -> contralateral visual-field routing plus one bilateral midline shape-opponent source -> five internal source proxies -> homogeneous infinite-conductor illustrative leadfield -> Q1 observation operator",
+                "shape_preference_feedforward": {
+                    "input": "early visual-field E/I activity after the fixed 33 ms delay",
+                    "pool_weights_left_right": list(config.SHAPE_FEEDFORWARD_FIELD_WEIGHTS),
+                    "routing": "the same pooled input is sent to both template-preference channels; template-specific drives encode left/right preference",
+                    "midline_opponent_source": "explicit modeling hypothesis, not anatomical localization"},
+                "diagnostic_figures": ["lgn_spatiotemporal.png",
+                                       "cortical_ei_responses.png",
+                                       "source_to_electrode_contributions.png"],
+                "diagnostic_figure_parameters": "generated from this run's fitted-parameter median; source contributions are checked to sum to electrode prediction",
                 "fitting": "leave-one-MAT-out; fixed frontend calibration; fit Stage1 left/right only; one signed shared gain",
                 "observation_operator": "0.2-24 Hz 4th-order Butterworth zero-phase; 256-to-128 Hz Fourier resample; per-channel prestimulus baseline; full [-1,3)s epoch",
                 "head_model": geometry_manifest(),

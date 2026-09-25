@@ -8,11 +8,11 @@ import numpy as np
 try:
     from . import config
     from .head_model import SOURCE_LABELS, build_sensor_leadfield, geometry_manifest
-    from .model import map_population_to_source_channels
+    from .model import _route_early_feedforward, map_population_to_source_channels
 except ImportError:
     import config
     from head_model import SOURCE_LABELS, build_sensor_leadfield, geometry_manifest
-    from model import map_population_to_source_channels
+    from model import _route_early_feedforward, map_population_to_source_channels
 
 
 def _write_csv(path, rows):
@@ -60,6 +60,23 @@ def run():
     if not np.array_equal(routing, expected):
         raise AssertionError(f"population/source routing differs from declared map:\n{routing}")
 
+    feedforward_rows = []
+    for field_i, field_name in enumerate(("left_visual_field", "right_visual_field")):
+        impulse = np.zeros((2, 1), dtype=np.float32)
+        impulse[field_i, 0] = 1.0
+        field_route, preference_route = _route_early_feedforward(impulse, 0, 0.0)
+        expected_preference = np.full(2, config.SHAPE_FEEDFORWARD_FIELD_WEIGHTS[field_i])
+        if not np.allclose(field_route, impulse[:, 0]) or not np.allclose(
+                preference_route, expected_preference):
+            raise AssertionError("early-to-template feedforward routing is inconsistent")
+        feedforward_rows.append({
+            "unit_input": field_name,
+            "configuration_left_field_channel": float(field_route[0]),
+            "configuration_right_field_channel": float(field_route[1]),
+            "template_left_preference_channel": float(preference_route[0]),
+            "template_right_preference_channel": float(preference_route[1]),
+        })
+
     lead = build_sensor_leadfield()
     geometry = geometry_manifest()
     sensor_radii = np.asarray(geometry["sensor_radii_mm"], dtype=float)
@@ -84,6 +101,7 @@ def run():
         {"input_channel": name, **{f"source_{i + 1}": float(routing[i, j])
                                     for i in range(len(SOURCE_LABELS))}}
         for j, name in enumerate(input_labels)])
+    _write_csv(out / "early_to_template_preference_routing.csv", feedforward_rows)
     _write_csv(out / "leadfield.csv", [
         {"sensor": sensor, **{f"source_{i + 1}": float(value)
                               for i, value in enumerate(row)}}
@@ -91,7 +109,7 @@ def run():
 
     proof = {
         "status": "PASS",
-        "code_version": "revision_v3_source_semantics_geometry_fix",
+        "code_version": "revision_v3_bilateral_preference_feedforward_and_source_geometry_fix",
         "current_source_mapping_schema": config.SOURCE_MAPPING_SCHEMA,
         "saved_fit_manifest_schema": saved_fit_schema,
         "saved_fit_outputs_match_current_schema": saved_fits_current,
@@ -108,6 +126,12 @@ def run():
                 routing[4, 4] == 1.0 and routing[4, 5] == -1.0),
             "template_preference_has_no_hemisphere_source_columns": bool(
                 np.all(routing[:4, 4:] == 0.0)),
+            "configuration_group_retains_field_aligned_feedforward": True,
+            "both_template_preference_channels_receive_same_bilateral_pool": bool(
+                np.allclose([r["template_left_preference_channel"] for r in feedforward_rows],
+                            [r["template_right_preference_channel"] for r in feedforward_rows])),
+            "template_feedforward_weights_left_right":
+                list(config.SHAPE_FEEDFORWARD_FIELD_WEIGHTS),
         },
         "geometry_checks": {
             "outer_head_radius_mm": geometry["head_outer_radius_mm"],
@@ -126,7 +150,7 @@ def run():
             "forward_approximation": geometry["forward_approximation"],
         },
         "limitations": geometry["limitations"],
-        "note": "This proves the implemented routing and coordinates, not anatomical localization or EEG model validity.",
+        "note": "This proves the implemented routing and coordinates, not anatomical localization or EEG model validity. The bilateral midline opponent source remains a modeling hypothesis.",
     }
     (out / "source_semantics_geometry_audit.json").write_text(
         json.dumps(proof, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -144,7 +168,7 @@ def run():
     readme = [
         "# Source semantics and geometry audit", "",
         "This deterministic audit checks the six population input channels, their mapping into five source proxies, and the source/electrode coordinates.",
-        "The detailed machine-readable evidence is in `source_semantics_geometry_audit.json`; `population_to_source_routing.csv` and `leadfield.csv` contain the literal matrices.",
+        "The detailed machine-readable evidence is in `source_semantics_geometry_audit.json`; `population_to_source_routing.csv`, `early_to_template_preference_routing.csv`, and `leadfield.csv` contain the literal routing tables and matrix.",
         "", "## Semantic routing", "",
         "| Input meaning | Source interpretation |", "|---|---|",
         "| Early left visual-field half | Right-hemisphere early visual proxy |",
@@ -152,6 +176,7 @@ def run():
         "| Configuration left visual-field half | Right-hemisphere configuration proxy |",
         "| Configuration right visual-field half | Left-hemisphere configuration proxy |",
         "| Left-triangle preference minus right-triangle preference | One signed bilateral midline opponent proxy; no hemisphere is inferred from preference |",
+        "| Early left/right visual field to the template-preference group | Both preference channels receive the same pre-fixed 0.5/0.5 field average; template-specific drives carry the preference distinction |",
         "", "## Geometry and leadfield", "",
         "Electrodes and approximate linked-mastoid reference points lie on the 90 mm outer surface. The five canonical source proxies are internal:",
         "", "| Source proxy | Coordinate (x, y, z) mm | Radius mm | Depth below surface mm |", "|---|---:|---:|---:|"]

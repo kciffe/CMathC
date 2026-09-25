@@ -189,6 +189,7 @@ ax.legend(frameon=False, ncol=3, fontsize=9.5)
 
 fig.text(0.5, -0.01,
          "源顺序：早期/构型左视野→右半球、右视野→左半球；左右模板偏好差→双侧中线对手源。"
+         "模板偏好组接收左右视野早期活动的固定等权平均；中线对手源为建模假设。"
          "实测 ERP 来自 VisualCogA_Task-1_clean.mat；模型曲线为默认参数示例，不是拟合或留出成绩。",
          ha="center", fontsize=10.5, color="#405261")
 fig.savefig(HERE / "revision_v3_真实数据与皮层观测模块I_O示例.png", dpi=450, bbox_inches="tight")
@@ -216,7 +217,7 @@ metadata = {
     json.dumps(metadata, ensure_ascii=False, indent=2), encoding="utf-8")
 
 metadata = {
-    "claim": "以当前五源 revision_v3 正向模型展示真实 ERP 输入、E/I 群体、语义路由源代理与简化 F3/Fz/F4 观测。",
+    "claim": "以当前五源 revision_v3 正向模型展示真实 ERP 输入、三组 E/I 群体、视野/模板偏好分离的语义路由源代理与简化 F3/Fz/F4 观测。",
     "sources": [
         "q1/output/8riemann_denoise/VisualCogA_Task-1_clean.mat",
         "q2/revision_v3/model.py",
@@ -226,11 +227,11 @@ metadata = {
     ],
     "scenarios": ["VisualCogA_Task-1 Stage1 observed ERP", "Stage1 left cue default-parameter model illustration"],
     "model_parameters": {"tau_s_ms": 40.0, "g_i": 1.0, "tau_a_ms": 80.0, "amplitude": 1.0},
-    "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+    "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
     "source_labels": list(SOURCE_LABELS),
     "head_geometry": geometry_manifest(),
     "processing": "Real trial ERP is baseline-corrected per trial over [-200,0) ms. Model observation uses revision_v3 observation.py with Q1-style filter/resample/baseline operator.",
-    "notes": "Model curves use default parameters and are illustrative only; no fit or held-out score is shown. Source proxies are relative units; leadfield uses a homogeneous infinite-conductor point-dipole approximation.",
+    "notes": "Model curves use default parameters and are illustrative only; no fit or held-out score is shown. Shape-preference channels receive the same fixed equal-weight bilateral early-field pool. The bilateral midline opponent source is a modeling hypothesis. Source proxies are relative units; leadfield uses a homogeneous infinite-conductor point-dipole approximation.",
     "randomness": "none",
     "dimensions": {
         "mat_trial_data": list(data["eeg"].shape[:1]) + [10, 512],

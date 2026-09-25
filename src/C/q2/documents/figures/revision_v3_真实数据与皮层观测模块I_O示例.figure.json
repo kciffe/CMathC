@@ -1,5 +1,5 @@
 {
-  "claim": "以当前五源 revision_v3 正向模型展示真实 ERP 输入、E/I 群体、语义路由源代理与简化 F3/Fz/F4 观测。",
+  "claim": "以当前五源 revision_v3 正向模型展示真实 ERP 输入、三组 E/I 群体、视野/模板偏好分离的语义路由源代理与简化 F3/Fz/F4 观测。",
   "sources": [
     "q1/output/8riemann_denoise/VisualCogA_Task-1_clean.mat",
     "q2/revision_v3/model.py",
@@ -17,7 +17,7 @@
     "tau_a_ms": 80.0,
     "amplitude": 1.0
   },
-  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
   "source_labels": [
     "early_visual_left_hemisphere_from_right_visual_field",
     "early_visual_right_hemisphere_from_left_visual_field",
@@ -155,7 +155,7 @@
     ]
   },
   "processing": "Real trial ERP is baseline-corrected per trial over [-200,0) ms. Model observation uses revision_v3 observation.py with Q1-style filter/resample/baseline operator.",
-  "notes": "Model curves use default parameters and are illustrative only; no fit or held-out score is shown. Source proxies are relative units; leadfield uses a homogeneous infinite-conductor point-dipole approximation.",
+  "notes": "Model curves use default parameters and are illustrative only; no fit or held-out score is shown. Shape-preference channels receive the same fixed equal-weight bilateral early-field pool. The bilateral midline opponent source is a modeling hypothesis. Source proxies are relative units; leadfield uses a homogeneous infinite-conductor point-dipole approximation.",
   "randomness": "none",
   "dimensions": {
     "mat_trial_data": [

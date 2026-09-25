@@ -12,7 +12,7 @@
         "height_mm": 160.0,
         "target_width_mm": 183.0,
         "figure_role": "model-result",
-        "visible_text_count": 75,
+        "visible_text_count": 77,
         "axes_count": 12,
         "minimum_font_size_pt": 5.0
       }
@@ -49,7 +49,7 @@
         "height_mm": 104.0,
         "target_width_mm": 183.0,
         "figure_role": "model-result",
-        "visible_text_count": 49,
+        "visible_text_count": 46,
         "axes_count": 12,
         "minimum_font_size_pt": 5.0
       }
@@ -64,7 +64,7 @@
         "height_mm": 74.0,
         "target_width_mm": 183.0,
         "figure_role": "model-diagnostic",
-        "visible_text_count": 23,
+        "visible_text_count": 21,
         "axes_count": 5,
         "minimum_font_size_pt": 5.0
       }
@@ -79,7 +79,7 @@
         "height_mm": 105.0,
         "target_width_mm": 183.0,
         "figure_role": "model-result",
-        "visible_text_count": 224,
+        "visible_text_count": 226,
         "axes_count": 9,
         "minimum_font_size_pt": 5.0
       }
@@ -94,7 +94,7 @@
         "height_mm": 139.0,
         "target_width_mm": 183.0,
         "figure_role": "model-result",
-        "visible_text_count": 87,
+        "visible_text_count": 86,
         "axes_count": 8,
         "minimum_font_size_pt": 5.0
       }
@@ -109,7 +109,7 @@
         "height_mm": 159.0,
         "target_width_mm": 183.0,
         "figure_role": "model-result",
-        "visible_text_count": 106,
+        "visible_text_count": 104,
         "axes_count": 7,
         "minimum_font_size_pt": 5.0
       }
@@ -124,7 +124,7 @@
         "height_mm": 131.0,
         "target_width_mm": 183.0,
         "figure_role": "model-result",
-        "visible_text_count": 76,
+        "visible_text_count": 74,
         "axes_count": 5,
         "minimum_font_size_pt": 5.0
       }
@@ -139,7 +139,7 @@
         "height_mm": 80.0,
         "target_width_mm": 183.0,
         "figure_role": "model-diagnostic",
-        "visible_text_count": 39,
+        "visible_text_count": 35,
         "axes_count": 2,
         "minimum_font_size_pt": 5.0
       }
@@ -154,7 +154,7 @@
         "height_mm": 219.0,
         "target_width_mm": 183.0,
         "figure_role": "model-comparison",
-        "visible_text_count": 180,
+        "visible_text_count": 184,
         "axes_count": 13,
         "minimum_font_size_pt": 5.0
       }
@@ -169,32 +169,8 @@
         "height_mm": 201.0,
         "target_width_mm": 183.0,
         "figure_role": "model-diagnostic",
-        "visible_text_count": 175,
+        "visible_text_count": 182,
         "axes_count": 13,
-        "minimum_font_size_pt": 5.0
-      }
-    },
-    {
-      "figure_id": "exploratory_lr_local_window",
-      "passed": true,
-      "errors": [],
-      "warnings": [
-        "axis 'VisualCogA_Task-1：右−左 ERP' is missing an x or y label",
-        "legend is fully inside the data region: VisualCogA_Task-1：右−左 ERP",
-        "axis 'F4 125–219 ms；BA=72.5%，准确率=72.2%' is missing an x or y label",
-        "legend is fully inside the data region: F4 125–219 ms；BA=72.5%，准确率=72.2%",
-        "axis 'VisualCogA_Task-2：右−左 ERP' is missing an x or y label",
-        "axis 'Fz 266–281 ms；BA=63.0%，准确率=61.3%' is missing an x or y label",
-        "axis 'VisualCogB_Task-1：右−左 ERP' is missing an x or y label",
-        "axis 'Fz 359–555 ms；BA=67.5%，准确率=67.5%' is missing an x or y label"
-      ],
-      "metrics": {
-        "width_mm": 183.0,
-        "height_mm": 188.0,
-        "target_width_mm": 183.0,
-        "figure_role": "model-result",
-        "visible_text_count": 127,
-        "axes_count": 8,
         "minimum_font_size_pt": 5.0
       }
     }

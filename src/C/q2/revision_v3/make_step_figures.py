@@ -689,8 +689,8 @@ def plot_step3(data: dict, registry: list, audits: list) -> None:
     left, right = results["left"], results["right"]
     times = left.time_ms
     pop_names = ("早期视觉输入群体", "空间构型群体", "三角模板偏好群体")
-    channel_difference_names = ("左视野 − 右视野", "左视野 − 右视野",
-                               "左三角模板偏好 − 右三角模板偏好")
+    channel_difference_names = ("早期视野差 L−R", "构型视野差 L−R",
+                               "模板偏好差 P_L−P_R")
     fig = plt.figure(figsize=publication_size("double", 159), layout="constrained")
     grid = fig.add_gridspec(3, 3, height_ratios=(0.12, 1.0, 0.83))
     legend_ax = fig.add_subplot(grid[0, :])
@@ -717,7 +717,7 @@ def plot_step3(data: dict, registry: list, audits: list) -> None:
             ax2.plot(times, lateral, color=color, linewidth=1.1, label=condition)
         ax2 = bottom_axes[pop]
         _base_axis(ax2)
-        ax2.set_title(f"{pop_names[pop]}：{channel_difference_names[pop]}")
+        ax2.set_title(channel_difference_names[pop])
         ax2.set_xlabel("时间（ms）")
         ax2.set_ylabel("E 群体通道差（相对单位）")
     top_handles = [
@@ -737,13 +737,13 @@ def plot_step3(data: dict, registry: list, audits: list) -> None:
     _save_figure(
         fig, "03_v3_population_dynamics",
         _figure_contract(
-            claim="V3 将视觉输入传入早期、形状和方向三个功能群体，内部左右通道响应可在时间上分化。",
-            evidence=("三组 E/I 活动时程", "每组 E 群体左通道减右通道"),
+            claim="V3 将视觉输入传入三组功能群体；早期与构型组保留视野通道，模板偏好组接收固定双视野汇总输入并由模板驱动形成偏好差。",
+            evidence=("三组 E/I 活动时程", "前两组视野通道差及模板偏好通道差"),
             source_paths=("output/revision_v3/heldout_fit_summary.csv",
                           "output/revision_v3/drive_scales.csv", "revision_v3/model.py"),
             figure_role="model-result",
             scenario="Stage1 cue；代表性 tau_s/g_i/tau_a 和增益取三个重点记录已保存留出拟合的中位数。",
-            statistic="E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。",
+            statistic="E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。第三组左右通道表示模板偏好，不是视野位置。",
             n_definition="无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
             review_risks=("功能群体是模型变量，不应直接等同于 V1/IT/PFC 的实测活动。",),
         ), registry, audits,

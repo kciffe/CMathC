@@ -4,83 +4,126 @@
     "Fz",
     "F4"
   ],
+  "coordinate_axes": {
+    "x": "negative=left, positive=right",
+    "y": "negative=posterior, positive=anterior",
+    "z": "positive=superior"
+  },
+  "head_outer_radius_mm": 90.0,
   "sensor_coordinates_mm": [
     [
-      -35.0,
-      55.0,
-      62.0
+      -35.0129701690574,
+      55.02038169423305,
+      62.02297572804453
     ],
     [
       0.0,
-      66.0,
-      61.0
+      66.09390373125984,
+      61.08678981222501
     ],
     [
-      35.0,
-      55.0,
-      62.0
+      35.0129701690574,
+      55.02038169423305,
+      62.02297572804453
     ]
+  ],
+  "sensor_radii_mm": [
+    90.0,
+    90.0,
+    90.0
   ],
   "reference": "average of approximate left/right mastoid coordinates",
   "reference_coordinates_mm": [
     [
-      -70.0,
-      -50.0,
-      5.0
+      -73.11261550139308,
+      -52.223296786709355,
+      5.222329678670935
     ],
     [
-      70.0,
-      -50.0,
-      5.0
+      73.11261550139308,
+      -52.223296786709355,
+      5.222329678670935
     ]
   ],
+  "reference_radii_mm": [
+    89.99999999999999,
+    89.99999999999999
+  ],
   "sources": [
-    "early_visual_left",
-    "early_visual_right",
-    "shape_left",
-    "shape_right",
-    "orientation_left",
-    "orientation_right"
+    "early_visual_left_hemisphere_from_right_visual_field",
+    "early_visual_right_hemisphere_from_left_visual_field",
+    "configuration_left_hemisphere_from_right_visual_field",
+    "configuration_right_hemisphere_from_left_visual_field",
+    "bilateral_shape_preference_opponent_midline"
   ],
   "source_coordinates_mm": [
     [
-      -12.0,
-      -62.0,
-      58.0
+      -10.0,
+      -58.0,
+      45.0
     ],
     [
-      12.0,
-      -62.0,
-      58.0
+      10.0,
+      -58.0,
+      45.0
     ],
     [
-      -42.0,
-      -20.0,
-      60.0
+      -36.0,
+      -25.0,
+      50.0
     ],
     [
-      42.0,
-      -20.0,
-      60.0
+      36.0,
+      -25.0,
+      50.0
     ],
     [
-      -30.0,
-      18.0,
-      68.0
-    ],
-    [
-      30.0,
-      18.0,
-      68.0
+      0.0,
+      -34.0,
+      56.0
     ]
   ],
-  "source_orientation": "radial",
+  "source_radii_mm": [
+    74.08778576796583,
+    74.08778576796583,
+    66.49060083951716,
+    66.49060083951716,
+    65.5133574166368
+  ],
+  "source_depths_mm": [
+    15.912214232034174,
+    15.912214232034174,
+    23.509399160482843,
+    23.509399160482843,
+    24.486642583363206
+  ],
+  "source_orientation": "radial from head centre; canonical approximation",
+  "visual_field_to_hemisphere": {
+    "left_visual_field": "right_hemisphere (contralateral)",
+    "right_visual_field": "left_hemisphere (contralateral)"
+  },
+  "shape_preference_to_source": "left-template preference minus right-template preference -> one bilateral midline opponent source",
+  "population_channel_semantics": {
+    "early": [
+      "left_visual_field",
+      "right_visual_field"
+    ],
+    "configuration": [
+      "left_visual_field",
+      "right_visual_field"
+    ],
+    "shape_preference": [
+      "left_triangle_template_preference",
+      "right_triangle_template_preference"
+    ]
+  },
   "conductivity_S_per_m": 0.33,
   "leadfield_units": "V/(A m)",
+  "forward_approximation": "homogeneous infinite conductor point dipoles; not a finite spherical head solution",
   "limitations": [
-    "canonical coordinates",
-    "homogeneous conductor",
-    "assumed linked-mastoid reference",
-    "not an individualized head model"
+    "canonical coordinates, not MRI-localized anatomy",
+    "radial dipole directions are an explicit approximation",
+    "assumed linked-mastoid reference; recorded reference metadata not used",
+    "source currents are relative proxies, not calibrated A m"
   ]
 }

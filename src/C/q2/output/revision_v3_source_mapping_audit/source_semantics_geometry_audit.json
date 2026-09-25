@@ -1,9 +1,9 @@
 {
   "status": "PASS",
-  "code_version": "revision_v3_source_semantics_geometry_fix",
-  "current_source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
-  "saved_fit_manifest_schema": null,
-  "saved_fit_outputs_match_current_schema": false,
+  "code_version": "revision_v3_bilateral_preference_feedforward_and_source_geometry_fix",
+  "current_source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
+  "saved_fit_manifest_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
+  "saved_fit_outputs_match_current_schema": true,
   "source_labels": [
     "early_visual_left_hemisphere_from_right_visual_field",
     "early_visual_right_hemisphere_from_left_visual_field",
@@ -73,7 +73,13 @@
     "right_visual_field_to_left_hemisphere_source": true,
     "configuration_halves_use_same_contralateral_route": true,
     "left_minus_right_template_preference_to_single_midline_source": true,
-    "template_preference_has_no_hemisphere_source_columns": true
+    "template_preference_has_no_hemisphere_source_columns": true,
+    "configuration_group_retains_field_aligned_feedforward": true,
+    "both_template_preference_channels_receive_same_bilateral_pool": true,
+    "template_feedforward_weights_left_right": [
+      0.5,
+      0.5
+    ]
   },
   "geometry_checks": {
     "outer_head_radius_mm": 90.0,
@@ -139,5 +145,5 @@
     "assumed linked-mastoid reference; recorded reference metadata not used",
     "source currents are relative proxies, not calibrated A m"
   ],
-  "note": "This proves the implemented routing and coordinates, not anatomical localization or EEG model validity."
+  "note": "This proves the implemented routing and coordinates, not anatomical localization or EEG model validity. The bilateral midline opponent source remains a modeling hypothesis."
 }

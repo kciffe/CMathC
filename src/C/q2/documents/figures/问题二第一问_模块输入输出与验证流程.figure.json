@@ -1,6 +1,6 @@
 {
   "claim": "展示修正后五源模型的模块输入输出，以及建议的训练块/测试块验证路径；区分左右视野与模板偏好。",
-  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2",
   "source": [
     "q2/revision_v3/config.py",
     "q2/revision_v3/frontend.py",

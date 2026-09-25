@@ -1,7 +1,7 @@
 {
   "schema_version": 1,
   "contract": {
-    "claim": "V3 的几何导联场将六个源代理映射为 F3/Fz/F4 相对传感器曲线。",
+    "claim": "V3 的几何导联近似将五个源代理映射为 F3/Fz/F4 相对传感器曲线。",
     "evidence": [
       "左/右 cue 的 F3/Fz/F4 模型波形",
       "模型右减左波形"
@@ -36,7 +36,7 @@
       "height_mm": 131.0,
       "target_width_mm": 183.0,
       "figure_role": "model-result",
-      "visible_text_count": 76,
+      "visible_text_count": 74,
       "axes_count": 5,
       "minimum_font_size_pt": 5.0
     }

@@ -1,9 +1,9 @@
 {
   "schema_version": 1,
   "contract": {
-    "claim": "V3 用固定规范头部几何导联矩阵将六个源代理映射到 F3/Fz/F4。",
+    "claim": "V3 用外表面电极、内层功能源的固定规范几何映射，将五个源代理投影到 F3/Fz/F4。",
     "evidence": [
-      "保存的 3×6 传感器 × 源导联系数矩阵"
+      "保存的 3×5 传感器 × 源导联系数矩阵及源深度审计"
     ],
     "source_paths": [
       "output/revision_v3/leadfield.csv",
@@ -17,7 +17,7 @@
     "scenario": "canonical 几何点偶极近似；双乳突平均参考；不是个体化头模型。",
     "parameter_source": "saved held-out fit summary; no refitting",
     "randomness": "deterministic forward simulation; no random sampling",
-    "n_definition": "不涉及样本；显示固定的确定性 3×6 映射矩阵。",
+    "n_definition": "不涉及样本；显示固定的确定性 3×5 映射矩阵。",
     "statistic": "颜色和标注为带符号导联系数；单位 V/(A m)。",
     "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
     "review_risks": [
@@ -33,7 +33,7 @@
       "height_mm": 80.0,
       "target_width_mm": 183.0,
       "figure_role": "model-diagnostic",
-      "visible_text_count": 39,
+      "visible_text_count": 35,
       "axes_count": 2,
       "minimum_font_size_pt": 5.0
     }
