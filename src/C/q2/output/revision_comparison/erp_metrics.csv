@@ -1,0 +1,13 @@
+﻿record,method,n_left,n_right,full_sensor_nrmse_both_conditions,full_sensor_correlation_both_conditions,fit_parameters_refit
+VisualCogA_Task-1,revision,29,25,1.7484209488365776,0.15447919770755433,False
+VisualCogA_Task-1,revision_v2,29,25,1.0393230443444623,-0.23974993084692622,False
+VisualCogA_Task-1,revision_v3,29,25,3.1239162281209705,-0.35840025330663194,False
+VisualCogA_Task-2,revision,45,35,0.9736128804598707,-0.5368166284026358,False
+VisualCogA_Task-2,revision_v2,45,35,0.9998320754452704,0.0752008317397877,False
+VisualCogA_Task-2,revision_v3,45,35,0.8323043579619239,0.8704830100918646,False
+VisualCogB_Task-1,revision,41,42,1.1513822240018874,-0.5335521326081634,False
+VisualCogB_Task-1,revision_v2,41,42,0.999337096917804,0.20323907170666658,False
+VisualCogB_Task-1,revision_v3,41,42,1.1266760636604423,0.7130671911777946,False
+VisualCogB_Task-2,revision,37,43,0.9668453557313121,-0.35218142436960775,False
+VisualCogB_Task-2,revision_v2,37,43,0.9998962126190972,0.02385368564486646,False
+VisualCogB_Task-2,revision_v3,37,43,0.7862462892543207,0.5315342090251233,False

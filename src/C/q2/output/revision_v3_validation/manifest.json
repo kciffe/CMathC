@@ -1,0 +1,20 @@
+{
+  "purpose": "Step 2 empirical reproducibility gate before further model fitting",
+  "data": "Q1 cleaned MAT; already filtered/resampled by Q1; per-trial [-200,0) ms baseline correction",
+  "split": "retained original trial order; first chronological half vs second chronological half",
+  "n_records": 4,
+  "n_block_rows": 16,
+  "n_stability_rows": 144,
+  "n_temporal_lda_folds": 8,
+  "important_limit": "time blocks are record segments, not independent participants; preprocessing is inherited from Q1",
+  "outputs": [
+    "chronological_block_counts.csv",
+    "erp_block_stability.csv",
+    "within_record_temporal_lda.csv",
+    "stimulus_sequence_audit.csv",
+    "event_window_temporal_lda.csv",
+    "chronological_block_erps.png",
+    "observation_tail_audit.csv",
+    "验证结果与结论.md"
+  ]
+}

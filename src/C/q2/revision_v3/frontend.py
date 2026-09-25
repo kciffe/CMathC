@@ -316,26 +316,66 @@ def _shape_maps(v_orient, size, eps=1e-8):
     return bmap.astype(np.float32), outputs["left"], outputs["right"]
 
 
-def _simulate_lgn(contrast, stage, time_ms, tau_a, dt_ms=1.0, include_offset=True):
-    size = contrast.shape[0]
-    ratio = 256.0 / size
-    center = gaussian_filter(contrast, config.PIXEL_PARAMS["dog_center_sigma"] / ratio,
-                             mode="constant", cval=0.0)
-    surround = gaussian_filter(contrast, config.PIXEL_PARAMS["dog_surround_sigma"] / ratio,
-                               mode="constant", cval=0.0)
-    dog = center - surround
+def _simulate_lgn(contrast, stage, time_ms, tau_a, dt_ms=1.0, include_offset=True,
+                  initial_state=None, return_state=False):
+    """Simulate LGN on a fixed contrast or a sequence of complete scenes.
+
+    A dynamic input is a mapping with ``scene_contrasts`` (one full-scene
+    contrast image per scene) and ``scene_index`` (one scene id per sample).
+    State can be warm-started from a preceding background-only simulation.
+    The original static increment API remains unchanged for the frozen v3 run.
+    """
+    dynamic = isinstance(contrast, dict)
+    if dynamic:
+        scenes = np.asarray(contrast["scene_contrasts"], dtype=np.float32)
+        scene_index = np.asarray(contrast["scene_index"], dtype=int)
+        if (scenes.ndim != 3 or scenes.shape[1] != scenes.shape[2]
+                or scene_index.shape != np.asarray(time_ms).shape
+                or np.any(scene_index < 0) or np.any(scene_index >= len(scenes))):
+            raise ValueError("dynamic LGN input requires [scene,y,x] images and one valid scene id per time")
+        size = scenes.shape[1]
+        ratio = 256.0 / size
+        dog_scenes = []
+        for scene in scenes:
+            center = gaussian_filter(scene, config.PIXEL_PARAMS["dog_center_sigma"] / ratio,
+                                     mode="constant", cval=0.0)
+            surround = gaussian_filter(scene, config.PIXEL_PARAMS["dog_surround_sigma"] / ratio,
+                                       mode="constant", cval=0.0)
+            dog_scenes.append(center - surround)
+        dog_scenes = np.asarray(dog_scenes, dtype=np.float32)
+    else:
+        contrast = np.asarray(contrast, dtype=np.float32)
+        size = contrast.shape[0]
+        ratio = 256.0 / size
+        center = gaussian_filter(contrast, config.PIXEL_PARAMS["dog_center_sigma"] / ratio,
+                                 mode="constant", cval=0.0)
+        surround = gaussian_filter(contrast, config.PIXEL_PARAMS["dog_surround_sigma"] / ratio,
+                                   mode="constant", cval=0.0)
+        dog = center - surround
     relay = np.zeros((size, size, len(time_ms)), dtype=np.float32)
-    adaptation = np.zeros((size, size), dtype=np.float32)
-    tcr = np.zeros((2, size, size), dtype=np.float32)
-    interneuron = np.zeros_like(tcr)
-    trn = np.zeros_like(tcr)
+    if initial_state is None:
+        adaptation = np.zeros((size, size), dtype=np.float32)
+        tcr = np.zeros((2, size, size), dtype=np.float32)
+        interneuron = np.zeros_like(tcr)
+        trn = np.zeros_like(tcr)
+    else:
+        adaptation = np.asarray(initial_state["adaptation"], dtype=np.float32).copy()
+        tcr = np.asarray(initial_state["tcr"], dtype=np.float32).copy()
+        interneuron = np.asarray(initial_state["interneuron"], dtype=np.float32).copy()
+        trn = np.asarray(initial_state["trn"], dtype=np.float32).copy()
+        if (adaptation.shape != (size, size) or tcr.shape != (2, size, size)
+                or interneuron.shape != tcr.shape or trn.shape != tcr.shape):
+            raise ValueError("initial LGN state shapes do not match the spatial grid")
     on_mean = np.zeros(len(time_ms), dtype=np.float32)
     off_mean = np.zeros_like(on_mean)
     on_pooled = np.zeros((8, 8, len(time_ms)), dtype=np.float32)
     off_pooled = np.zeros_like(on_pooled)
     for ti, time in enumerate(time_ms):
-        gate = ((time >= 0) and (time < 200 if stage == "Stage1" and include_offset else True))
-        signed = dog * float(gate)
+        if dynamic:
+            signed = dog_scenes[scene_index[ti]]
+        else:
+            gate = ((time >= 0) and (time < 200 if stage == "Stage1" and include_offset else True))
+            signed = dog * float(gate)
         transient = signed - adaptation
         drive = np.stack([0.8 * np.maximum(transient, 0) + 0.2 * np.maximum(signed, 0),
                           0.8 * np.maximum(-transient, 0) + 0.2 * np.maximum(-signed, 0)])
@@ -355,13 +395,17 @@ def _simulate_lgn(contrast, stage, time_ms, tau_a, dt_ms=1.0, include_offset=Tru
     if (min(float(tcr.min()), float(interneuron.min()), float(trn.min())) < -1e-6
             or max(float(tcr.max()), float(interneuron.max()), float(trn.max())) > 1.000001):
         raise FloatingPointError("LGN TCR state left the [0,1] range")
-    return relay, on_mean, off_mean, on_pooled, off_pooled
+    final_state = {"adaptation": adaptation.copy(), "tcr": tcr.copy(),
+                   "interneuron": interneuron.copy(), "trn": trn.copy()}
+    result = (relay, on_mean, off_mean, on_pooled, off_pooled)
+    return (*result, final_state) if return_state else result
 
 
 def simulate_frontend(stimulus, events=None, params=None, time_ms=None,
                       resolution=64, include_offset=True, remove_position=False,
                       capture_spatial_audit=False,
-                      feature_stride_ms=config.FRONTEND_FEATURE_STRIDE_MS):
+                      feature_stride_ms=config.FRONTEND_FEATURE_STRIDE_MS,
+                      scene_contrasts=None, scene_index=None, initial_lgn_state=None):
     """Return pooled early and configuration features for a standard stimulus."""
     if resolution not in (64, 128):
         raise ValueError("the forward model supports 64 or 128 spatial grids")
@@ -374,10 +418,23 @@ def simulate_frontend(stimulus, events=None, params=None, time_ms=None,
         raise ValueError("time_ms must be a strictly increasing one-dimensional axis")
     if not np.isfinite(feature_stride_ms) or feature_stride_ms <= 0:
         raise ValueError("feature_stride_ms must be positive")
-    contrast = resize_area(stimulus.signed_contrast, resolution)
-    relay, on_mean, off_mean, on_pooled, off_pooled = _simulate_lgn(
-        contrast, stimulus.stage, time_ms, tau_a, dt_ms=float(np.median(np.diff(time_ms))),
-        include_offset=include_offset)
+    lgn_state = None
+    if scene_contrasts is None:
+        contrast = resize_area(stimulus.signed_contrast, resolution)
+        relay, on_mean, off_mean, on_pooled, off_pooled = _simulate_lgn(
+            contrast, stimulus.stage, time_ms, tau_a, dt_ms=float(np.median(np.diff(time_ms))),
+            include_offset=include_offset)
+    else:
+        if scene_index is None or initial_lgn_state is None:
+            raise ValueError("scene_contrasts requires scene_index and a warmed LGN state")
+        scene_contrasts = np.asarray(scene_contrasts, dtype=np.float32)
+        if scene_contrasts.ndim != 3 or scene_contrasts.shape[1:] != (256, 256):
+            raise ValueError("scene_contrasts must have shape [scene,256,256]")
+        scenes = np.stack([resize_area(scene, resolution) for scene in scene_contrasts])
+        relay, on_mean, off_mean, on_pooled, off_pooled, lgn_state = _simulate_lgn(
+            {"scene_contrasts": scenes, "scene_index": scene_index}, stimulus.stage,
+            time_ms, tau_a, dt_ms=float(np.median(np.diff(time_ms))),
+            initial_state=initial_lgn_state, return_state=True)
     templates = build_triangle_templates()
     t_count = len(time_ms)
     sample_times = np.arange(time_ms[0], time_ms[-1] + feature_stride_ms * 0.5,
@@ -461,7 +518,7 @@ def simulate_frontend(stimulus, events=None, params=None, time_ms=None,
         "stimulus": stimulus, "include_offset": bool(include_offset),
         "remove_position": bool(remove_position), "template_iou_left": templates["left"].mask_iou,
         "template_iou_right": templates["right"].mask_iou, "audit_maps": audit_maps,
-        "feature_stride_ms": float(feature_stride_ms),
+        "feature_stride_ms": float(feature_stride_ms), "lgn_final_state": lgn_state,
     }
 
 

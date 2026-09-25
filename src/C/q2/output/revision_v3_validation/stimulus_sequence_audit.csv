@@ -1,0 +1,3 @@
+﻿condition,size,baseline_circle_changed_pixels_vs_white,cue_minus_circle_nonzero_pixels,cue_minus_circle_unique_values,common_circle_pixelwise_unchanged,left_right_exact_horizontal_mirror,current_v3_input_is_absolute_scene,current_v3_input_definition
+left,256x256,1076,1226,"[-115, 0]",True,True,False,(cue image - circle baseline) / 255
+right,256x256,1076,1226,"[-115, 0]",True,True,False,(cue image - circle baseline) / 255

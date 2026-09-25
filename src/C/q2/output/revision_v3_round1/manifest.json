@@ -1,0 +1,31 @@
+{
+  "analysis": "full-scene LGN warmup, cue onset/offset, shared WC, blocked train-estimated observation map",
+  "cue_timeline_ms": {
+    "circle_pre_cue": "at least -2200..0 assumed; 1200 ms warmup plus recorded -1000..0",
+    "lgn_warmup": "1200 ms stationary circle-only numerical initialization, not an observed display interval",
+    "cue_scene": "0..199",
+    "circle_after_offset": "200..2199",
+    "target_nuisance_onset": 2200
+  },
+  "target_policy": {
+    "Task1": "dots target at 2.2 s",
+    "Task2": "equal average of inward/outward predictions; not inferred trial labels"
+  },
+  "source_labels": [
+    "early_visual_field_left",
+    "early_visual_field_right",
+    "config_energy_visual_field_left",
+    "config_energy_visual_field_right",
+    "triangle_left_preference",
+    "triangle_right_preference"
+  ],
+  "mapping_alpha_sensitivity": [
+    0.1,
+    1.0,
+    10.0
+  ],
+  "primary_alpha": 1.0,
+  "filtering": "same 256-to-128 Hz Q1 zero-phase filter and [-200,0) per-source baseline",
+  "evaluation": "within-record chronological first/second trial blocks, both directions",
+  "records_are_participants": false
+}
