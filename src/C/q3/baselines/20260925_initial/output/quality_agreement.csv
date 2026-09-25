@@ -1,0 +1,3 @@
+﻿stage,n_trials,q1_pass_raw_qc_pass,q1_pass_raw_qc_fail,q1_fail_raw_qc_pass,q1_fail_raw_qc_fail
+cue_locked,400,297,0,90,13
+target_locked,400,297,0,99,4

@@ -1,0 +1,18 @@
+{
+  "problem": "Q3 visual cognition macro EEG model",
+  "unified_core": "Trial-level EEG measurement and cognitive-state model; Q2 contributes mechanism only, not numerical outputs.",
+  "dependency_diagram": [
+    "raw Fz/F3/F4 + VisCue + TimeStamp -> audited trial windows -> EEG feature vector f_i",
+    "f_i -> sparse anchored measurement model f_i=C z_i+epsilon_i, z_i=[V_i,H_i,P_i]",
+    "VisCue u_i + verified task type T_i -> within-trial structural chain V_i -> H_i -> P_i",
+    "z_i + EEG features -> condition contrasts and ablation validation",
+    "channel-9 response side/time + verified target/deadline -> optional choice/RT/censored-DDM validation"
+  ],
+  "subproblems": [
+    {"id":"observation", "objective":"Extract trial-level frontal ERP and spectral features from the measured EEG.", "inputs":["raw channels 1-3", "VisCue", "TimeStamp"], "outputs":["stage-specific feature table", "feature definitions", "quality flags"]},
+    {"id":"state_chain", "objective":"Estimate interpretable trial-level visual-feedforward, HPC-like and PFC-like macro states under a constrained measurement/structural model.", "inputs":["EEG feature vector", "cue side", "verified task type"], "outputs":["V/H/P scores", "loadings", "path parameters", "uncertainty"]},
+    {"id":"validation", "objective":"Test condition effects and whether H/P/task dependence improves held-out feature reconstruction.", "inputs":["EEG features", "fitted states", "file/subject groups"], "outputs":["contrasts", "LOFO metrics", "ablation metrics"]},
+    {"id":"behavior_extension", "objective":"Relate EEG state to choice and, only with verified timing/deadline, RT and censoring.", "inputs":["channel-9 response labels", "verified target truth/time/deadline", "EEG states"], "outputs":["choice/RT validation or explicit gate status"]}
+  ],
+  "grouping_status": "Four recording files are known; participant/session/task mapping must be verified before describing LOFO as leave-one-subject-out."
+}

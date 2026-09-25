@@ -1,0 +1,350 @@
+{
+  "status": "choice_logistic_comparison_fitted_ddm_skipped_rt_quality_gate",
+  "model": "L2-regularized binary logistic regression",
+  "n_joined_trials": 387,
+  "raw_qc_passed_trials": 387,
+  "q1_quality_matched_sensitivity": {
+    "cue_plus_task_code": {
+      "n_trials": 297,
+      "valid_record_folds": 4,
+      "mean_balanced_accuracy": 0.7446821314872931,
+      "folds": [
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 243,
+          "n_test": 54,
+          "accuracy": 1.0,
+          "balanced_accuracy": 1.0,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.5375,
+          "balanced_accuracy": 0.5,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 214,
+          "n_test": 83,
+          "accuracy": 0.9759036144578314,
+          "balanced_accuracy": 0.9759001161440186,
+          "model": "cue_plus_task_code"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.502828409805154,
+          "model": "cue_plus_task_code"
+        }
+      ]
+    },
+    "EEG_state_only": {
+      "n_trials": 297,
+      "valid_record_folds": 4,
+      "mean_balanced_accuracy": 0.4830157277487944,
+      "folds": [
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 243,
+          "n_test": 54,
+          "accuracy": 0.42592592592592593,
+          "balanced_accuracy": 0.4572413793103448,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.425,
+          "balanced_accuracy": 0.42928975487115023,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 214,
+          "n_test": 83,
+          "accuracy": 0.5421686746987951,
+          "balanced_accuracy": 0.5386178861788617,
+          "model": "EEG_state_only"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.5125,
+          "balanced_accuracy": 0.506913890634821,
+          "model": "EEG_state_only"
+        }
+      ]
+    },
+    "cue_task_plus_EEG": {
+      "n_trials": 297,
+      "valid_record_folds": 4,
+      "mean_balanced_accuracy": 0.7403609498405301,
+      "folds": [
+        {
+          "held_out_record": "VisualCogA_Task-1",
+          "status": "ok",
+          "n_train": 243,
+          "n_test": 54,
+          "accuracy": 1.0,
+          "balanced_accuracy": 1.0,
+          "model": "cue_task_plus_EEG"
+        },
+        {
+          "held_out_record": "VisualCogA_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.5,
+          "balanced_accuracy": 0.47077309868007544,
+          "model": "cue_task_plus_EEG"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-1",
+          "status": "ok",
+          "n_train": 214,
+          "n_test": 83,
+          "accuracy": 0.9759036144578314,
+          "balanced_accuracy": 0.9759001161440186,
+          "model": "cue_task_plus_EEG"
+        },
+        {
+          "held_out_record": "VisualCogB_Task-2",
+          "status": "ok",
+          "n_train": 217,
+          "n_test": 80,
+          "accuracy": 0.525,
+          "balanced_accuracy": 0.5147705845380264,
+          "model": "cue_task_plus_EEG"
+        }
+      ]
+    }
+  },
+  "n_records": 4,
+  "predictors": {
+    "cue_plus_task_baseline": [
+      "cue_side",
+      "filename_task_code_candidate",
+      "cue_by_task_code_candidate"
+    ],
+    "EEG_state_only": [
+      "V_visual_like_raw",
+      "H_memory_like_raw",
+      "P_control_like_raw"
+    ],
+    "cue_task_plus_EEG": [
+      "cue_side",
+      "filename_task_code_candidate",
+      "cue_by_task_code_candidate",
+      "V_visual_like_raw",
+      "H_memory_like_raw",
+      "P_control_like_raw"
+    ]
+  },
+  "target": "channel 9 response direction normalized to choice side -1/+1",
+  "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
+  "rt_quality": {
+    "response_trials": 400,
+    "no_response_marker_trials": 0,
+    "rt_observed_trials": 400,
+    "rt_at_least_minimum_for_ddm": 1,
+    "rt_below_minimum_for_ddm": 399,
+    "rt_median_s": 0.0148437500000113,
+    "minimum_rt_gate_s": 0.1,
+    "deadline_known": false
+  },
+  "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
+  "ddm_reason": "This implementation uses a choice-only logistic fallback. RTs relative to the scheduled cue+2.2 s target are mostly below 100 ms; the target-time anchor is not separately marked.",
+  "cross_validation": "leave-one-record-out; standardization fitted on training records only; primary set uses raw-signal QC, with Q1-retained sensitivity subset",
+  "model_comparison": {
+    "folds": [
+      {
+        "held_out_record": "VisualCogA_Task-1",
+        "status": "ok",
+        "n_train": 287,
+        "n_test": 100,
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "model": "cue_plus_task_code"
+      },
+      {
+        "held_out_record": "VisualCogA_Task-2",
+        "status": "ok",
+        "n_train": 291,
+        "n_test": 96,
+        "accuracy": 0.5208333333333334,
+        "balanced_accuracy": 0.5,
+        "model": "cue_plus_task_code"
+      },
+      {
+        "held_out_record": "VisualCogB_Task-1",
+        "status": "ok",
+        "n_train": 289,
+        "n_test": 98,
+        "accuracy": 0.9795918367346939,
+        "balanced_accuracy": 0.9795150501672241,
+        "model": "cue_plus_task_code"
+      },
+      {
+        "held_out_record": "VisualCogB_Task-2",
+        "status": "ok",
+        "n_train": 294,
+        "n_test": 93,
+        "accuracy": 0.5376344086021505,
+        "balanced_accuracy": 0.5391509433962265,
+        "model": "cue_plus_task_code"
+      },
+      {
+        "held_out_record": "VisualCogA_Task-1",
+        "status": "ok",
+        "n_train": 287,
+        "n_test": 100,
+        "accuracy": 0.45,
+        "balanced_accuracy": 0.47946859903381644,
+        "model": "EEG_state_only"
+      },
+      {
+        "held_out_record": "VisualCogA_Task-2",
+        "status": "ok",
+        "n_train": 291,
+        "n_test": 96,
+        "accuracy": 0.4895833333333333,
+        "balanced_accuracy": 0.48652173913043484,
+        "model": "EEG_state_only"
+      },
+      {
+        "held_out_record": "VisualCogB_Task-1",
+        "status": "ok",
+        "n_train": 289,
+        "n_test": 98,
+        "accuracy": 0.5306122448979592,
+        "balanced_accuracy": 0.5125418060200669,
+        "model": "EEG_state_only"
+      },
+      {
+        "held_out_record": "VisualCogB_Task-2",
+        "status": "ok",
+        "n_train": 294,
+        "n_test": 93,
+        "accuracy": 0.4838709677419355,
+        "balanced_accuracy": 0.4797169811320755,
+        "model": "EEG_state_only"
+      },
+      {
+        "held_out_record": "VisualCogA_Task-1",
+        "status": "ok",
+        "n_train": 287,
+        "n_test": 100,
+        "accuracy": 1.0,
+        "balanced_accuracy": 1.0,
+        "model": "cue_task_plus_EEG"
+      },
+      {
+        "held_out_record": "VisualCogA_Task-2",
+        "status": "ok",
+        "n_train": 291,
+        "n_test": 96,
+        "accuracy": 0.5520833333333334,
+        "balanced_accuracy": 0.532608695652174,
+        "model": "cue_task_plus_EEG"
+      },
+      {
+        "held_out_record": "VisualCogB_Task-1",
+        "status": "ok",
+        "n_train": 289,
+        "n_test": 98,
+        "accuracy": 0.9795918367346939,
+        "balanced_accuracy": 0.9795150501672241,
+        "model": "cue_task_plus_EEG"
+      },
+      {
+        "held_out_record": "VisualCogB_Task-2",
+        "status": "ok",
+        "n_train": 294,
+        "n_test": 93,
+        "accuracy": 0.4946236559139785,
+        "balanced_accuracy": 0.47688679245283017,
+        "model": "cue_task_plus_EEG"
+      }
+    ],
+    "cue_choice_alignment_by_filename_task_code": [
+      {
+        "filename_task_code_candidate": 1,
+        "n_trials": 198,
+        "n_cue_choice_same_side": 196,
+        "cue_choice_same_side_fraction": 0.98989898989899,
+        "interpretation": "descriptive only; not response correctness; filename task mapping unverified"
+      },
+      {
+        "filename_task_code_candidate": 2,
+        "n_trials": 189,
+        "n_cue_choice_same_side": 87,
+        "cue_choice_same_side_fraction": 0.4603174603174603,
+        "interpretation": "descriptive only; not response correctness; filename task mapping unverified"
+      }
+    ],
+    "mean_balanced_accuracy": {
+      "cue_plus_task_code": 0.7546664983908626,
+      "EEG_state_only": 0.4895622813290984,
+      "cue_task_plus_EEG": 0.747252634568057
+    },
+    "EEG_increment_over_cue_task": -0.007413863822805622,
+    "task_code_source": "filename suffix only; formal Project-1/Project-2 mapping unverified"
+  },
+  "folds": [
+    {
+      "held_out_record": "VisualCogA_Task-1",
+      "status": "ok",
+      "n_train": 287,
+      "n_test": 100,
+      "accuracy": 1.0,
+      "balanced_accuracy": 1.0,
+      "model": "cue_task_plus_EEG"
+    },
+    {
+      "held_out_record": "VisualCogA_Task-2",
+      "status": "ok",
+      "n_train": 291,
+      "n_test": 96,
+      "accuracy": 0.5520833333333334,
+      "balanced_accuracy": 0.532608695652174,
+      "model": "cue_task_plus_EEG"
+    },
+    {
+      "held_out_record": "VisualCogB_Task-1",
+      "status": "ok",
+      "n_train": 289,
+      "n_test": 98,
+      "accuracy": 0.9795918367346939,
+      "balanced_accuracy": 0.9795150501672241,
+      "model": "cue_task_plus_EEG"
+    },
+    {
+      "held_out_record": "VisualCogB_Task-2",
+      "status": "ok",
+      "n_train": 294,
+      "n_test": 93,
+      "accuracy": 0.4946236559139785,
+      "balanced_accuracy": 0.47688679245283017,
+      "model": "cue_task_plus_EEG"
+    }
+  ],
+  "mean_balanced_accuracy": 0.747252634568057,
+  "correctness": "left unassigned; target-side truth is not available for every task",
+  "omissions": "all trials have a channel-9 marker; this does not establish that the protocol had no behavioral omissions",
+  "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time"
+}
