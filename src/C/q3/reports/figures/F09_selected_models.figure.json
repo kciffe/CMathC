@@ -1,0 +1,19 @@
+{
+  "figure": "F09_selected_models",
+  "title": "四个外层折的模型选择结果",
+  "purpose": "列出每个留出记录对应的模型族、特征集、参数和外层评分。",
+  "data_sources": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_fold_metrics.csv"
+  ],
+  "source_sha256": {
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_fold_metrics.csv": "9031ed83d5ab83cc8e2ff98228e6481962bc63edb7d2dfd1c61c0fe1e9dd712a"
+  },
+  "render": {
+    "png_dpi": 320,
+    "vector_master": "F09_selected_models.svg",
+    "background": "white"
+  },
+  "notes": {
+    "selection_scope": "model is selected independently within each outer-training split"
+  }
+}

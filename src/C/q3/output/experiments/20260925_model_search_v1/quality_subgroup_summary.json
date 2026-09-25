@@ -1,0 +1,122 @@
+{
+  "q1_quality_matched|cue_locked|q1_pass=True": {
+    "n_trials": 297,
+    "baseline_mean_record_ba": 0.4867748606218495,
+    "nested_selected_mean_record_ba": 0.4865275177759286,
+    "delta_percentage_points": -0.024734284592087263,
+    "per_record_ba": {
+      "fixed_baseline": {
+        "VisualCogA_Task-1": 0.49310344827586206,
+        "VisualCogA_Task-2": 0.4777777777777778,
+        "VisualCogB_Task-1": 0.5063879210220674,
+        "VisualCogB_Task-2": 0.46983029541169075
+      },
+      "nested_selected": {
+        "VisualCogA_Task-1": 0.45862068965517244,
+        "VisualCogA_Task-2": 0.4873015873015873,
+        "VisualCogB_Task-1": 0.49390243902439024,
+        "VisualCogB_Task-2": 0.5062853551225645
+      }
+    }
+  },
+  "q1_quality_matched|target_locked|q1_pass=True": {
+    "n_trials": 297,
+    "baseline_mean_record_ba": 0.5104496858316758,
+    "nested_selected_mean_record_ba": 0.4970292436243402,
+    "delta_percentage_points": -1.3420442207335626,
+    "per_record_ba": {
+      "fixed_baseline": {
+        "VisualCogA_Task-1": 0.4986206896551724,
+        "VisualCogA_Task-2": 0.47619047619047616,
+        "VisualCogB_Task-1": 0.5528455284552846,
+        "VisualCogB_Task-2": 0.51414204902577
+      },
+      "nested_selected": {
+        "VisualCogA_Task-1": 0.46413793103448275,
+        "VisualCogA_Task-2": 0.48253968253968255,
+        "VisualCogB_Task-1": 0.531068524970964,
+        "VisualCogB_Task-2": 0.5103708359522313
+      }
+    }
+  },
+  "raw_qc_pass|cue_locked|q1_pass=False": {
+    "n_trials": 90,
+    "baseline_mean_record_ba": 0.5197420634920635,
+    "nested_selected_mean_record_ba": 0.47325396825396826,
+    "delta_percentage_points": -4.648809523809527,
+    "per_record_ba": {
+      "fixed_baseline": {
+        "VisualCogA_Task-1": 0.5095238095238095,
+        "VisualCogA_Task-2": 0.5,
+        "VisualCogB_Task-1": 0.5,
+        "VisualCogB_Task-2": 0.5694444444444444
+      },
+      "nested_selected": {
+        "VisualCogA_Task-1": 0.4580952380952381,
+        "VisualCogA_Task-2": 0.6904761904761905,
+        "VisualCogB_Task-1": 0.30000000000000004,
+        "VisualCogB_Task-2": 0.4444444444444444
+      }
+    }
+  },
+  "raw_qc_pass|cue_locked|q1_pass=True": {
+    "n_trials": 297,
+    "baseline_mean_record_ba": 0.44231841292127444,
+    "nested_selected_mean_record_ba": 0.5419300933157115,
+    "delta_percentage_points": 9.961168039443708,
+    "per_record_ba": {
+      "fixed_baseline": {
+        "VisualCogA_Task-1": 0.47586206896551725,
+        "VisualCogA_Task-2": 0.4,
+        "VisualCogB_Task-1": 0.4700929152148664,
+        "VisualCogB_Task-2": 0.42331866750471403
+      },
+      "nested_selected": {
+        "VisualCogA_Task-1": 0.6158620689655172,
+        "VisualCogA_Task-2": 0.49523809523809526,
+        "VisualCogB_Task-1": 0.5566202090592335,
+        "VisualCogB_Task-2": 0.5
+      }
+    }
+  },
+  "raw_qc_pass|target_locked|q1_pass=False": {
+    "n_trials": 99,
+    "baseline_mean_record_ba": 0.42679410866910866,
+    "nested_selected_mean_record_ba": 0.49565323565323566,
+    "delta_percentage_points": 6.8859126984126995,
+    "per_record_ba": {
+      "fixed_baseline": {
+        "VisualCogA_Task-1": 0.4980952380952381,
+        "VisualCogA_Task-2": 0.2625,
+        "VisualCogB_Task-1": 0.6388888888888888,
+        "VisualCogB_Task-2": 0.3076923076923077
+      },
+      "nested_selected": {
+        "VisualCogA_Task-1": 0.4542857142857143,
+        "VisualCogA_Task-2": 0.55,
+        "VisualCogB_Task-1": 0.5277777777777778,
+        "VisualCogB_Task-2": 0.45054945054945056
+      }
+    }
+  },
+  "raw_qc_pass|target_locked|q1_pass=True": {
+    "n_trials": 297,
+    "baseline_mean_record_ba": 0.5457035861908532,
+    "nested_selected_mean_record_ba": 0.5049275483749441,
+    "delta_percentage_points": -4.077603781590911,
+    "per_record_ba": {
+      "fixed_baseline": {
+        "VisualCogA_Task-1": 0.4813793103448276,
+        "VisualCogA_Task-2": 0.526984126984127,
+        "VisualCogB_Task-1": 0.6141114982578397,
+        "VisualCogB_Task-2": 0.5603394091766185
+      },
+      "nested_selected": {
+        "VisualCogA_Task-1": 0.4868965517241379,
+        "VisualCogA_Task-2": 0.44285714285714284,
+        "VisualCogB_Task-1": 0.5563298490127758,
+        "VisualCogB_Task-2": 0.5336266499057197
+      }
+    }
+  }
+}

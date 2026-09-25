@@ -1,0 +1,45 @@
+{
+  "figure": "F10_confusion_matrices",
+  "title": "外层留出预测的混淆矩阵",
+  "purpose": "比较基线与嵌套所选模型的左右错误计数；不以合并矩阵替代主 BA。",
+  "data_sources": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\baseline_oof_predictions.csv",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_oof_predictions.csv"
+  ],
+  "source_sha256": {
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\baseline_oof_predictions.csv": "a08df827d342a6c78b9febd3bdc063c77a0f752fb3fc615f9a6bf05dabc31763",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_oof_predictions.csv": "e5616cd2095b47894f7086762366b666c6cf187cefe452daad6d803b56256912"
+  },
+  "render": {
+    "png_dpi": 320,
+    "vector_master": "F10_confusion_matrices.svg",
+    "background": "white"
+  },
+  "notes": {
+    "labels": [
+      "left=-1",
+      "right=+1"
+    ],
+    "baseline_matrix": [
+      [
+        113,
+        87
+      ],
+      [
+        119,
+        68
+      ]
+    ],
+    "selected_matrix": [
+      [
+        135,
+        65
+      ],
+      [
+        122,
+        65
+      ]
+    ],
+    "pooled_metric_not_primary": true
+  }
+}

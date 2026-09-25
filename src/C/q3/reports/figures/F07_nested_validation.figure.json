@@ -1,0 +1,25 @@
+{
+  "figure": "F07_nested_validation",
+  "title": "嵌套留一记录验证结构",
+  "purpose": "展示外层评估和内层模型选择的隔离方式，及训练折内缩放规则。",
+  "data_sources": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\experiments\\model_search.py",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_fold_metrics.csv"
+  ],
+  "source_sha256": {
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\experiments\\model_search.py": "b0acb9d32d68a3a7fb8304c7504a0728032e0e58ff317c129d0b8e4d65e85104",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_fold_metrics.csv": "9031ed83d5ab83cc8e2ff98228e6481962bc63edb7d2dfd1c61c0fe1e9dd712a"
+  },
+  "render": {
+    "png_dpi": 320,
+    "vector_master": "F07_nested_validation.svg",
+    "background": "white"
+  },
+  "notes": {
+    "outer": "leave one recording out; 4 groups",
+    "inner": "leave one of three outer-training recordings out",
+    "primary_aggregation": "unweighted mean of four outer-fold balanced accuracies",
+    "threshold_tuning": false,
+    "scaling": "fit on train split only"
+  }
+}

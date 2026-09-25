@@ -48,3 +48,27 @@ The scripts write tables, summaries, and figures to `src/C/q3/output/`. Run `pyt
 - `output/ablation_summary.json`, `output/ablation_report.md`, `output/ablation_effects.png`: V/H/P ablation results.
 - `output/legacy_q1_baseline_reference.json`: archived pre-update baseline used for direct comparison.
 - `output/legacy_q1_pipeline/`: preserved outputs from the superseded Q1-derived feature pipeline; not used by current Q3 scripts.
+
+## Exploratory classifier search
+
+The initial metrics and code are frozen under `baselines/20260925_initial/`. A separate 49-configuration nested leave-one-record-out search is in `experiments/model_search.py`; results are under `output/experiments/20260925_model_search_v1/`. On raw-QC cue trials, inner-fold model selection raised BA by 6.05 percentage points (0.460 to 0.521) across the four outer records. Target-window BA fell by 2.15 points, and the cue lift was absent when training and evaluation were restricted to the 297 Q1-matched trials. These exploratory results do not replace the primary baseline.
+
+To run another isolated experiment, choose a new output directory so prior results remain intact:
+
+```powershell
+python src/C/q3/experiments/model_search.py --output-dir src/C/q3/output/experiments/my_model_search
+python src/C/q3/experiments/summarize_quality_subgroups.py --results-dir src/C/q3/output/experiments/my_model_search
+```
+
+## Further optimization rounds
+
+The later time-resolved ERP/CSP, joint-candidate, and training-fold threshold searches are documented in [optimization_report.md](optimization_report.md). The best nested result remains the first-round raw-QC cue search (+6.05 pp BA versus the frozen baseline); this is development-only and does not replace the primary pipeline.
+
+Reproduce the isolated searches from the repository root:
+
+```powershell
+python src/C/q3/experiments/temporal_search.py --output-dir src/C/q3/output/experiments/temporal_reproduction
+python src/C/q3/experiments/joint_search.py --output-dir src/C/q3/output/experiments/joint_reproduction
+python src/C/q3/experiments/threshold_search.py --output-dir src/C/q3/output/experiments/threshold_reproduction
+python src/C/q3/experiments/expanded_search.py --output-dir src/C/q3/output/experiments/expanded_reproduction
+```

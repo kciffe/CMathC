@@ -1,0 +1,33 @@
+{
+  "figure": "F04_feature_schema",
+  "title": "13维 EEG 特征设计",
+  "purpose": "明确展示进入49候选模型的输入列、频段与冗余特征处理。",
+  "data_sources": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\summary.json",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\signal_processing.py",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\experiments\\model_search.py"
+  ],
+  "source_sha256": {
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\summary.json": "4f26cc60c7592139d61e1eff1686e61a9efcd6ff6811e795711154c6a1e2eb85",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\signal_processing.py": "3ba53b654ecddd9006583c1671c25a7c943e97fc397213268d8411b6dc62280d",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\experiments\\model_search.py": "b0acb9d32d68a3a7fb8304c7504a0728032e0e58ff317c129d0b8e4d65e85104"
+  },
+  "render": {
+    "png_dpi": 320,
+    "vector_master": "F04_feature_schema.svg",
+    "background": "white"
+  },
+  "notes": {
+    "selected_feature_families": {
+      "ERP_mean": 3,
+      "log_bandpower_theta_alpha_beta": 9,
+      "alpha_asymmetry": 1
+    },
+    "excluded": [
+      "gamma power",
+      "peak latency",
+      "response marker",
+      "pre-response features"
+    ]
+  }
+}

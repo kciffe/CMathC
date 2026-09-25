@@ -1,0 +1,51 @@
+{
+  "experiment": "time-resolved ERP and train-fold CSP nested leave-one-record-out search",
+  "created_local": "2026-09-25T14:55:27",
+  "inputs": {
+    "trial_features_sha256": "526dc19800bfe0a2db98a5c38a32dcef3238a86994462b0fea9d5243334c9e0a",
+    "raw_event_epochs_sha256": "d1c1353a5c1f156b92a9dfb3101d69f69e5886e1853f74b6fbc57e5e51756ac7"
+  },
+  "source_sha256": "09b7f860dacdd5749ded99477e30bb671f265196941dba4536250c24b5c657cf",
+  "artifacts": [
+    {
+      "path": "baseline_oof_predictions.csv",
+      "sha256": "a6e5102d0fed2a40d59b7cef65dad4b09247b3f299e6fe337cabe4a78b210c92",
+      "bytes": 158074
+    },
+    {
+      "path": "experiment_findings.md",
+      "sha256": "fa3200804b6ba63a9307f90f4136c252ace36e40f7d28ed04e7398b08b4d7614",
+      "bytes": 1241
+    },
+    {
+      "path": "inner_cv_scores.csv",
+      "sha256": "f4f2f119bdf1cc8875fe2d381c24383e896b9fe9b572dc79d7fc01d44ee78b23",
+      "bytes": 317123
+    },
+    {
+      "path": "nested_selected_fold_metrics.csv",
+      "sha256": "0fcc46d1f84c409aef89127d00b2f616c1b85313d7685fdf2b3207b6ef9bece3",
+      "bytes": 4699
+    },
+    {
+      "path": "nested_selected_oof_predictions.csv",
+      "sha256": "d5425b19293878033909cb441baedcae245e1c8748bd77e1ee75d66fb8e4d586",
+      "bytes": 160708
+    },
+    {
+      "path": "outer_candidate_metrics.csv",
+      "sha256": "0cf8cead3853e30d89218bc5ad05110c367a708b2a6564682643da982fba0ce5",
+      "bytes": 112774
+    },
+    {
+      "path": "outer_candidate_summary.csv",
+      "sha256": "5c008f075399c3198cdacb4df1e5a9794244ce1481338171c107f747cfa25d94",
+      "bytes": 22122
+    },
+    {
+      "path": "summary.json",
+      "sha256": "647a9f1a8b425ec6afb01af47b03cf9d574153540755b203fe30d9abf4935987",
+      "bytes": 6669
+    }
+  ]
+}

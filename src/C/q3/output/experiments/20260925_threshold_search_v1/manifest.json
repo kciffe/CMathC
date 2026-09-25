@@ -1,0 +1,46 @@
+{
+  "experiment": "nested inner-record probability threshold calibration over the round-one and temporal candidate union",
+  "created_local": "2026-09-25T15:06:18",
+  "inputs": {
+    "trial_features_sha256": "526dc19800bfe0a2db98a5c38a32dcef3238a86994462b0fea9d5243334c9e0a",
+    "raw_event_epochs_sha256": "d1c1353a5c1f156b92a9dfb3101d69f69e5886e1853f74b6fbc57e5e51756ac7"
+  },
+  "sources": {
+    "threshold_search.py": "8104db91807aef7c4d0437d8c0af6e6df09364d85d078880e27f58056eaa0f45",
+    "joint_search.py": "77b6ae2709922e47ea780c989507197e4c9a1c984b924f16b2c188dc63d098fb",
+    "model_search.py": "b0acb9d32d68a3a7fb8304c7504a0728032e0e58ff317c129d0b8e4d65e85104",
+    "temporal_search.py": "09b7f860dacdd5749ded99477e30bb671f265196941dba4536250c24b5c657cf"
+  },
+  "artifacts": [
+    {
+      "path": "baseline_oof_predictions.csv",
+      "sha256": "af299aef166f0d68fe7cdfd778c1bef3b1c615cfa1514e9bca306e15dd20e58c",
+      "bytes": 174616
+    },
+    {
+      "path": "experiment_findings.md",
+      "sha256": "c51fa4060214fd4dd2c1671657a866cb41e8f34fe455097cdf12bf41c62af947",
+      "bytes": 1000
+    },
+    {
+      "path": "inner_threshold_scores.csv",
+      "sha256": "a4b2a9c228d808b047ffb445efc9132d3d40af79142de12c627cd8ad3075fe08",
+      "bytes": 2884087
+    },
+    {
+      "path": "nested_selected_fold_metrics.csv",
+      "sha256": "df6fb32a3f858fe2fa20620cf7830a361193754d227e5bcf68b82fccb1466a24",
+      "bytes": 4889
+    },
+    {
+      "path": "nested_selected_oof_predictions.csv",
+      "sha256": "08518b1c94acd386504369a08a76edef43bf0178eb7da2626136f5ac65c28a65",
+      "bytes": 183867
+    },
+    {
+      "path": "summary.json",
+      "sha256": "be8f2c7dabc3c16426d5eaa370ac30fd10a57abd6cbd4b93baebaa3dad4ad77d",
+      "bytes": 5354
+    }
+  ]
+}

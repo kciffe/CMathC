@@ -1,0 +1,33 @@
+{
+  "figure": "F08_primary_scores",
+  "title": "52.06%主结果及四折配对比较",
+  "purpose": "显示固定基线与嵌套模型选择程序在四个外层记录上的BA，以及+6.05个百分点总体变化。",
+  "data_sources": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\summary.json",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_fold_metrics.csv",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\outer_candidate_metrics.csv"
+  ],
+  "source_sha256": {
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\summary.json": "4f26cc60c7592139d61e1eff1686e61a9efcd6ff6811e795711154c6a1e2eb85",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\nested_selected_fold_metrics.csv": "9031ed83d5ab83cc8e2ff98228e6481962bc63edb7d2dfd1c61c0fe1e9dd712a",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\outer_candidate_metrics.csv": "0359e828e6a96732b509fb62407cfd7adbf6bdff8c2f9a0d1304c1fae32a30e6"
+  },
+  "render": {
+    "png_dpi": 320,
+    "vector_master": "F08_primary_scores.svg",
+    "background": "white"
+  },
+  "notes": {
+    "baseline_fold_mean_percent": 46.010943030485116,
+    "nested_selected_fold_mean_percent": 52.06359160163508,
+    "delta_percentage_points": 6.052648571149966,
+    "fold_deltas_percentage_points": [
+      527.3752012882449,
+      1111.1111111111115,
+      426.42140468227456,
+      356.1517113783536
+    ],
+    "n_trials": 387,
+    "outer_folds": 4
+  }
+}

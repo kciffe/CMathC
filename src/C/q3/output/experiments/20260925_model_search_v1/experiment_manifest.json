@@ -1,0 +1,92 @@
+﻿{
+    "experiment_id":  "q3_nested_model_search_20260925_v1",
+    "frozen_baseline":  "src/C/q3/baselines/20260925_initial",
+    "input":  "src/C/q3/baselines/20260925_initial/output/trial_features.csv",
+    "primary_metric":  "balanced_accuracy",
+    "outer_cv":  "leave one complete recording file out",
+    "inner_cv":  "leave one outer-training recording file out",
+    "candidate_count":  49,
+    "created_local":  "2026-09-25",
+    "files":  [
+                  {
+                      "path":  "baseline_oof_predictions.csv",
+                      "sha256":  "A08DF827D342A6C78B9FEBD3BDC063C77A0F752FB3FC615F9A6BF05DABC31763",
+                      "bytes":  158082
+                  },
+                  {
+                      "path":  "experiment_findings.md",
+                      "sha256":  "3E8203DAA0284BA2CDB99E9A156021FF365352713BD8FA8E0AA2D3B05CB969BB",
+                      "bytes":  3273
+                  },
+                  {
+                      "path":  "inner_cv_scores.csv",
+                      "sha256":  "B7515EB4B0AFC5A1D364B4ACA36DE7AA338DDD883AF71239207E0911CF02C954",
+                      "bytes":  769022
+                  },
+                  {
+                      "path":  "nested_selected_fold_metrics.csv",
+                      "sha256":  "9031ED83D5AB83CC8E2FF98228E6481962BC63EDB7D2DFD1C61C0FE1E9DD712A",
+                      "bytes":  6764
+                  },
+                  {
+                      "path":  "nested_selected_oof_predictions.csv",
+                      "sha256":  "E5616CD2095B47894F7086762366B666C6CF187CEFE452DAAD6D803B56256912",
+                      "bytes":  185382
+                  },
+                  {
+                      "path":  "outer_candidate_metrics.csv",
+                      "sha256":  "0359E828E6A96732B509FB62407CFD7ADBF6BDFF8C2F9A0D1304C1FAE32A30E6",
+                      "bytes":  268428
+                  },
+                  {
+                      "path":  "outer_candidate_summary.csv",
+                      "sha256":  "A9C724D3F2B0810B9C656655D40CD54929AD4D8C1946AB756CAFAE736131EDB9",
+                      "bytes":  41812
+                  },
+                  {
+                      "path":  "quality_subgroup_metrics.csv",
+                      "sha256":  "1583CC1AE164F87F53204BE657576CA17979604D1C9126F1F9770C4A6EA9EC6C",
+                      "bytes":  4633
+                  },
+                  {
+                      "path":  "quality_subgroup_summary.json",
+                      "sha256":  "CF86B2CAAFBB2D5602BA020FD59F7E1AB38DE6F1E8D612A396FCF06B3CE6E8BF",
+                      "bytes":  4384
+                  },
+                  {
+                      "path":  "README.md",
+                      "sha256":  "10537C549A8C4B88F6E90A30BFF3E881858E44297B314F3C5BE2126CBB62B926",
+                      "bytes":  1470
+                  },
+                  {
+                      "path":  "summary.json",
+                      "sha256":  "4F26CC60C7592139D61E1EFF1686E61A9EFCD6FF6811E795711154C6A1E2EB85",
+                      "bytes":  8116
+                  },
+                  {
+                      "path":  "trial_features_profile.json",
+                      "sha256":  "A442CF9B7F3AFED85870CB265E1E48D7C031E6033FF450C172D0BA3E37FAD1AD",
+                      "bytes":  42798
+                  },
+                  {
+                      "path":  "source_snapshot/model_search.py",
+                      "sha256":  "B0ACB9D32D68A3A7FB8304C7504A0728032E0E58FF317C129D0B8E4D65E85104",
+                      "bytes":  23178
+                  },
+                  {
+                      "path":  "source_snapshot/summarize_quality_subgroups.py",
+                      "sha256":  "E97D2C9910BE3D4581E2FE649D72A9038CAF561A544A516C557A58FB36281A37",
+                      "bytes":  9900
+                  },
+                  {
+                      "path":  "source_snapshot/test_model_search.py",
+                      "sha256":  "93E627C0B7CA95D680668066DAD436449607B68CC967A223189F266FFB98E184",
+                      "bytes":  1405
+                  },
+                  {
+                      "path":  "source_snapshot/test_quality_subgroups.py",
+                      "sha256":  "5801CD1B9D1A3387DD9D705FC0C72FDED1976B5A418BA01FAFC7C2791D1BA0AE",
+                      "bytes":  2228
+                  }
+              ]
+}
