@@ -288,6 +288,7 @@ def _write_report(path, fit, cases, metric_rows, difference_rows):
 
 
 def run(max_nfev=None, progress=True):
+    config.require_current_source_mapping_manifest()
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
     cases, audit = load_cases_with_audit()
     eligible = [case for case in cases

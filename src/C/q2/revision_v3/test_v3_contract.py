@@ -36,7 +36,7 @@ def test_fixed_visual_calibration_puts_groups_on_a_shared_reference_scale():
 
 def test_head_geometry_generates_a_referenced_full_rank_three_sensor_map():
     lead = build_sensor_leadfield()
-    assert lead.shape == (3, 6)
+    assert lead.shape == (3, 5)
     assert np.isfinite(lead).all()
     assert np.linalg.matrix_rank(lead) == 3
     np.testing.assert_allclose(lead[0, 0], lead[2, 1], rtol=1e-8, atol=1e-10)

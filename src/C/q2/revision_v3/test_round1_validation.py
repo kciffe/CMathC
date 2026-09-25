@@ -25,8 +25,9 @@ def test_effective_mapping_recovers_synthetic_sensor_mix():
 
 def test_shape_preference_channels_are_not_named_as_cortical_hemispheres():
     labels = rv.source_channel_labels()
-    assert labels[4:] == ("triangle_left_preference", "triangle_right_preference")
-    assert not any("cortex_left" in label or "cortex_right" in label for label in labels)
+    assert labels[4:] == ("bilateral_shape_preference_opponent_midline",)
+    assert "early_visual_left_hemisphere_from_right_visual_field" in labels
+    assert "early_visual_right_hemisphere_from_left_visual_field" in labels
 
 
 def test_dynamic_lgn_accepts_warmed_state_and_switches_full_scenes():

@@ -74,10 +74,11 @@ def _read_json(path: Path) -> dict:
 
 def _read_calibration() -> np.ndarray:
     rows = _read_csv(V3_DIR / "drive_scales.csv")
-    population_order = ("early", "shape", "orientation")
-    channel_order = (("early_left", "early_right"),
-                     ("shape_left", "shape_right"),
-                     ("orientation_left", "orientation_right"))
+    population_order = ("early", "configuration", "shape_preference")
+    channel_order = (("left_visual_field", "right_visual_field"),
+                     ("left_visual_field", "right_visual_field"),
+                     ("left_triangle_template_preference",
+                      "right_triangle_template_preference"))
     values = []
     for population, names in zip(population_order, channel_order):
         selected = rows.loc[rows["population"] == population].set_index("channel")
@@ -110,7 +111,7 @@ def _representative_fit() -> tuple[ModelParams, float, dict]:
 
 
 def _prepare_forward() -> dict:
-    manifest = _read_json(V3_DIR / "manifest.json")
+    manifest = config.require_current_source_mapping_manifest(V3_DIR / "manifest.json")
     params, gain, fit_detail = _representative_fit()
     scales = _read_calibration()
     left_stimulus = load_stimulus("Stage1", "left")
@@ -664,20 +665,20 @@ def plot_leadfield_matrix(registry: list, audits: list) -> None:
                     fontsize=6.2, color="white" if abs(matrix[row, col]) > limit * 0.56 else INK)
     fig.colorbar(im, ax=ax, fraction=0.032, pad=0.02,
                  label=geometry.get("leadfield_units", "V/(A m)"))
-    fig.suptitle("04 · F3/Fz/F4 × 六个源代理的导联矩阵",
+    fig.suptitle("04 · F3/Fz/F4 × 五个语义明确源代理的导联矩阵",
                  fontsize=9.5, fontweight="bold")
     _save_figure(
         fig, "导联矩阵热图",
         _figure_contract(
-            claim="V3 用固定规范头部几何导联矩阵将六个源代理映射到 F3/Fz/F4。",
-            evidence=("保存的 3×6 传感器 × 源导联系数矩阵",),
+            claim="V3 用外表面电极、内层功能源的固定规范几何映射，将五个源代理投影到 F3/Fz/F4。",
+            evidence=("保存的 3×5 传感器 × 源导联系数矩阵及源深度审计",),
             source_paths=("output/revision_v3/leadfield.csv",
                           "output/revision_v3/leadfield_geometry.json",
                           "revision_v3/head_model.py"),
             figure_role="model-diagnostic",
             scenario="canonical 几何点偶极近似；双乳突平均参考；不是个体化头模型。",
             statistic="颜色和标注为带符号导联系数；单位 V/(A m)。",
-            n_definition="不涉及样本；显示固定的确定性 3×6 映射矩阵。",
+            n_definition="不涉及样本；显示固定的确定性 3×5 映射矩阵。",
             review_risks=("导联矩阵基于规范几何和均匀导体假设，传感器增益未校准为 μV。",),
         ), registry, audits,
     )
@@ -687,7 +688,9 @@ def plot_step3(data: dict, registry: list, audits: list) -> None:
     results = data["results"]
     left, right = results["left"], results["right"]
     times = left.time_ms
-    pop_names = ("早期视觉驱动群体", "形状整合群体", "方向模板群体")
+    pop_names = ("早期视觉输入群体", "空间构型群体", "三角模板偏好群体")
+    channel_difference_names = ("左视野 − 右视野", "左视野 − 右视野",
+                               "左三角模板偏好 − 右三角模板偏好")
     fig = plt.figure(figsize=publication_size("double", 159), layout="constrained")
     grid = fig.add_gridspec(3, 3, height_ratios=(0.12, 1.0, 0.83))
     legend_ax = fig.add_subplot(grid[0, :])
@@ -714,7 +717,7 @@ def plot_step3(data: dict, registry: list, audits: list) -> None:
             ax2.plot(times, lateral, color=color, linewidth=1.1, label=condition)
         ax2 = bottom_axes[pop]
         _base_axis(ax2)
-        ax2.set_title(f"{pop_names[pop]}：左通道 − 右通道")
+        ax2.set_title(f"{pop_names[pop]}：{channel_difference_names[pop]}")
         ax2.set_xlabel("时间（ms）")
         ax2.set_ylabel("E 群体通道差（相对单位）")
     top_handles = [
@@ -791,7 +794,7 @@ def plot_step4(data: dict, registry: list, audits: list) -> None:
     _save_figure(
         fig, "04_v3_simulated_eeg",
         _figure_contract(
-            claim="V3 的几何导联场将六个源代理映射为 F3/Fz/F4 相对传感器曲线。",
+            claim="V3 的几何导联近似将五个源代理映射为 F3/Fz/F4 相对传感器曲线。",
             evidence=("左/右 cue 的 F3/Fz/F4 模型波形", "模型右减左波形"),
             source_paths=("output/revision_v3/heldout_fit_summary.csv",
                           "output/revision_v3/drive_scales.csv",
@@ -1038,6 +1041,7 @@ def main() -> int:
     registry_payload = {
         "schema_version": 1,
         "model": "revision_v3",
+        "source_mapping_schema": config.SOURCE_MAPPING_SCHEMA,
         "primary_records": list(PRIMARY_RECORDS),
         "retained_low_quality_record": LOW_QUALITY_RECORD,
         "representative_parameters": data["fit_detail"],

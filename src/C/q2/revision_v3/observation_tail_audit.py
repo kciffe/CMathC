@@ -28,6 +28,7 @@ def _corr(a, b):
 
 def _load_fit_data():
     out = config.Q2_ROOT / "output" / "revision_v3"
+    config.require_current_source_mapping_manifest(out / "manifest.json")
     fits = json.loads((out / "heldout_fit_details.json").read_text(encoding="utf-8"))
     rows = list(csv.DictReader((out / "drive_scales.csv").open(encoding="utf-8-sig")))
     scales = np.asarray([float(r["reference_rms_scale"]) for r in rows], dtype=np.float32).reshape(3, 2)

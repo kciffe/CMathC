@@ -1,5 +1,6 @@
 """Fixed paths, timing, stimulus, and model constants for revision v3."""
 from pathlib import Path
+import json
 
 import numpy as np
 
@@ -7,6 +8,7 @@ Q2_ROOT = Path(__file__).resolve().parents[1]
 INPUT_ROOT = Q2_ROOT / "input"
 REAL_ROOT = Q2_ROOT.parent / "q1" / "output" / "8riemann_denoise"
 OUTPUT_ROOT = Q2_ROOT / "output" / "revision_v3"
+SOURCE_MAPPING_SCHEMA = "contralateral_visual_field_5source_midline_opponent_v1"
 SEED = 20260924
 
 TIME_MS = np.arange(801, dtype=np.float64)
@@ -54,11 +56,6 @@ FIT_TAU_A_GRID = np.arange(40.0, 160.0 + 1e-9, 20.0)
 # resolution. These steps apply to tau_s (ms) and g_i, respectively.
 FIT_FINITE_DIFF_STEPS = np.array([0.5, 0.01], dtype=float)
 
-LEAD_FIELD = np.array([
-    [.32, .24, .48, .36, .72, .58],
-    [.28, .28, .42, .42, .65, .65],
-    [.24, .32, .36, .48, .58, .72],
-], dtype=np.float64)
 U0 = np.array([1.0, 1.0, 1.0]) / np.sqrt(3.0)
 U1 = np.array([-1.0, 0.0, 1.0]) / np.sqrt(2.0)
 U2 = np.array([1.0, -2.0, 1.0]) / np.sqrt(6.0)
@@ -74,3 +71,18 @@ SPLIT_HALF_SEED = 20260925
 SPLIT_HALF_REPEATS = 500
 PERMUTATION_SEED = 20260926
 PERMUTATION_REPEATS = 1999
+
+
+def require_current_source_mapping_manifest(path=None):
+    """Refuse downstream use of fits created with the old six-source map."""
+    manifest_path = OUTPUT_ROOT / "manifest.json" if path is None else Path(path)
+    if not manifest_path.exists():
+        raise RuntimeError(
+            f"current revision_v3 manifest not found at {manifest_path}; "
+            "rerun revision_v3/run_v3.py before downstream analysis")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("source_mapping_schema") != SOURCE_MAPPING_SCHEMA:
+        raise RuntimeError(
+            "saved revision_v3 fits use an older source mapping; "
+            "rerun revision_v3/run_v3.py before consuming them")
+    return manifest

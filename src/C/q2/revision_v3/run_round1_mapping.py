@@ -203,6 +203,7 @@ def _write_figure(plot_data, path, figure_title):
 
 
 def run():
+    config.require_current_source_mapping_manifest()
     OUT.mkdir(parents=True, exist_ok=True)
     if not FIT_JSON.exists():
         raise FileNotFoundError(f"frozen v3 fit file not found: {FIT_JSON}")
@@ -411,6 +412,7 @@ def run():
     (OUT / "第一轮结果与结论.md").write_text("\n".join(lines), encoding="utf-8")
 
     generated = {
+        "source_mapping_schema": config.SOURCE_MAPPING_SCHEMA,
         "analysis": "full-scene LGN warmup, cue onset/offset, shared WC, blocked train-estimated observation map",
         "cue_timeline_ms": {"circle_pre_cue": "at least -2200..0 assumed; 1200 ms warmup plus recorded -1000..0",
                              "lgn_warmup": "1200 ms stationary circle-only numerical initialization, not an observed display interval",

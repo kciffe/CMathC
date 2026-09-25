@@ -1,0 +1,21 @@
+{
+  "claim": "展示修正后五源模型的模块输入输出，以及建议的训练块/测试块验证路径；区分左右视野与模板偏好。",
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+  "source": [
+    "q2/revision_v3/config.py",
+    "q2/revision_v3/frontend.py",
+    "q2/revision_v3/model.py",
+    "q2/revision_v3/head_model.py",
+    "q2/revision_v3/observation.py",
+    "q2/revision_v3/real_data.py",
+    "q2/revision_v3/fit.py",
+    "q2/revision_v3/evaluate.py"
+  ],
+  "units": "Source proxies are model-relative currents; T denotes time samples. The 3x5 leadfield is a homogeneous infinite-conductor approximation, not a finite spherical head solution.",
+  "method": "Hand-laid module and validation flow diagram; boxes reflect current interfaces and proposed blocked validation.",
+  "randomness": "none",
+  "outputs": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q2\\documents\\figures\\问题二第一问_模块输入输出与验证流程.png",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q2\\documents\\figures\\问题二第一问_模块输入输出与验证流程.svg"
+  ]
+}

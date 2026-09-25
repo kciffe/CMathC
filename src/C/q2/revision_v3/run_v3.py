@@ -314,7 +314,7 @@ def _write_readme(out, resolution, stride, scales, fits, metrics, differences,
     lines = [
         "# Revision v3：问题二第一小问计算结果", "",
         "## 实现内容", "",
-        "本版本用标准化刺激矩阵作为确定性输入，经 LGN ON/OFF 与 Gabor/形状模板前端、三组 E/I 群体动力学、E-I 突触滤波得到六个源代理，再用固定几何近似导联场映射到 F3/Fz/F4。模型曲线与真实数据统一通过第一问的 0.2–24 Hz 双向四阶滤波、128 Hz 重采样和逐通道基线校正。拟合按留一 MAT 记录进行，尺度由固定左右参考刺激预先计算，不读取留出记录确定尺度。", "",
+        "本版本用标准化刺激矩阵作为确定性输入，经 LGN ON/OFF 与 Gabor/形状模板前端、三组 E/I 群体动力学得到五个语义明确的源代理：左右视野分别投射到对侧半球的早期视觉与构型源，以及由左右模板偏好差形成的双侧中线对手源。电极/参考在外表面，源坐标在头内；再以均匀无限导体点偶极近似映射到 F3/Fz/F4。该映射是规范近似，不是有限球体或个体头模型。模型曲线与真实数据统一通过第一问的 0.2–24 Hz 双向四阶滤波、128 Hz 重采样和逐通道基线校正。拟合按留一 MAT 记录进行，尺度由固定左右参考刺激预先计算，不读取留出记录确定尺度。", "",
         "## 本次设置", "",
         f"- 空间网格：{resolution} × {resolution}；前端时间特征步长：{stride:g} ms。",
         f"- 输入群体 RMS 尺度（early/shape/orientation，每个含左右通道）：`{np.asarray(scales).round(6).tolist()}`。",
@@ -409,9 +409,10 @@ def run(resolution=None, max_nfev=60):
                       "right": mirror_stage1_frontend(selected_front, reference_right)}
     drive_scales = calibrate_drive_scales(reference_pair)
     scale_rows = []
-    channel_names = ("early_left", "early_right", "shape_left", "shape_right",
-                     "orientation_left", "orientation_right")
-    for group, row_labels in zip(("early", "shape", "orientation"),
+    channel_names = ("left_visual_field", "right_visual_field",
+                     "left_visual_field", "right_visual_field",
+                     "left_triangle_template_preference", "right_triangle_template_preference")
+    for group, row_labels in zip(("early", "configuration", "shape_preference"),
                                  (channel_names[:2], channel_names[2:4], channel_names[4:])):
         for index, label in enumerate(row_labels):
             scale_rows.append({"population": group, "channel": label,
@@ -469,13 +470,15 @@ def run(resolution=None, max_nfev=60):
                     Path(__file__).with_name("frontend.py"), Path(__file__).with_name("model.py"),
                     Path(__file__).with_name("fit.py"), Path(__file__).with_name("real_data.py"),
                     Path(__file__).with_name("observation.py"), Path(__file__).with_name("head_model.py")]
-    manifest = {"revision": "revision_v3", "python": platform.python_version(),
+    manifest = {"revision": "revision_v3",
+                "source_mapping_schema": config.SOURCE_MAPPING_SCHEMA,
+                "python": platform.python_version(),
                 "numpy": np.__version__, "scipy": scipy.__version__,
                 "output_root": str(out), "resolution": resolution,
                 "frontend_feature_stride_ms": selected_stride,
                 "fit_max_objective_calls_per_start": max_nfev,
                 "fit_case_count": len(fit_cases), "mat_record_count": len(event_rows),
-                "primary_model": "LGN ON/OFF -> Gabor and fixed shape/opponent templates -> three E/I population pairs -> six filtered E-I source proxies -> geometry-based illustrative leadfield -> Q1 observation operator",
+                "primary_model": "LGN ON/OFF -> Gabor and fixed shape/opponent templates -> three E/I population pairs -> contralateral visual-field routing plus one bilateral midline shape-opponent source -> five internal source proxies -> homogeneous infinite-conductor illustrative leadfield -> Q1 observation operator",
                 "fitting": "leave-one-MAT-out; fixed frontend calibration; fit Stage1 left/right only; one signed shared gain",
                 "observation_operator": "0.2-24 Hz 4th-order Butterworth zero-phase; 256-to-128 Hz Fourier resample; per-channel prestimulus baseline; full [-1,3)s epoch",
                 "head_model": geometry_manifest(),

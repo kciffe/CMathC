@@ -1,8 +1,11 @@
-"""Low-dimensional forward model with explicit shape-opponent readout.
+"""Low-dimensional forward model with explicit field/preference routing.
 
-The three output coordinates are fixed orthogonal sensor-space modes, not
-anatomical sources or a subject-specific head model. The model therefore
-supports relative waveform comparisons, not absolute source localization.
+Population-channel semantics are kept separate from cortical-source labels:
+visual-field halves route contralaterally to early/configuration proxies, while
+triangle-template preference becomes one bilateral midline opponent proxy.
+The resulting F3/Fz/F4 curves use a canonical point-dipole approximation and
+relative source currents; they are not individualized source localization or
+calibrated microvolt predictions.
 """
 from dataclasses import dataclass
 
@@ -12,11 +15,11 @@ from scipy.signal import fftconvolve
 try:
     from . import config
     from .frontend import activation
-    from .head_model import build_sensor_leadfield
+    from .head_model import SOURCE_LABELS, build_sensor_leadfield
 except ImportError:
     import config
     from frontend import activation
-    from head_model import build_sensor_leadfield
+    from head_model import SOURCE_LABELS, build_sensor_leadfield
 
 
 @dataclass(frozen=True)
@@ -41,7 +44,7 @@ class ModelResult:
     time_ms: np.ndarray
     excitatory: np.ndarray  # population, channel, time
     inhibitory: np.ndarray
-    source_proxy: np.ndarray  # six filtered E-I channel signals, relative units
+    source_proxy: np.ndarray  # five semantically mapped filtered E-I currents, relative units
     observable_modes: np.ndarray  # u0/u1/u2 coordinates, time
     eeg: np.ndarray  # F3/Fz/F4 relative sensor units, time
     eeg_scaled: np.ndarray
@@ -172,20 +175,43 @@ def _synaptic_kernel(tau_ms, dt_ms, n_samples):
     return (h / area if area > 0 else h).astype(np.float32)
 
 
+def map_population_to_source_channels(population_currents):
+    """Map population channels to sources without conflating their meanings.
+
+    Input order is ``[early, configuration, shape_preference] x [L,R] x time``.
+    The first two pairs are visual-field halves and use contralateral cortical
+    sources. The final pair is left/right triangle-template preference and is
+    reduced to one signed bilateral midline opponent current.
+    """
+    values = np.asarray(population_currents, dtype=np.float32)
+    if values.ndim != 3 or values.shape[:2] != (3, 2):
+        raise ValueError("population_currents must have shape [3 populations, 2 channels, time]")
+    if not np.isfinite(values).all():
+        raise ValueError("population_currents must be finite")
+    early, configuration, preference = values
+    return np.stack((
+        early[1],             # left cortical hemisphere <- right visual field
+        early[0],             # right cortical hemisphere <- left visual field
+        configuration[1],     # left cortical hemisphere <- right visual field
+        configuration[0],     # right cortical hemisphere <- left visual field
+        preference[0] - preference[1],  # bilateral shape-template opponent
+    )).astype(np.float32, copy=False)
+
+
 def _source_proxy(e, inh, time_ms):
-    """Return filtered E-I activity for the three two-channel populations."""
+    """Filter E/I activity, then map visual fields and shape preference to sources."""
     dt = float(np.median(np.diff(time_ms)))
     he = _synaptic_kernel(10.0, dt, len(time_ms))
     hi = _synaptic_kernel(20.0, dt, len(time_ms))
     pe = fftconvolve(e, he[None, None, :], mode="full", axes=(-1,))[..., :len(time_ms)] * dt
     pi = fftconvolve(inh, hi[None, None, :], mode="full", axes=(-1,))[..., :len(time_ms)] * dt
-    return (pe - pi).reshape(6, len(time_ms)).astype(np.float32)
+    return map_population_to_source_channels(pe - pi)
 
 
 def simulate_forward(frontend, params=None, time_ms=None, amplitude=1.0,
                      feature_route="opponent", drive_scales=None,
                      leadfield=None):
-    """Run the cascade and project six source currents to F3/Fz/F4.
+    """Run the cascade and project five explicit source currents to F3/Fz/F4.
 
     The sensor map is calculated from fixed source/electrode geometry and a
     homogeneous-conductor approximation. Only one shared signed scale may be
@@ -203,8 +229,8 @@ def simulate_forward(frontend, params=None, time_ms=None, amplitude=1.0,
     e, inh, delayed_drive = _wc_populations(drives, time, params)
     source = _source_proxy(e, inh, time)
     lead = build_sensor_leadfield() if leadfield is None else np.asarray(leadfield, dtype=float)
-    if lead.shape != (3, 6) or not np.isfinite(lead).all():
-        raise ValueError("leadfield must be a finite [F3/Fz/F4, six sources] matrix")
+    if lead.shape != (3, len(SOURCE_LABELS)) or not np.isfinite(lead).all():
+        raise ValueError(f"leadfield must be a finite [F3/Fz/F4, {len(SOURCE_LABELS)} sources] matrix")
     eeg = (lead @ source).astype(np.float32)
     modes = observable_modes_from_real(eeg)
     return ModelResult(
@@ -218,10 +244,19 @@ def simulate_forward(frontend, params=None, time_ms=None, amplitude=1.0,
                      "leadfield": lead.tolist(),
                      "E_range": [float(e.min()), float(e.max())],
                      "I_range": [float(inh.min()), float(inh.max())],
-                     "channel_labels": ("early_left", "early_right", "shape_left", "shape_right",
-                                        "opponent_left", "opponent_right"),
+                     "population_channel_labels": {
+                         "early": ("left_visual_field", "right_visual_field"),
+                         "configuration": ("left_visual_field", "right_visual_field"),
+                         "shape_preference": ("left_triangle_template_preference",
+                                              "right_triangle_template_preference")},
+                     "source_channel_labels": SOURCE_LABELS,
+                     "visual_field_to_hemisphere": {
+                         "left_visual_field": "right_hemisphere",
+                         "right_visual_field": "left_hemisphere"},
+                     "shape_preference_source_rule": (
+                         "left preference minus right preference -> bilateral midline opponent proxy"),
                      "mode_labels": ("u0_common", "u1_lateral", "u2_shape"),
-                     "observation": "geometric leadfield applied to six source-current proxies"})
+                     "observation": "geometric leadfield applied to five semantically mapped source-current proxies"})
 
 
 def observable_modes_from_real(real):

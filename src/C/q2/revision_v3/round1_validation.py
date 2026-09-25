@@ -7,6 +7,11 @@ independently of the expensive visual simulation.
 
 import numpy as np
 
+try:
+    from .head_model import SOURCE_LABELS
+except ImportError:
+    from head_model import SOURCE_LABELS
+
 
 def build_scene_timeline(time_ms, cue_onset_ms=0.0, cue_offset_ms=200.0,
                          target_onset_ms=None):
@@ -32,10 +37,8 @@ def build_scene_timeline(time_ms, cue_onset_ms=0.0, cue_offset_ms=200.0,
 
 
 def source_channel_labels():
-    """Names for the six functional currents; none assert cortical anatomy."""
-    return ("early_visual_field_left", "early_visual_field_right",
-            "config_energy_visual_field_left", "config_energy_visual_field_right",
-            "triangle_left_preference", "triangle_right_preference")
+    """Names for the five sources after explicit field/preference routing."""
+    return SOURCE_LABELS
 
 
 def fit_effective_mapping(source_curves, observed_curves, prior_map, alpha=1.0):

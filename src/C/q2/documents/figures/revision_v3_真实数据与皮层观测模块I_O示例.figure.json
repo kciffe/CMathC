@@ -1,0 +1,200 @@
+{
+  "claim": "以当前五源 revision_v3 正向模型展示真实 ERP 输入、E/I 群体、语义路由源代理与简化 F3/Fz/F4 观测。",
+  "sources": [
+    "q1/output/8riemann_denoise/VisualCogA_Task-1_clean.mat",
+    "q2/revision_v3/model.py",
+    "q2/revision_v3/head_model.py",
+    "q2/revision_v3/observation.py",
+    "q2/revision_v3/real_data.py"
+  ],
+  "scenarios": [
+    "VisualCogA_Task-1 Stage1 observed ERP",
+    "Stage1 left cue default-parameter model illustration"
+  ],
+  "model_parameters": {
+    "tau_s_ms": 40.0,
+    "g_i": 1.0,
+    "tau_a_ms": 80.0,
+    "amplitude": 1.0
+  },
+  "source_mapping_schema": "contralateral_visual_field_5source_midline_opponent_v1",
+  "source_labels": [
+    "early_visual_left_hemisphere_from_right_visual_field",
+    "early_visual_right_hemisphere_from_left_visual_field",
+    "configuration_left_hemisphere_from_right_visual_field",
+    "configuration_right_hemisphere_from_left_visual_field",
+    "bilateral_shape_preference_opponent_midline"
+  ],
+  "head_geometry": {
+    "sensors": [
+      "F3",
+      "Fz",
+      "F4"
+    ],
+    "coordinate_axes": {
+      "x": "negative=left, positive=right",
+      "y": "negative=posterior, positive=anterior",
+      "z": "positive=superior"
+    },
+    "head_outer_radius_mm": 90.0,
+    "sensor_coordinates_mm": [
+      [
+        -35.0129701690574,
+        55.02038169423305,
+        62.02297572804453
+      ],
+      [
+        0.0,
+        66.09390373125984,
+        61.08678981222501
+      ],
+      [
+        35.0129701690574,
+        55.02038169423305,
+        62.02297572804453
+      ]
+    ],
+    "sensor_radii_mm": [
+      90.0,
+      90.0,
+      90.0
+    ],
+    "reference": "average of approximate left/right mastoid coordinates",
+    "reference_coordinates_mm": [
+      [
+        -73.11261550139308,
+        -52.223296786709355,
+        5.222329678670935
+      ],
+      [
+        73.11261550139308,
+        -52.223296786709355,
+        5.222329678670935
+      ]
+    ],
+    "reference_radii_mm": [
+      89.99999999999999,
+      89.99999999999999
+    ],
+    "sources": [
+      "early_visual_left_hemisphere_from_right_visual_field",
+      "early_visual_right_hemisphere_from_left_visual_field",
+      "configuration_left_hemisphere_from_right_visual_field",
+      "configuration_right_hemisphere_from_left_visual_field",
+      "bilateral_shape_preference_opponent_midline"
+    ],
+    "source_coordinates_mm": [
+      [
+        -10.0,
+        -58.0,
+        45.0
+      ],
+      [
+        10.0,
+        -58.0,
+        45.0
+      ],
+      [
+        -36.0,
+        -25.0,
+        50.0
+      ],
+      [
+        36.0,
+        -25.0,
+        50.0
+      ],
+      [
+        0.0,
+        -34.0,
+        56.0
+      ]
+    ],
+    "source_radii_mm": [
+      74.08778576796583,
+      74.08778576796583,
+      66.49060083951716,
+      66.49060083951716,
+      65.5133574166368
+    ],
+    "source_depths_mm": [
+      15.912214232034174,
+      15.912214232034174,
+      23.509399160482843,
+      23.509399160482843,
+      24.486642583363206
+    ],
+    "source_orientation": "radial from head centre; canonical approximation",
+    "visual_field_to_hemisphere": {
+      "left_visual_field": "right_hemisphere (contralateral)",
+      "right_visual_field": "left_hemisphere (contralateral)"
+    },
+    "shape_preference_to_source": "left-template preference minus right-template preference -> one bilateral midline opponent source",
+    "population_channel_semantics": {
+      "early": [
+        "left_visual_field",
+        "right_visual_field"
+      ],
+      "configuration": [
+        "left_visual_field",
+        "right_visual_field"
+      ],
+      "shape_preference": [
+        "left_triangle_template_preference",
+        "right_triangle_template_preference"
+      ]
+    },
+    "conductivity_S_per_m": 0.33,
+    "leadfield_units": "V/(A m)",
+    "forward_approximation": "homogeneous infinite conductor point dipoles; not a finite spherical head solution",
+    "limitations": [
+      "canonical coordinates, not MRI-localized anatomy",
+      "radial dipole directions are an explicit approximation",
+      "assumed linked-mastoid reference; recorded reference metadata not used",
+      "source currents are relative proxies, not calibrated A m"
+    ]
+  },
+  "processing": "Real trial ERP is baseline-corrected per trial over [-200,0) ms. Model observation uses revision_v3 observation.py with Q1-style filter/resample/baseline operator.",
+  "notes": "Model curves use default parameters and are illustrative only; no fit or held-out score is shown. Source proxies are relative units; leadfield uses a homogeneous infinite-conductor point-dipole approximation.",
+  "randomness": "none",
+  "dimensions": {
+    "mat_trial_data": [
+      54,
+      10,
+      512
+    ],
+    "selected_eeg": [
+      54,
+      3,
+      512
+    ],
+    "frontend_gabor": [
+      4,
+      8,
+      8,
+      801
+    ],
+    "frontend_lgn_on_pooled": [
+      8,
+      8,
+      801
+    ],
+    "model_e_i": [
+      3,
+      2,
+      801
+    ],
+    "source_proxy": [
+      5,
+      801
+    ],
+    "sensor_eeg": [
+      3,
+      801
+    ],
+    "observation_grid": [
+      3,
+      512
+    ]
+  }
+}

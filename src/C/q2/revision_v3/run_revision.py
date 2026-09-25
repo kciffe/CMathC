@@ -395,6 +395,7 @@ def _run_real_data_evaluation(cases, out):
 def run_revision(mode="full", resolution=None, max_nfev=35, skip_resolution_audit=False,
                  progress=True):
     """Run real-data separability checks, forward fitting, controls, and plots."""
+    config.require_current_source_mapping_manifest()
     out = config.OUTPUT_ROOT
     out.mkdir(parents=True, exist_ok=True)
     cases, event_audit = load_cases_with_audit()
