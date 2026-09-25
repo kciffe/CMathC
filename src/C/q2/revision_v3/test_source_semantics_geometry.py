@@ -9,7 +9,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from head_model import SOURCE_LABELS, build_sensor_leadfield, geometry_manifest
 from config import SOURCE_MAPPING_SCHEMA, require_current_source_mapping_manifest
-from model import map_population_to_source_channels, simulate_forward
+from model import (_route_early_feedforward, map_population_to_source_channels,
+                   simulate_forward)
+
+
+def test_shape_preference_feedforward_is_same_fixed_bilateral_visual_field_pool():
+    early_activity = np.zeros((2, 5), dtype=np.float32)
+    early_activity[0, 4] = 2.0  # left visual field
+    early_activity[1, 4] = 6.0  # right visual field
+
+    field_route, preference_route = _route_early_feedforward(
+        early_activity, step=4, delay_samples=0.0)
+
+    np.testing.assert_array_equal(field_route, [2.0, 6.0])
+    np.testing.assert_array_equal(preference_route, [4.0, 4.0])
 
 
 def test_visual_field_halves_route_to_contralateral_early_and_configuration_sources():
