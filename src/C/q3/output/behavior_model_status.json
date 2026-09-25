@@ -1,0 +1,64 @@
+{
+  "status": "choice_logistic_fitted_ddm_skipped_rt_quality_gate",
+  "model": "L2-regularized binary logistic regression",
+  "n_joined_trials": 297,
+  "n_records": 4,
+  "predictors": [
+    "V_visual_like_raw",
+    "H_memory_like_raw",
+    "P_control_like_raw"
+  ],
+  "target": "channel 9 response direction normalized to choice side -1/+1",
+  "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
+  "rt_quality": {
+    "response_trials": 400,
+    "no_response_marker_trials": 0,
+    "rt_observed_trials": 400,
+    "rt_at_least_minimum_for_ddm": 1,
+    "rt_below_minimum_for_ddm": 399,
+    "rt_median_s": 0.0148437500000113,
+    "minimum_rt_gate_s": 0.1,
+    "deadline_known": false
+  },
+  "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
+  "ddm_reason": "This implementation uses a choice-only logistic fallback. RTs relative to the scheduled cue+2.2 s target are mostly below 100 ms; the target-time anchor is not separately marked.",
+  "cross_validation": "leave-one-record-out; standardization fitted on training records only",
+  "folds": [
+    {
+      "held_out_record": "VisualCogA_Task-1",
+      "status": "ok",
+      "n_train": 243,
+      "n_test": 54,
+      "accuracy": 0.5370370370370371,
+      "balanced_accuracy": 0.549655172413793
+    },
+    {
+      "held_out_record": "VisualCogA_Task-2",
+      "status": "ok",
+      "n_train": 217,
+      "n_test": 80,
+      "accuracy": 0.5125,
+      "balanced_accuracy": 0.49937146448774355
+    },
+    {
+      "held_out_record": "VisualCogB_Task-1",
+      "status": "ok",
+      "n_train": 214,
+      "n_test": 83,
+      "accuracy": 0.4578313253012048,
+      "balanced_accuracy": 0.45876887340301975
+    },
+    {
+      "held_out_record": "VisualCogB_Task-2",
+      "status": "ok",
+      "n_train": 217,
+      "n_test": 80,
+      "accuracy": 0.5375,
+      "balanced_accuracy": 0.516970458830924
+    }
+  ],
+  "mean_balanced_accuracy": 0.5061914922838701,
+  "correctness": "left unassigned; target-side truth is not available for every task",
+  "omissions": "no response marker within the cue-to-next-cue trial interval is recorded as a no-response trial",
+  "pre_response_EEG": "not used as a predictor because its time window is aligned using the response time"
+}

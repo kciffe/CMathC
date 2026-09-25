@@ -1,0 +1,10 @@
+﻿stage,state_proxy,source_feature,definition,pooled_center,pooled_scale_sd,scope
+cue_locked,V_visual_like,V_visual_like_raw,mean frontal ERP candidate amplitude,6.631393120411938,77.84520106816514,descriptive scaling within event stage; not a predictive train/test transform
+cue_locked,H_memory_like,H_memory_like_raw,mean frontal log theta power,3.1839475601365983,1.1786633831846685,descriptive scaling within event stage; not a predictive train/test transform
+cue_locked,P_control_like,P_control_like_raw,mean frontal log beta power,1.8022413126281918,0.5628151780176073,descriptive scaling within event stage; not a predictive train/test transform
+pre_response_100ms_end,V_visual_like,V_visual_like_raw,mean frontal ERP candidate amplitude,,1.0,descriptive scaling within event stage; not a predictive train/test transform
+pre_response_100ms_end,H_memory_like,H_memory_like_raw,mean frontal log theta power,2.603971466777882,1.0613072775804955,descriptive scaling within event stage; not a predictive train/test transform
+pre_response_100ms_end,P_control_like,P_control_like_raw,mean frontal log beta power,2.182779175969486,0.8240145463130606,descriptive scaling within event stage; not a predictive train/test transform
+target_locked,V_visual_like,V_visual_like_raw,mean frontal ERP candidate amplitude,8.139393296489946,56.67189507966441,descriptive scaling within event stage; not a predictive train/test transform
+target_locked,H_memory_like,H_memory_like_raw,mean frontal log theta power,2.2021739969519696,0.6942795049262043,descriptive scaling within event stage; not a predictive train/test transform
+target_locked,P_control_like,P_control_like_raw,mean frontal log beta power,1.822477302959512,0.6006273976480615,descriptive scaling within event stage; not a predictive train/test transform

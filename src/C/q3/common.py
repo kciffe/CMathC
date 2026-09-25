@@ -14,7 +14,9 @@ from config import (
     ALLOWED_CHANNELS,
     OUTPUT_DIR,
     Q1_CLEAN_DIR,
+    REPO_ROOT,
     RECORDS,
+    RESPONSE_CHANNEL_NAMES,
     TARGET_OFFSET_S,
     TARGET_OFFSET_SOURCE,
 )
@@ -39,8 +41,10 @@ def channel_name(label: str) -> str:
     return label.split(":", maxsplit=1)[0].strip()
 
 
-def _selected_channel_indices(labels: list[str]) -> dict[str, int]:
-    """Return indices only for explicitly allowed EEG, cue, and time signals."""
+def _selected_channel_indices(
+    labels: list[str], include_response: bool = False
+) -> dict[str, int]:
+    """Select allowed EEG/event rows and, for raw MAT only, one response row."""
     selected: dict[str, int] = {}
     for index, label in enumerate(labels):
         name = channel_name(label)
@@ -49,14 +53,23 @@ def _selected_channel_indices(labels: list[str]) -> dict[str, int]:
     missing = sorted(ALLOWED_CHANNELS.difference(selected))
     if missing:
         raise ValueError(f"MAT file is missing allowed channel labels: {missing}")
+    if include_response:
+        response_matches = [
+            (index, label)
+            for index, label in enumerate(labels)
+            if channel_name(label) in RESPONSE_CHANNEL_NAMES
+        ]
+        if len(response_matches) != 1:
+            raise ValueError(
+                "Raw MAT file must have exactly one Action/TgtAct response channel; "
+                f"found {len(response_matches)}"
+            )
+        selected["Response"] = response_matches[0][0]
     return selected
 
 
 def find_record_path(record: str) -> Path:
-    candidates = (
-        Path(__file__).resolve().parents[3]
-        / "data"
-    ).rglob(f"{record}.mat")
+    candidates = (REPO_ROOT / "data").rglob(f"{record}.mat")
     path = next(candidates, None)
     if path is None:
         raise FileNotFoundError(f"Could not find raw MAT file for {record}")
@@ -72,7 +85,7 @@ def load_raw_record(record: str) -> dict[str, Any]:
         raise ValueError(f"Expected data, DataLabel, and SampleRate in {path.name}")
 
     all_labels = matlab_labels(source["DataLabel"])
-    selected = _selected_channel_indices(all_labels)
+    selected = _selected_channel_indices(all_labels, include_response=True)
     matrix = np.asarray(source[data_key], dtype=np.float64)
     if matrix.ndim != 2:
         raise ValueError(f"Expected channel x sample matrix in {path.name}, got {matrix.shape}")
@@ -81,7 +94,11 @@ def load_raw_record(record: str) -> dict[str, Any]:
             f"DataLabel count {len(all_labels)} does not match matrix rows {matrix.shape[0]}"
         )
 
-    channels = {name: matrix[index, :].copy() for name, index in selected.items()}
+    channels = {
+        name: matrix[index, :].copy()
+        for name, index in selected.items()
+        if name != "Response"
+    }
     sample_rate = float(np.asarray(source["SampleRate"]).squeeze())
     if sample_rate <= 0:
         raise ValueError(f"Invalid sample rate in {path.name}: {sample_rate}")
@@ -90,6 +107,8 @@ def load_raw_record(record: str) -> dict[str, Any]:
         "path": path,
         "sample_rate_hz": sample_rate,
         "channels": channels,
+        "response_signal": matrix[selected["Response"], :].copy(),
+        "response_label": all_labels[selected["Response"]],
         "labels": {name: all_labels[index] for name, index in selected.items()},
     }
 
@@ -116,6 +135,38 @@ def detect_cues(cue_signal: np.ndarray, timestamps: np.ndarray) -> list[dict[str
             }
         )
     return events
+
+
+def standardize_response_code(raw_response: np.ndarray) -> np.ndarray:
+    """Map either Action/TgtAct sign convention to -2/0/+2 without mutation."""
+    raw = np.asarray(raw_response, dtype=np.float64)
+    standardized = np.zeros(raw.shape, dtype=np.int8)
+    standardized[raw < 0] = -2
+    standardized[raw > 0] = 2
+    return standardized
+
+
+def detect_response_events(
+    raw_response: np.ndarray, timestamps: np.ndarray
+) -> list[dict[str, Any]]:
+    raw = np.asarray(raw_response, dtype=np.float64).reshape(-1)
+    time = np.asarray(timestamps, dtype=np.float64).reshape(-1)
+    if raw.size != time.size:
+        raise ValueError(f"Response and timestamp lengths differ: {raw.size} vs {time.size}")
+    standardized = standardize_response_code(raw)
+    active = standardized != 0
+    sign_change = np.r_[False, (standardized[1:] != 0) & (standardized[1:] != standardized[:-1])]
+    starts = np.flatnonzero((active & ~np.r_[False, active[:-1]]) | sign_change)
+    return [
+        {
+            "response_sample_index": int(index),
+            "response_time_s": float(time[index]),
+            "response_raw": float(raw[index]),
+            "response_code": int(standardized[index]),
+            "choice_side": int(standardized[index] // 2),
+        }
+        for index in starts
+    ]
 
 
 def load_q1_clean(record: str) -> dict[str, Any]:
@@ -196,6 +247,25 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
         raise ValueError(f"Timestamp is not strictly increasing in {record}")
     median_dt = float(np.median(timestamp_delta)) if timestamp_delta.size else np.nan
     events = detect_cues(cue, timestamps)
+    response_events = detect_response_events(raw["response_signal"], timestamps)
+    response_by_trial: dict[int, dict[str, Any]] = {}
+    for trial_index, event in enumerate(events):
+        trial_start = int(event["cue_sample_index"])
+        trial_end = (
+            int(events[trial_index + 1]["cue_sample_index"])
+            if trial_index + 1 < len(events)
+            else cue.size
+        )
+        trial_responses = [
+            response
+            for response in response_events
+            if trial_start <= response["response_sample_index"] < trial_end
+        ]
+        response_by_trial[trial_index] = {
+            "response_events": trial_responses,
+            "response_event_count": len(trial_responses),
+            "response": trial_responses[0] if trial_responses else None,
+        }
 
     quality = load_quality_table(record)
     quality_by_trial: dict[int, dict[str, Any]] = {}
@@ -276,6 +346,20 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
     for event in events:
         original_index = int(event["original_trial_index"])
         q1_match = mapping.get(original_index)
+        response_info = response_by_trial[original_index]
+        response = response_info["response"]
+        response_code = int(response["response_code"]) if response else 0
+        response_time = float(response["response_time_s"]) if response else np.nan
+        target_time = float(event["cue_time_s"] + TARGET_OFFSET_S)
+        reaction_time = response_time - target_time if response else np.nan
+        if response is None:
+            rt_status = "no_response_marker"
+        elif reaction_time < 0:
+            rt_status = "before_assumed_target"
+        elif reaction_time < 0.10:
+            rt_status = "shorter_than_100ms_review_timing_anchor"
+        else:
+            rt_status = "nonnegative_100ms_or_more"
         quality_info = quality_by_trial.get(original_index, {})
         q1_drop = quality_info.get("q1_final_drop")
         if q1_match is not None:
@@ -291,7 +375,7 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "record": record,
                 **event,
                 "cue_side_text": "left" if event["cue_side"] < 0 else "right",
-                "target_time_s": event["cue_time_s"] + TARGET_OFFSET_S,
+                "target_time_s": target_time,
                 "target_time_source": TARGET_OFFSET_SOURCE,
                 "task_type": "unresolved_from_allowed_channels",
                 "q1_trial_index": q1_match["q1_trial_index"] if q1_match else None,
@@ -299,11 +383,19 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "q1_mapping_error_s": q1_match["mapping_error_s"] if q1_match else np.nan,
                 "q1_final_drop": q1_drop,
                 "eeg_quality": eeg_quality,
-                "behavior_label_status": "unavailable_no_external_behavior_labels",
-                "response_side": np.nan,
-                "reaction_time_s": np.nan,
+                "response_channel_label": raw["response_label"],
+                "response_event_count": response_info["response_event_count"],
+                "response_raw": response["response_raw"] if response else np.nan,
+                "response_code": response_code,
+                "response_time_s": response_time,
+                "response_side": "left" if response_code < 0 else "right" if response_code > 0 else "",
+                "choice_side": response["choice_side"] if response else np.nan,
+                "choice_side_text": "left" if response_code < 0 else "right" if response_code > 0 else "",
+                "reaction_time_s": reaction_time,
+                "rt_status": rt_status,
                 "correct": np.nan,
-                "is_omission": np.nan,
+                "is_omission": response is None,
+                "behavior_label_status": "channel9_response_marker" if response else "no_channel9_response_marker",
             }
         )
 
@@ -320,12 +412,22 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
         if np.isfinite(median_dt)
         else np.nan,
         "cue_event_count": len(events),
+        "response_event_count": len(response_events),
+        "response_channel_label": raw["response_label"],
+        "response_trial_count": sum(info["response_event_count"] > 0 for info in response_by_trial.values()),
+        "multiple_response_trial_count": sum(info["response_event_count"] > 1 for info in response_by_trial.values()),
+        "omission_marker_count": sum(info["response_event_count"] == 0 for info in response_by_trial.values()),
+        "rt_median_s": float(np.nanmedian([row["reaction_time_s"] for row in event_rows]))
+        if any(np.isfinite(row["reaction_time_s"]) for row in event_rows)
+        else np.nan,
+        "rt_under_100ms_count": sum(row["rt_status"] == "shorter_than_100ms_review_timing_anchor" for row in event_rows),
         "q1_clean_trial_count": len(clean["clean_events"]),
         "q1_timestamp_mapping_count": len(mapping),
         "q1_quality_csv_order_validated": quality_order_validated,
         "target_time_source": TARGET_OFFSET_SOURCE,
         "task_type": "unresolved_from_allowed_channels",
-        "selected_channels": ",".join((*("F3", "Fz", "F4"), "VisCue", "TimeStamp")),
+        "selected_eeg_channels": ",".join(("F3", "Fz", "F4")),
+        "selected_behavior_channels": ",".join(("VisCue", raw["response_label"], "TimeStamp")),
     }
     return pd.DataFrame(event_rows), pd.DataFrame(mapping_rows), {**record_info, "clean": clean}
 

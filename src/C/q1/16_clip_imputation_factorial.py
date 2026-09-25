@@ -44,6 +44,7 @@ OUTPUT_SAMPLE_RATE = 128
 BASELINE_S = (-0.2, 0.0)
 BOOTSTRAP_REPEATS = 1000
 BOOTSTRAP_SEED = 20260926
+ORDER_BLOCKS = 5
 WINDOWS_MS = {
     "cue_onset_0_200ms": (0.0, 200.0),
     "cue_offset_200_800ms": (200.0, 800.0),
@@ -61,6 +62,12 @@ COLORS = {
     "剔除削顶_执行SQI": "#F58518",
     "插补削顶_不做SQI": "#54A24B",
     "插补削顶_执行SQI": "#E45756",
+}
+PLOT_LABELS = {
+    "剔除削顶_不做SQI": "剔除 + 无 SQI",
+    "剔除削顶_执行SQI": "剔除 + SQI",
+    "插补削顶_不做SQI": "插补 + 无 SQI",
+    "插补削顶_执行SQI": "插补 + SQI",
 }
 
 plt.rcParams["font.sans-serif"] = ["Microsoft YaHei", "SimHei", "SimSun", "DejaVu Sans"]
@@ -223,13 +230,21 @@ def window_mask(time_ms, window):
     return mask
 
 
-def bootstrap_difference(left, right, repeats, rng):
-    n_channels, n_time = left.shape[1:]
+def bootstrap_difference(eeg, left_indices, right_indices, trial_blocks, repeats, rng):
+    n_channels, n_time = eeg.shape[1:]
     draws = np.empty((repeats, n_channels, n_time), dtype=np.float32)
     for repeat in range(repeats):
-        li = rng.integers(0, len(left), size=len(left))
-        ri = rng.integers(0, len(right), size=len(right))
-        draws[repeat] = right[ri].mean(axis=0) - left[li].mean(axis=0)
+        sampled_left, sampled_right = [], []
+        for block in range(ORDER_BLOCKS):
+            left_pool = left_indices[trial_blocks[left_indices] == block]
+            right_pool = right_indices[trial_blocks[right_indices] == block]
+            if left_pool.size:
+                sampled_left.append(rng.choice(left_pool, size=left_pool.size, replace=True))
+            if right_pool.size:
+                sampled_right.append(rng.choice(right_pool, size=right_pool.size, replace=True))
+        left_draw = np.concatenate(sampled_left)
+        right_draw = np.concatenate(sampled_right)
+        draws[repeat] = eeg[right_draw].mean(axis=0) - eeg[left_draw].mean(axis=0)
     return np.quantile(draws, [0.025, 0.975], axis=0)
 
 
@@ -268,11 +283,16 @@ def analyze_scenario(item, scenario_name, exclude_clipped, use_sqi, sqi_module, 
     baseline_eeg = baseline_correct(eeg_ds, item["output_time_ms"])
     left_idx = keep & (item["cue"] == -1)
     right_idx = keep & (item["cue"] == 1)
+    trial_indices = np.arange(len(item["cue"]))
+    trial_blocks = np.minimum(
+        trial_indices * ORDER_BLOCKS // len(trial_indices), ORDER_BLOCKS - 1
+    )
     lr = baseline_eeg[right_idx].mean(axis=0) - baseline_eeg[left_idx].mean(axis=0)
     left_erp = baseline_eeg[left_idx].mean(axis=0)
     right_erp = baseline_eeg[right_idx].mean(axis=0)
     boot_low_high = bootstrap_difference(
-        baseline_eeg[left_idx], baseline_eeg[right_idx], BOOTSTRAP_REPEATS, rng
+        baseline_eeg, np.flatnonzero(left_idx), np.flatnonzero(right_idx),
+        trial_blocks, BOOTSTRAP_REPEATS, rng
     )
 
     rows = []
@@ -298,7 +318,9 @@ def analyze_scenario(item, scenario_name, exclude_clipped, use_sqi, sqi_module, 
                     np.mean((low > 0) | (high < 0))
                 ),
                 "imputed_sample_fraction": (
-                    float(item["imputed_mask"][keep][:, DISPLAY_ORDER, :][:, ci, :][:, mask].mean())
+                    float(item["imputed_mask"][keep][:, DISPLAY_ORDER, :][
+                        :, ci, :
+                    ][:, window_mask(item["time_s"] * 1000, window)].mean())
                     if not exclude_clipped else 0.0
                 ),
                 "bootstrap_repeats": BOOTSTRAP_REPEATS,
@@ -332,7 +354,8 @@ def plot_waveforms(items, results, out_path, window):
                 mask = window_mask(item["output_time_ms"], window)
                 ax.plot(
                     item["output_time_ms"][mask], result["lr"][col, mask],
-                    color=COLORS[scenario_name], lw=1.3, label=scenario_name,
+                    color=COLORS[scenario_name], lw=1.3,
+                    label=PLOT_LABELS[scenario_name],
                 )
             ax.axhline(0, color="0.35", lw=0.8)
             if window[0] <= 0 <= window[1]:
@@ -346,12 +369,13 @@ def plot_waveforms(items, results, out_path, window):
             if row == len(items) - 1:
                 ax.set_xlabel("相对提示时间（ms）")
     handles, labels = axes[0, 0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=False)
+    fig.legend(handles, labels, loc="upper center", ncol=2, frameon=False,
+               bbox_to_anchor=(0.5, 0.965))
     fig.suptitle(
-        f"削顶处理 × SQI 的左右差异敏感性（{window[0]:g}–{window[1]:g} ms）",
-        y=1.02, fontsize=14, fontweight="bold",
+        f"削顶处理与 SQI 对左右 ERP 差异的影响（{window[0]:g}–{window[1]:g} ms）",
+        y=1.015, fontsize=14, fontweight="bold",
     )
-    fig.tight_layout(rect=(0, 0, 1, 0.98))
+    fig.tight_layout(rect=(0, 0, 1, 0.91))
     fig.savefig(out_path, dpi=180, bbox_inches="tight")
     plt.close(fig)
 
@@ -401,7 +425,7 @@ def write_report(items, summaries, metrics, result_dir):
         "",
         "## 插补边界与数据质量",
         "",
-        "饱和判据沿用第一问 `abs(EEG) >= 999`。连续削顶段不超过 50 ms 时用局部 PCHIP；更长的段用两侧有效样本线性桥接，若削顶碰到试次边界则使用最近有效值延拓。插补在原始 256 Hz 分段信号上进行，随后统一重跑第一问 0.2–24 Hz 零相位滤波和 128 Hz 降采样；所有组合都用每试次提示前 [-200, 0) ms 均值做基线校正。插补削顶组合的 SQI 在插补后的数据上重算。",
+        "饱和判据沿用第一问 `abs(EEG) >= 999`。连续削顶段不超过 50 ms 时用局部 PCHIP；更长的段用两侧有效样本线性桥接，若削顶碰到试次边界则使用最近有效值延拓。插补在原始 256 Hz 分段信号上进行，随后统一重跑第一问 0.2–24 Hz 零相位滤波和 128 Hz 降采样；所有组合都用每试次提示前 [-200, 0) ms 均值做基线校正。插补削顶组合的 SQI 在插补后的数据上重算。目标候选窗 2450–2700 ms 仍使用提示前基线，没有改为目标前 2.0–2.2 s 基线，因此只用于处理方案敏感性对照，不等同于标准目标锁时 P300 ERP。",
         "",
         "| 记录 | 含削顶试次数 | 削顶连续段数 | >50 ms 段数 | 最长段（ms） | 削顶样本占 EEG 样本比例 |",
         "|---|---:|---:|---:|---:|---:|",
@@ -411,7 +435,7 @@ def write_report(items, summaries, metrics, result_dir):
         "",
         "## 0–800 ms 左右差异",
         "",
-        "下表按 F3/Fz/F4 顺序列出右减左 ERP 的 RMS 差异幅度；后列是试次 bootstrap 的逐点 95% 区间不含 0 的时间点比例。它是描述性指标，未做全时间窗多重比较校正，不等于显著性检验。",
+        "下表按 F3/Fz/F4 顺序列出右减左 ERP 的 RMS 差异幅度；后列是按原试次顺序分五块、条件内分层重抽样得到的逐点 95% 区间不含 0 的时间点比例。它是描述性指标，未做全时间窗多重比较校正，不等于显著性检验。",
         "",
         "| 记录 | 组合 | 左/右保留数 | 差异 RMS（F3/Fz/F4） | 逐点区间不含0比例（F3/Fz/F4） |",
         "|---|---|---:|---|---|",

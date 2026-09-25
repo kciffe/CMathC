@@ -1,0 +1,23 @@
+{
+  "observation_unit": "one retained trial at one fixed event-locked analysis stage",
+  "proxy_vector": [
+    "V_visual_like",
+    "H_memory_like",
+    "P_control_like"
+  ],
+  "proxy_definitions": {
+    "V_visual_like": "frontal mean ERP candidate amplitude across F3/Fz/F4",
+    "H_memory_like": "frontal mean log theta power across F3/Fz/F4",
+    "P_control_like": "frontal mean log beta power across F3/Fz/F4"
+  },
+  "additional_feature": "AI_alpha = log(P_alpha,F4) - log(P_alpha,F3)",
+  "inputs_u": [
+    "VisCue direction",
+    "event stage"
+  ],
+  "task_type": "unresolved; not inferred from recording filenames or response-channel coding",
+  "latent_factor_model_fitted": false,
+  "reason": "three-channel trial-level observations do not identify unconstrained latent loadings; use predefined feature composites",
+  "state_transition_model_fitted": false,
+  "interpretation_limit": "functional feature proxies only; they do not identify LGN, hippocampal, or PFC sources"
+}

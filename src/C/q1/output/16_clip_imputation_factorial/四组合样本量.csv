@@ -1,0 +1,17 @@
+﻿dataset,scenario,clip_policy,sqi,n_left,n_right,sqi_threshold,sqi_dropped_within_eligible
+VisualCogA_Task-1,剔除削顶_不做SQI,exclude,off,42,41,,0
+VisualCogA_Task-1,剔除削顶_执行SQI,exclude,on,29,25,0.4468309162888451,29
+VisualCogA_Task-1,插补削顶_不做SQI,impute,off,54,46,,0
+VisualCogA_Task-1,插补削顶_执行SQI,impute,on,36,27,0.4187343114467721,37
+VisualCogA_Task-2,剔除削顶_不做SQI,exclude,off,48,37,,0
+VisualCogA_Task-2,剔除削顶_执行SQI,exclude,on,45,35,0.30978517572044645,5
+VisualCogA_Task-2,插补削顶_不做SQI,impute,off,57,43,,0
+VisualCogA_Task-2,插补削顶_执行SQI,impute,on,52,39,0.39644556319524865,9
+VisualCogB_Task-1,剔除削顶_不做SQI,exclude,off,42,43,,0
+VisualCogB_Task-1,剔除削顶_执行SQI,exclude,on,41,42,0.1922575800502123,2
+VisualCogB_Task-1,插补削顶_不做SQI,impute,off,48,52,,0
+VisualCogB_Task-1,插补削顶_执行SQI,impute,on,43,48,0.2671438959263012,9
+VisualCogB_Task-2,剔除削顶_不做SQI,exclude,off,39,44,,0
+VisualCogB_Task-2,剔除削顶_执行SQI,exclude,on,37,43,0.22065145417183976,3
+VisualCogB_Task-2,插补削顶_不做SQI,impute,off,50,50,,0
+VisualCogB_Task-2,插补削顶_执行SQI,impute,on,48,48,0.16922239828126687,4
