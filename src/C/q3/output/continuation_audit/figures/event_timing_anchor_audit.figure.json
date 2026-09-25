@@ -1,0 +1,18 @@
+{
+  "figure_id": "event_timing_anchor_audit",
+  "claim": "The observed channel-9 event edge clusters near both the cue+2.2 schedule reference and the cue-off plus approximately 2 s schedule proxy; these differences cannot be interpreted as reaction times without a trial target-onset log.",
+  "source_data": [
+    "raw MAT channels VisCue, Action/TgtAct, TimeStamp"
+  ],
+  "scenario": "All 400 supplied raw trials; four files, separately colored; approximate target schedule follows the official appendix; no anchor is selected.",
+  "units": {
+    "x": "s or ms as labeled",
+    "event_code": "raw channel code"
+  },
+  "processing": "event edges are first zero-to-nonzero transitions; cue offset is first inactive sample after the nonzero pulse; target schedule is cue offset plus approximately 2 s from appendix wording",
+  "uncertainty": "No independent target onset, response deadline, or trial correctness log was supplied; reference lines are not observed events.",
+  "outputs": [
+    "event_timing_anchor_audit.svg",
+    "event_timing_anchor_audit.png"
+  ]
+}

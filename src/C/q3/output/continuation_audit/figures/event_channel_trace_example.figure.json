@@ -1,0 +1,18 @@
+{
+  "figure_id": "event_channel_trace_example",
+  "claim": "A representative raw trial shows the VisCue pulse and sustained channel-9 nonzero segment; the channel-9 onset is near the approximate schedule, not an independently observed target-onset marker.",
+  "source_data": [
+    "raw MAT channels VisCue, Action/TgtAct, TimeStamp"
+  ],
+  "scenario": "VisualCogA_Task-1, zero-based trial 10; raw VisCue and Action channels; relative time from cue onset.",
+  "units": {
+    "x": "s or ms as labeled",
+    "event_code": "raw channel code"
+  },
+  "processing": "event edges are first zero-to-nonzero transitions; cue offset is first inactive sample after the nonzero pulse; target schedule is cue offset plus approximately 2 s from appendix wording",
+  "uncertainty": "No independent target onset, response deadline, or trial correctness log was supplied; reference lines are not observed events.",
+  "outputs": [
+    "event_channel_trace_example.svg",
+    "event_channel_trace_example.png"
+  ]
+}
