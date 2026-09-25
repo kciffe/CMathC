@@ -14,11 +14,28 @@
 2. **通道9语义：书面定义为目标应答/行动，实际时序仍需核验。** 官方题面将通道9定义为点击左/右目标的应答；但原始边沿在四份记录中高度集中于上述计划时刻附近，且通道9为持续非零段而非单采样脉冲。这种吻合既不能推翻官方定义，也不能单凭文件证明其边沿是鼠标首次动作。应答边沿与目标时刻的关系仍有语义/时间戳冲突。
 3. **试次配对：当前未见错位证据。** 按每个 cue 到下一 cue 的区间检查，所有记录都是一段一个通道9边沿；故逐试次顺序错位暂不支持为主要解释。跨通道同步偏移或记录程序对通道9的写入语义，仍需要原始实验日志/软件定义才能排除。
 
+## Task 类型映射冲突
+
+《第三.pdf》把项目1定义为位置提示、项目2定义为形状提示，但没有在文本中给四份 MAT 文件写出机器可核对的逐文件项目映射。当前 Q3 将 `Task-1/Task-2` 后缀作为候选类型；Q2 的 `revision_v3/config.py` 则把 `VisualCogA_*` 两份文件归为 Task1、`VisualCogB_*` 两份归为 Task2。两套分组给出不同的 cue-应答同侧结构：
+
+| grouping_scheme               | group             |   n_trials |   cue_response_same_side_count |   cue_response_same_side_fraction | interpretation                                                                    |
+|:------------------------------|:------------------|-----------:|-------------------------------:|----------------------------------:|:----------------------------------------------------------------------------------|
+| suffix: Task-1/Task-2         | Task-1            |        200 |                            198 |                             0.990 | descriptive cue-response agreement only; not correctness or task-label validation |
+| suffix: Task-1/Task-2         | Task-2            |        200 |                             95 |                             0.475 | descriptive cue-response agreement only; not correctness or task-label validation |
+| prefix: VisualCogA/VisualCogB | VisualCogA        |        200 |                            147 |                             0.735 | descriptive cue-response agreement only; not correctness or task-label validation |
+| prefix: VisualCogA/VisualCogB | VisualCogB        |        200 |                            146 |                             0.730 | descriptive cue-response agreement only; not correctness or task-label validation |
+| record                        | VisualCogA_Task-1 |        100 |                            100 |                             1.000 | descriptive cue-response agreement only; not correctness or task-label validation |
+| record                        | VisualCogA_Task-2 |        100 |                             47 |                             0.470 | descriptive cue-response agreement only; not correctness or task-label validation |
+| record                        | VisualCogB_Task-1 |        100 |                             98 |                             0.980 | descriptive cue-response agreement only; not correctness or task-label validation |
+| record                        | VisualCogB_Task-2 |        100 |                             48 |                             0.480 | descriptive cue-response agreement only; not correctness or task-label validation |
+
+按 `Task-1/Task-2` 后缀分组的模式与位置提示/形状提示的行为预期相容；但同侧不等于正确，也不能用它来反向证明文件映射。按 `VisualCogA/B` 前缀分组则没有区分度。由于映射来源冲突且缺少实验记录表，**项目类型仍标为候选映射**；当前 OLS 中的任务项不作项目1/项目2效应解释。后续动态模型先不依赖该任务变量，并同时保存两种候选分组供敏感性审查。
+
 ## 标签规则
 
 - `response_side`：由通道9起始边沿的符号确定，并统一 `-1/-2 -> -2`、`+1/+2 -> +2`；保留原始边沿码。
 - `reaction_time_s`：本轮保留为空，状态为 `unknown_no_independent_trial_target_onset`。
-- `correctness`：本轮保留为未知；没有经过验证的逐试次目标真值与任务类型映射。cue/response 同侧比例只是选择一致性，不等于正确率。
+- `correctness`：本轮保留为未知；没有经过验证的逐试次目标真值与无冲突的任务类型映射。cue/response 同侧比例只是选择一致性，不等于正确率。
 - `omission_status`：本轮保留为未知；没有经过验证的反应截止时刻。通道9有边沿不等于已证明不存在漏答/迟答。
 
 ## 当前可用的时间窗
@@ -30,7 +47,7 @@
 
 ## 动态认知模型与数据处理的边界
 
-当前 `V/H/P` 是 ERP、theta 与 beta 特征的聚合代理加描述性 OLS；它们不是经状态转移方程估计的潜变量，也不证明视觉区、海马或前额叶来源。Q2 的机制链可为 Q3 提供正向观测形式 `y(t) = G q(t) + ε(t)`：视觉输入经 LGN/皮层群体动力学形成源代理，再由导联矩阵映射到 F3/Fz/F4。Q2 五源至三电极的映射是欠定的，且 Q2 的源/头模是规范近似，因此 Q3 可以复用其**机制结构与前向映射思想**，但不能把五源当成从三通道 EEG 唯一反演出的真值。
+当前 `V/H/P` 是 ERP、theta 与 beta 特征的聚合代理加描述性 OLS；它们不是经状态转移方程估计的潜变量，也不证明视觉区、海马或前额叶来源。Q2 的机制链可为 Q3 提供正向观测形式 `y(t) = G q(t) + ε(t)`：视觉输入经 LGN/皮层群体动力学形成源代理，再由导联矩阵映射到 F3/Fz/F4。Q2 保存导联矩阵维数为 3×5，数值秩为 3，因此源空间零空间维数为 2。因此 Q3 可以复用其**机制结构与前向映射思想**，但不能把五源当成从三通道 EEG 唯一反演出的真值；再增加海马/PFC源后，逆问题更欠定。
 
 现有 Q3 特征管线使用 raw 256 Hz、ERP 0.5–30 Hz 与时频 1–80 Hz 两套滤波；Q2 对照链采用 Q1 的 0.2–24 Hz、256→128 Hz 和逐试次基线校正。新动态分析需先冻结一个共同采样率、滤波/相位处理、基线、质量排除和记录级验证合同，并保证模型预测和实测 EEG 经同一观测处理。由于零相位滤波会在事件两侧扩散波形，若用它分析亚百毫秒级阶段顺序，必须把滤波影响纳入解释限制。
 
@@ -52,8 +69,12 @@
 
 ## 图件
 
+![问题二导联矩阵的秩与源空间零空间](figures/q2_leadfield_rank_audit.png)
+
 ![逐试次事件间隔和计划时刻差值](figures/event_timing_anchor_audit.png)
 
 ![原始 VisCue 与通道9 事件波形](figures/event_channel_trace_example.png)
+
+![两种候选任务分组下的提示-应答同侧比例](figures/task_mapping_candidate_audit.png)
 
 图中 cue+2.0 s / cue+2.2 s 仅为敏感性参照；cue-off+约2秒是由题目附录构造的计划时刻代理。任何垂直参考线都不代表已观测的真实目标起始。

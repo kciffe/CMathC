@@ -25,6 +25,7 @@ from config import OUTPUT_DIR, RECORDS
 
 AUDIT_DIR = OUTPUT_DIR / "continuation_audit"
 FIGURE_DIR = AUDIT_DIR / "figures"
+Q2_LEADFIELD_PATH = OUTPUT_DIR.parent.parent / "q2" / "output" / "revision_v3" / "leadfield.csv"
 SCHEDULE_WAIT_AFTER_CUE_OFFSET_S = 2.0
 ALTERNATE_CUE_ONSET_REFERENCE_S = 2.0
 NOMINAL_CUE_ONSET_PLUS_SCHEDULE_S = 2.2
@@ -96,6 +97,7 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
             {
                 "record": record,
                 "original_trial_index": int(cue["original_trial_index"]),
+                "dataset_prefix_candidate": record.split("_", maxsplit=1)[0],
                 "filename_task_suffix_candidate": record.rsplit("Task-", maxsplit=1)[-1],
                 "sample_rate_hz": sample_rate,
                 "cue_sample_index": trial_start,
@@ -268,6 +270,144 @@ def _save_example_trace(example: dict[str, Any], out: Path) -> None:
     plt.close(fig)
 
 
+def _build_mapping_summary(frame: pd.DataFrame) -> pd.DataFrame:
+    data = frame.copy()
+    data["cue_response_same_side"] = data["cue_side"] == data["response_side"]
+    data["task_suffix_candidate"] = data["filename_task_suffix_candidate"].map(
+        lambda value: f"Task-{value}"
+    )
+    data["prefix_candidate"] = data["dataset_prefix_candidate"]
+    rows = []
+    for scheme, group_column in (
+        ("suffix: Task-1/Task-2", "task_suffix_candidate"),
+        ("prefix: VisualCogA/VisualCogB", "prefix_candidate"),
+        ("record", "record"),
+    ):
+        for group_name, group in data.groupby(group_column, sort=True):
+            n = int(group["cue_response_same_side"].notna().sum())
+            same = int(group["cue_response_same_side"].sum())
+            rows.append(
+                {
+                    "grouping_scheme": scheme,
+                    "group": group_name,
+                    "n_trials": n,
+                    "cue_response_same_side_count": same,
+                    "cue_response_same_side_fraction": same / n if n else np.nan,
+                    "interpretation": "descriptive cue-response agreement only; not correctness or task-label validation",
+                }
+            )
+    return pd.DataFrame(rows)
+
+
+def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
+    summary = _build_mapping_summary(frame)
+
+    fig, axes = plt.subplots(1, 2, figsize=(9.2, 4.0), constrained_layout=True)
+    record_order = list(RECORDS)
+    record_stats = summary.loc[summary["grouping_scheme"] == "record"].set_index("group")
+    record_colors = ["#356b8c", "#4f8f75", "#b77c33", "#8b6e9e"]
+    y = np.arange(len(record_order))
+    vals = [record_stats.loc[name, "cue_response_same_side_fraction"] for name in record_order]
+    axes[0].barh(y, vals, color=record_colors, height=0.62)
+    axes[0].set_yticks(y, record_order)
+    axes[0].invert_yaxis()
+    axes[0].set_xlim(0, 1.08)
+    axes[0].set_xlabel("Fraction cue side = response side")
+    axes[0].set_title("By MAT record")
+    axes[0].grid(axis="x", color="#dddddd", linewidth=0.6)
+    for yi, name in enumerate(record_order):
+        count = int(record_stats.loc[name, "cue_response_same_side_count"])
+        n = int(record_stats.loc[name, "n_trials"])
+        axes[0].text(vals[yi] + 0.02, yi, f"{count}/{n}", va="center", fontsize=8)
+
+    grouped = [
+        ("Task-1 suffix", "suffix: Task-1/Task-2", "Task-1"),
+        ("Task-2 suffix", "suffix: Task-1/Task-2", "Task-2"),
+        ("VisualCogA prefix", "prefix: VisualCogA/VisualCogB", "VisualCogA"),
+        ("VisualCogB prefix", "prefix: VisualCogA/VisualCogB", "VisualCogB"),
+    ]
+    labels = []
+    rates = []
+    counts = []
+    ns = []
+    for label, scheme, name in grouped:
+        row = summary.loc[(summary["grouping_scheme"] == scheme) & (summary["group"] == name)].iloc[0]
+        labels.append(label)
+        rates.append(float(row["cue_response_same_side_fraction"]))
+        counts.append(int(row["cue_response_same_side_count"]))
+        ns.append(int(row["n_trials"]))
+    yy = np.arange(len(labels))
+    colors = ["#356b8c", "#356b8c", "#b77c33", "#b77c33"]
+    axes[1].barh(yy, rates, color=colors, height=0.62)
+    axes[1].set_yticks(yy, labels)
+    axes[1].invert_yaxis()
+    axes[1].set_xlim(0, 1.12)
+    axes[1].set_xlabel("Fraction cue side = response side")
+    axes[1].set_title("Grouping-candidate contrast")
+    axes[1].grid(axis="x", color="#dddddd", linewidth=0.6)
+    for yi, (rate, count, n) in enumerate(zip(rates, counts, ns)):
+        axes[1].text(rate + 0.02, yi, f"{count}/{n}", va="center", fontsize=8)
+    fig.suptitle("Cue-response agreement is descriptive, not correctness", fontsize=10.5)
+    fig.savefig(out.with_suffix(".svg"), bbox_inches="tight")
+    fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
+    plt.close(fig)
+    return summary
+
+
+def _audit_q2_leadfield() -> dict[str, Any]:
+    if not Q2_LEADFIELD_PATH.exists():
+        return {"status": "missing_q2_leadfield", "path": str(Q2_LEADFIELD_PATH)}
+    table = pd.read_csv(Q2_LEADFIELD_PATH)
+    source_columns = [column for column in table.columns if column.startswith("source_")]
+    matrix = table[source_columns].to_numpy(dtype=float)
+    singular_values = np.linalg.svd(matrix, compute_uv=False)
+    rank = int(np.linalg.matrix_rank(matrix))
+    return {
+        "status": "computed_from_saved_q2_revision_v3_leadfield",
+        "path": str(Q2_LEADFIELD_PATH),
+        "sensor_rows": int(matrix.shape[0]),
+        "source_columns": int(matrix.shape[1]),
+        "matrix_rank": rank,
+        "source_nullity": int(matrix.shape[1] - rank),
+        "singular_values": singular_values.tolist(),
+        "condition_number_nonzero_subspace": float(singular_values[0] / singular_values[-1]),
+        "interpretation": "At least two linearly independent source changes lie in the null space; the five Q2 source proxies cannot be uniquely recovered from three electrodes without additional constraints.",
+    }
+
+
+def _save_q2_leadfield_figure(audit: dict[str, Any], out: Path) -> None:
+    if audit.get("status") != "computed_from_saved_q2_revision_v3_leadfield":
+        return
+    table = pd.read_csv(Q2_LEADFIELD_PATH)
+    source_columns = [column for column in table.columns if column.startswith("source_")]
+    matrix = table[source_columns].to_numpy(dtype=float)
+    source_labels = [
+        "early visual\nLH from right field",
+        "early visual\nRH from left field",
+        "configuration\nLH from right field",
+        "configuration\nRH from left field",
+        "bilateral shape\nopponent",
+    ]
+    fig, ax = plt.subplots(figsize=(8.5, 3.5), constrained_layout=True)
+    vmax = float(np.max(np.abs(matrix)))
+    image = ax.imshow(matrix, cmap="coolwarm", vmin=-vmax, vmax=vmax, aspect="auto")
+    ax.set_xticks(range(len(source_labels)), source_labels)
+    ax.set_yticks(range(len(table)), table["sensor"])
+    ax.set_xlabel("Q2 canonical source proxies")
+    ax.set_ylabel("Scalp sensor")
+    ax.set_title("Q2 forward matrix has rank 3 for 5 source proxies")
+    for i in range(matrix.shape[0]):
+        for j in range(matrix.shape[1]):
+            ax.text(j, i, f"{matrix[i, j]:.2f}", ha="center", va="center", fontsize=7.5,
+                    color="#202020")
+    fig.colorbar(image, ax=ax, shrink=0.82, label="Leadfield coefficient (saved units)")
+    fig.text(0.5, -0.025, "Source nullity = 5 − rank(3×5 matrix) = 2; not uniquely invertible.",
+             ha="center", fontsize=8.5, color="#444444")
+    fig.savefig(out.with_suffix(".svg"), bbox_inches="tight")
+    fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
+    plt.close(fig)
+
+
 def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Path) -> None:
     n = len(frame)
     one_to_one = int((frame["channel9_response_event_count_in_cue_interval"] == 1).sum())
@@ -279,6 +419,17 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
          & (frame["marker_minus_cue_plus_2p2_s_sensitivity_only"] < 0.1)).sum()
     )
     alt_median = float(frame["marker_minus_cue_plus_2p0_s_sensitivity_only"].median())
+    mapping_summary = _build_mapping_summary(frame)
+    mapping_md = mapping_summary.to_markdown(index=False, floatfmt=".3f")
+    q2_mapping = _audit_q2_leadfield()
+    if q2_mapping.get("status") == "computed_from_saved_q2_revision_v3_leadfield":
+        q2_rank_text = (
+            f"Q2 保存导联矩阵维数为 {q2_mapping['sensor_rows']}×{q2_mapping['source_columns']}，"
+            f"数值秩为 {q2_mapping['matrix_rank']}，因此源空间零空间维数为 "
+            f"{q2_mapping['source_nullity']}。"
+        )
+    else:
+        q2_rank_text = "未找到 Q2 保存导联矩阵，当前无法复核其源到电极矩阵秩。"
     summary_md = summaries[[
         "record", "response_channel_label", "cue_event_count", "channel9_response_edge_count",
         "cue_intervals_with_exactly_one_channel9_edge", "cue_duration_median_s",
@@ -301,11 +452,19 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 2. **通道9语义：书面定义为目标应答/行动，实际时序仍需核验。** 官方题面将通道9定义为点击左/右目标的应答；但原始边沿在四份记录中高度集中于上述计划时刻附近，且通道9为持续非零段而非单采样脉冲。这种吻合既不能推翻官方定义，也不能单凭文件证明其边沿是鼠标首次动作。应答边沿与目标时刻的关系仍有语义/时间戳冲突。
 3. **试次配对：当前未见错位证据。** 按每个 cue 到下一 cue 的区间检查，所有记录都是一段一个通道9边沿；故逐试次顺序错位暂不支持为主要解释。跨通道同步偏移或记录程序对通道9的写入语义，仍需要原始实验日志/软件定义才能排除。
 
+## Task 类型映射冲突
+
+《第三.pdf》把项目1定义为位置提示、项目2定义为形状提示，但没有在文本中给四份 MAT 文件写出机器可核对的逐文件项目映射。当前 Q3 将 `Task-1/Task-2` 后缀作为候选类型；Q2 的 `revision_v3/config.py` 则把 `VisualCogA_*` 两份文件归为 Task1、`VisualCogB_*` 两份归为 Task2。两套分组给出不同的 cue-应答同侧结构：
+
+{mapping_md}
+
+按 `Task-1/Task-2` 后缀分组的模式与位置提示/形状提示的行为预期相容；但同侧不等于正确，也不能用它来反向证明文件映射。按 `VisualCogA/B` 前缀分组则没有区分度。由于映射来源冲突且缺少实验记录表，**项目类型仍标为候选映射**；当前 OLS 中的任务项不作项目1/项目2效应解释。后续动态模型先不依赖该任务变量，并同时保存两种候选分组供敏感性审查。
+
 ## 标签规则
 
 - `response_side`：由通道9起始边沿的符号确定，并统一 `-1/-2 -> -2`、`+1/+2 -> +2`；保留原始边沿码。
 - `reaction_time_s`：本轮保留为空，状态为 `unknown_no_independent_trial_target_onset`。
-- `correctness`：本轮保留为未知；没有经过验证的逐试次目标真值与任务类型映射。cue/response 同侧比例只是选择一致性，不等于正确率。
+- `correctness`：本轮保留为未知；没有经过验证的逐试次目标真值与无冲突的任务类型映射。cue/response 同侧比例只是选择一致性，不等于正确率。
 - `omission_status`：本轮保留为未知；没有经过验证的反应截止时刻。通道9有边沿不等于已证明不存在漏答/迟答。
 
 ## 当前可用的时间窗
@@ -317,7 +476,7 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 
 ## 动态认知模型与数据处理的边界
 
-当前 `V/H/P` 是 ERP、theta 与 beta 特征的聚合代理加描述性 OLS；它们不是经状态转移方程估计的潜变量，也不证明视觉区、海马或前额叶来源。Q2 的机制链可为 Q3 提供正向观测形式 `y(t) = G q(t) + ε(t)`：视觉输入经 LGN/皮层群体动力学形成源代理，再由导联矩阵映射到 F3/Fz/F4。Q2 五源至三电极的映射是欠定的，且 Q2 的源/头模是规范近似，因此 Q3 可以复用其**机制结构与前向映射思想**，但不能把五源当成从三通道 EEG 唯一反演出的真值。
+当前 `V/H/P` 是 ERP、theta 与 beta 特征的聚合代理加描述性 OLS；它们不是经状态转移方程估计的潜变量，也不证明视觉区、海马或前额叶来源。Q2 的机制链可为 Q3 提供正向观测形式 `y(t) = G q(t) + ε(t)`：视觉输入经 LGN/皮层群体动力学形成源代理，再由导联矩阵映射到 F3/Fz/F4。{q2_rank_text}因此 Q3 可以复用其**机制结构与前向映射思想**，但不能把五源当成从三通道 EEG 唯一反演出的真值；再增加海马/PFC源后，逆问题更欠定。
 
 现有 Q3 特征管线使用 raw 256 Hz、ERP 0.5–30 Hz 与时频 1–80 Hz 两套滤波；Q2 对照链采用 Q1 的 0.2–24 Hz、256→128 Hz 和逐试次基线校正。新动态分析需先冻结一个共同采样率、滤波/相位处理、基线、质量排除和记录级验证合同，并保证模型预测和实测 EEG 经同一观测处理。由于零相位滤波会在事件两侧扩散波形，若用它分析亚百毫秒级阶段顺序，必须把滤波影响纳入解释限制。
 
@@ -334,9 +493,13 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 
 ## 图件
 
+![问题二导联矩阵的秩与源空间零空间](figures/q2_leadfield_rank_audit.png)
+
 ![逐试次事件间隔和计划时刻差值](figures/event_timing_anchor_audit.png)
 
 ![原始 VisCue 与通道9 事件波形](figures/event_channel_trace_example.png)
+
+![两种候选任务分组下的提示-应答同侧比例](figures/task_mapping_candidate_audit.png)
 
 图中 cue+2.0 s / cue+2.2 s 仅为敏感性参照；cue-off+约2秒是由题目附录构造的计划时刻代理。任何垂直参考线都不代表已观测的真实目标起始。
 """
@@ -374,6 +537,7 @@ def main() -> None:
         "response_marker_semantics_status": "officially described as target response/action; sample timing is inconsistent with a precise reaction-time interpretation under the approximate schedule",
         "trial_pairing_status": "one channel-9 event edge in each VisCue-to-next-VisCue interval for all supplied records",
         "anchor_selection": "none; cue+2.0 and cue+2.2 are sensitivity references only",
+        "task_mapping_status": "conflict: Q3 used the Task-1/Task-2 suffix as a candidate, while Q2 revision_v3/config.py groups Task1/Task2 by VisualCogA/VisualCogB prefix; task mapping remains candidate-only",
     }
     (AUDIT_DIR / "event_timing_audit_summary.json").write_text(
         json.dumps(overall, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
@@ -381,6 +545,17 @@ def main() -> None:
     _save_timing_figure(trials, FIGURE_DIR / "event_timing_anchor_audit")
     if example is not None:
         _save_example_trace(example, FIGURE_DIR / "event_channel_trace_example")
+    mapping_summary = _save_task_mapping_figure(
+        trials, FIGURE_DIR / "task_mapping_candidate_audit"
+    )
+    mapping_summary.to_csv(
+        AUDIT_DIR / "task_mapping_candidate_audit.csv", index=False, encoding="utf-8-sig"
+    )
+    q2_mapping = _audit_q2_leadfield()
+    (AUDIT_DIR / "q2_source_mapping_identifiability.json").write_text(
+        json.dumps(q2_mapping, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    _save_q2_leadfield_figure(q2_mapping, FIGURE_DIR / "q2_leadfield_rank_audit")
     for stem, claim, scenario in (
         (
             "event_timing_anchor_audit",
@@ -392,15 +567,35 @@ def main() -> None:
             "A representative raw trial shows the VisCue pulse and sustained channel-9 nonzero segment; the channel-9 onset is near the approximate schedule, not an independently observed target-onset marker.",
             "VisualCogA_Task-1, zero-based trial 10; raw VisCue and Action channels; relative time from cue onset.",
         ),
+        (
+            "task_mapping_candidate_audit",
+            "Cue-response side agreement separates the Task-1/Task-2 suffix grouping but not the VisualCogA/VisualCogB prefix grouping; agreement is not correctness and does not independently validate task mapping.",
+            "All 400 raw event pairs grouped by MAT record, filename suffix, and filename prefix; no p-values or correctness interpretation.",
+        ),
+        (
+            "q2_leadfield_rank_audit",
+            "The saved Q2 leadfield is a 3-sensor by 5-source matrix of rank 3 and nullity 2, so the five Q2 source proxies cannot be uniquely reconstructed from these three electrodes.",
+            "Saved Q2 revision_v3 leadfield.csv; canonical source geometry; matrix rank and singular values computed numerically.",
+        ),
     ):
+        if stem == "q2_leadfield_rank_audit":
+            source_data = ["Q2 revision_v3/output/leadfield.csv"]
+            processing = "SVD-based numerical rank, singular values, and source-space nullity for the saved 3-sensor by 5-source matrix"
+            uncertainty = "This is Q2's canonical forward matrix; it is not an individualized head model and does not uniquely invert five sources from three sensors."
+            units = {"matrix": "saved leadfield coefficient units"}
+        else:
+            source_data = ["raw MAT channels VisCue, Action/TgtAct, TimeStamp"]
+            processing = "event edges are first zero-to-nonzero transitions; cue offset is first inactive sample after the nonzero pulse; target schedule is cue offset plus approximately 2 s from appendix wording"
+            uncertainty = "No independent target onset, response deadline, or trial correctness log was supplied; reference lines are not observed events."
+            units = {"x": "s or ms as labeled", "event_code": "raw channel code"}
         metadata = {
             "figure_id": stem,
             "claim": claim,
-            "source_data": ["raw MAT channels VisCue, Action/TgtAct, TimeStamp"],
+            "source_data": source_data,
             "scenario": scenario,
-            "units": {"x": "s or ms as labeled", "event_code": "raw channel code"},
-            "processing": "event edges are first zero-to-nonzero transitions; cue offset is first inactive sample after the nonzero pulse; target schedule is cue offset plus approximately 2 s from appendix wording",
-            "uncertainty": "No independent target onset, response deadline, or trial correctness log was supplied; reference lines are not observed events.",
+            "units": units,
+            "processing": processing,
+            "uncertainty": uncertainty,
             "outputs": [f"{stem}.svg", f"{stem}.png"],
         }
         (FIGURE_DIR / f"{stem}.figure.json").write_text(

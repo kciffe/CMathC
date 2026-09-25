@@ -15,9 +15,10 @@ python src/C/q3/04_cognitive_state.py
 python src/C/q3/05_behavior_model.py
 python src/C/q3/06_validate.py
 python src/C/q3/07_ablation.py
+python src/C/q3/09_event_time_semantics.py
 ```
 
-After `02_extract_trials.py`, optionally run `python src/C/q3/08_behavior_event_audit.py` to audit target truth, target onset, response deadlines, and record mapping. Missing external labels stay blank and are reported as unknown.
+After `02_extract_trials.py`, optionally run `python src/C/q3/08_behavior_event_audit.py` to audit target truth, target onset, response deadlines, and record mapping. Missing external labels stay blank and are reported as unknown. Run `09_event_time_semantics.py` to regenerate the independent raw event-time, candidate task-mapping, and Q2 leadfield identifiability audit in `output/continuation_audit/`; its report is [`event_timing_semantics_report.md`](output/continuation_audit/event_timing_semantics_report.md).
 
 The scripts write tables, summaries, and figures to `src/C/q3/output/`. Run `python -m pytest src/C/q3/tests src/C/q3/experiments -q` for the Q3 unit and experiment tests.
 

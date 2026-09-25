@@ -1,0 +1,9 @@
+﻿grouping_scheme,group,n_trials,cue_response_same_side_count,cue_response_same_side_fraction,interpretation
+suffix: Task-1/Task-2,Task-1,200,198,0.99,descriptive cue-response agreement only; not correctness or task-label validation
+suffix: Task-1/Task-2,Task-2,200,95,0.475,descriptive cue-response agreement only; not correctness or task-label validation
+prefix: VisualCogA/VisualCogB,VisualCogA,200,147,0.735,descriptive cue-response agreement only; not correctness or task-label validation
+prefix: VisualCogA/VisualCogB,VisualCogB,200,146,0.73,descriptive cue-response agreement only; not correctness or task-label validation
+record,VisualCogA_Task-1,100,100,1.0,descriptive cue-response agreement only; not correctness or task-label validation
+record,VisualCogA_Task-2,100,47,0.47,descriptive cue-response agreement only; not correctness or task-label validation
+record,VisualCogB_Task-1,100,98,0.98,descriptive cue-response agreement only; not correctness or task-label validation
+record,VisualCogB_Task-2,100,48,0.48,descriptive cue-response agreement only; not correctness or task-label validation
