@@ -13,15 +13,15 @@
 
 ## 留一记录拟合
 
-- `VisualCogA_Task-1`: tau_s=81.94 ms, g_i=0.933, tau_a=140.0 ms, gain=-74.86, status=`profile_grid_best_candidate_optimizer_not_converged`
-- `VisualCogA_Task-2`: tau_s=100.00 ms, g_i=0.527, tau_a=160.0 ms, gain=-36.57, status=`profile_grid_best_candidate_optimizer_not_converged`
-- `VisualCogB_Task-1`: tau_s=84.88 ms, g_i=0.500, tau_a=140.0 ms, gain=-66.98, status=`profile_grid_best_candidate_optimizer_not_converged`
-- `VisualCogB_Task-2`: tau_s=83.70 ms, g_i=0.706, tau_a=120.0 ms, gain=-42.55, status=`profile_grid_best_candidate_optimizer_not_converged`
-- 四折中 `tau_s` 到达 100 ms 上界：1/4；达到设定的 60 次目标评估上限而未收敛：4/4。报告这些参数时应视为边界候选值，不能当作已识别的时间常数。
+- `VisualCogA_Task-1`: tau_s=78.87 ms, g_i=0.786, tau_a=100.0 ms, gain=-63.82, status=`profile_grid_best_candidate_optimizer_not_converged`
+- `VisualCogA_Task-2`: tau_s=76.30 ms, g_i=0.629, tau_a=120.0 ms, gain=-34.67, status=`profile_grid_best_candidate_optimizer_not_converged`
+- `VisualCogB_Task-1`: tau_s=76.67 ms, g_i=0.909, tau_a=120.0 ms, gain=-60.36, status=`profile_grid_best_candidate_optimizer_not_converged`
+- `VisualCogB_Task-2`: tau_s=75.14 ms, g_i=1.096, tau_a=160.0 ms, gain=-56.79, status=`profile_grid_best_candidate_optimizer_not_converged`
+- 四折中 `tau_s` 到达 100 ms 上界：0/4；达到设定的 12 次目标评估上限而未收敛：4/4。报告这些参数时应视为边界候选值，不能当作已识别的时间常数。
 
-对左右 × 四份 MAT 的整体 held-out NRMSE 均值为 **1.819**（按实测 ERP RMS 归一）。若该值接近 1，正向模型的绝对波形解释力弱；幅度增益不能掩盖这一点。
-右减左波形相关系数的四记录均值为 **-0.175**。相关系数只描述波形相似，不代表幅度或机制正确。
-几何映射下模型左右差异的侧化能量占比均值为 **0.253**；实测为 **0.168**（单记录范围 0.001–0.345）。这表明当前对称源/导联假设把差异限制在侧化方向，不能解释实测中出现的共同/形状模态差异。
+对左右 × 四份 MAT 的整体 held-out NRMSE 均值为 **1.810**（按实测 ERP RMS 归一）。若该值接近 1，正向模型的绝对波形解释力弱；幅度增益不能掩盖这一点。
+右减左波形相关系数的四记录均值为 **-0.147**。相关系数只描述波形相似，不代表幅度或机制正确。
+几何映射下模型左右差异的侧化能量占比均值为 **0.278**；实测为 **0.168**（单记录范围 0.001–0.345）。这表明当前对称源/导联假设把差异限制在侧化方向，不能解释实测中出现的共同/形状模态差异。
 
 ## 特征区分验证
 
@@ -29,13 +29,13 @@
 
 ## 针对性机制对照
 
-去除空间位置后保留的模型左右差异比例均值：**0.000**。仅保留 cue onset、删除 200 ms offset 后的比例：**1.202**。对照使用同一折拟合参数和同一增益，不重新拟合。比例用于描述模型生成差异的来源，不用于声称真实 EEG 的因果效应。
+去除空间位置后保留的模型左右差异比例均值：**0.000**。仅保留 cue onset、删除 200 ms offset 后的比例：**1.317**。对照使用同一折拟合参数和同一增益，不重新拟合。比例用于描述模型生成差异的来源，不用于声称真实 EEG 的因果效应。
 
 ## 解释边界
 
 1. 本模型给出从输入到传感器代理的显式正向计算链，可用于解释模型内部的差异来源；三电极与四份记录不足以识别真实脑内源分布。
 2. Stage1 的左右模板响应是形状方向编码的模型假设。必须同时报告实测右减左波形和留出结果；分类或拟合指标差不能单独证明生理机制。
-3. 真实试次的整段 [-1,3] s 已由第一问对称零相位滤波；当前 cue-only 模型在 +800 ms 后补零，没有模拟 +2.2 s 的目标响应。由于 `filtfilt` 是双向滤波，真实目标可能向前泄漏至 cue 窗口，所以滤波器相同但完整事件上下文尚未匹配；绝对 ERP 拟合暂不能作最终判断。
+3. The cue-only model is simulated naturally through 0-3000 ms before applying the full-epoch filter. No target event at 2.2 s is added; the event context remains unverified.
 4. 真实 EEG 使用第一问已清洗数据，模型在 ERP 前执行逐试次基线均值校正；这不等于线性基线回归，也不重新裁定第一问数据清洗的有效性。
 5. 原始的 v1/v2 代码和结果均未覆盖或删除；25 次预算结果另存于 `output/revision_v3_max25/`。
 

@@ -7,7 +7,7 @@
   "output_root": "D:\\8\\Desktop\\CMathc\\src\\C\\q2\\output\\revision_v3",
   "resolution": 128,
   "frontend_feature_stride_ms": 4.0,
-  "fit_max_objective_calls_per_start": 60,
+  "fit_max_objective_calls_per_start": 12,
   "fit_case_count": 8,
   "mat_record_count": 4,
   "primary_model": "LGN ON/OFF -> Gabor and fixed shape/opponent templates -> three E/I population pairs -> contralateral visual-field routing plus one bilateral midline shape-opponent source -> five internal source proxies -> homogeneous infinite-conductor illustrative leadfield -> Q1 observation operator",
@@ -20,6 +20,12 @@
     "routing": "the same pooled input is sent to both template-preference channels; template-specific drives encode left/right preference",
     "midline_opponent_source": "explicit modeling hypothesis, not anatomical localization"
   },
+  "diagnostic_figures": [
+    "lgn_spatiotemporal.png",
+    "cortical_ei_responses.png",
+    "source_to_electrode_contributions.png"
+  ],
+  "diagnostic_figure_parameters": "generated from this run's fitted-parameter median; source contributions are checked to sum to electrode prediction",
   "fitting": "leave-one-MAT-out; fixed frontend calibration; fit Stage1 left/right only; one signed shared gain",
   "observation_operator": "0.2-24 Hz 4th-order Butterworth zero-phase; 256-to-128 Hz Fourier resample; per-channel prestimulus baseline; full [-1,3)s epoch",
   "head_model": {
@@ -160,18 +166,12 @@
   ],
   "sha256": {
     "run_v3.py": "48aed0f9de7798cf26a683652e1e91462aae0fa283cadb00b3f760a94574a867",
-    "config.py": "5bc11c0d0126f533b752ea3ba83a5e7327588323868c01f7cfa77d2daa179742",
+    "config.py": "f0bb3418ba3922689db8481f223854f35805cd135bdae22bb28421e93a7a00d8",
     "frontend.py": "06f641dff5fdda3f26731c27c9709a5d8b75ac6191885640c485a6fb034f2279",
     "model.py": "eaeedad4a0fafe0a57cb1373f871d94a327d57a628de3fd2d4a881463c07cc49",
     "fit.py": "62a4b6bee86e787b0d1b4c0b4287539fdd8a840cfc74e4c0e839392c1ca5784f",
     "real_data.py": "201c4d1c4bdfba25ac5d8ef1bedfe4ccf90ec5820804f0086dbc181cee8b01c1",
     "observation.py": "68fc22b0c96a889d1daaaa0a926463d7ef4cd9398b4a286a8ca08ddbbe28f9c5",
     "head_model.py": "c52439da88a5e136a33fbd3fe96f96ddaa290c0bb34166d3365ff0e9e8b4a0ae"
-  },
-  "diagnostic_figures": [
-    "lgn_spatiotemporal.png",
-    "cortical_ei_responses.png",
-    "source_to_electrode_contributions.png"
-  ],
-  "diagnostic_figure_parameters": "generated from this run fit-parameter median; five source contributions checked to sum to the sensor prediction"
+  }
 }

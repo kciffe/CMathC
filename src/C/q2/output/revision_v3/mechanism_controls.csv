@@ -1,9 +1,9 @@
 ﻿heldout_record,control,parameters_refit,shared_gain_refit,full_left_right_difference_rms,control_left_right_difference_rms,retained_fraction
-VisualCogA_Task-1,no_spatial_position,False,False,3.1789482544061176,0.0,0.0
-VisualCogA_Task-1,cue_onset_only,False,False,3.1789482544061176,3.8573694663514306,1.2134105866633724
-VisualCogA_Task-2,no_spatial_position,False,False,1.7622020674822145,9.078863845574447e-06,5.151999315575697e-06
-VisualCogA_Task-2,cue_onset_only,False,False,1.7622020674822145,2.0122788992832294,1.1419115528324841
-VisualCogB_Task-1,no_spatial_position,False,False,3.118649641458261,1.7567096679886207e-05,5.632917672557774e-06
-VisualCogB_Task-1,cue_onset_only,False,False,3.118649641458261,3.7315697553983482,1.196533815723362
-VisualCogB_Task-2,no_spatial_position,False,False,1.8553501770758434,2.0237710541634068e-05,1.0907757894808871e-05
-VisualCogB_Task-2,cue_onset_only,False,False,1.8553501770758434,2.3327392011653454,1.2573040011465109
+VisualCogA_Task-1,no_spatial_position,False,False,2.642759946319811,7.076626663460661e-05,2.6777410007727925e-05
+VisualCogA_Task-1,cue_onset_only,False,False,2.642759946319811,3.702228659579422,1.4008947974010957
+VisualCogA_Task-2,no_spatial_position,False,False,1.5492680397814385,2.6776143695143948e-05,1.728309305271757e-05
+VisualCogA_Task-2,cue_onset_only,False,False,1.5492680397814385,2.039748577705254,1.3165885601002973
+VisualCogB_Task-1,no_spatial_position,False,False,2.5348893927871456,2.5992964980556868e-05,1.0254082507314944e-05
+VisualCogB_Task-1,cue_onset_only,False,False,2.5348893927871456,3.371735543064993,1.3301312288650684
+VisualCogB_Task-2,no_spatial_position,False,False,2.3879663024579867,4.182938468100349e-05,1.7516739929683086e-05
+VisualCogB_Task-2,cue_onset_only,False,False,2.3879663024579867,2.918880234913478,1.222328904687227

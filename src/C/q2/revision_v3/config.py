@@ -11,7 +11,10 @@ OUTPUT_ROOT = Q2_ROOT / "output" / "revision_v3"
 SOURCE_MAPPING_SCHEMA = "contralateral_visual_field_5source_midline_opponent_bilateral_ff_v2"
 SEED = 20260924
 
-TIME_MS = np.arange(801, dtype=np.float64)
+# Simulate through the complete Q1 epoch so zero-phase filtering sees the
+# naturally decaying cue response after the 0-800 ms fitting window.
+TIME_MS = np.arange(3001, dtype=np.float64)
+FIT_WINDOW_MS = (0.0, 800.0)
 STAGES = {
     "Stage1": {"onset_s": 0.0, "baseline": (-0.2, 0.0), "late": (450.0, 700.0), "offset_ms": 200.0},
     "Stage2": {"onset_s": 2.2, "baseline": (2.0, 2.2), "late": (250.0, 500.0), "offset_ms": None},

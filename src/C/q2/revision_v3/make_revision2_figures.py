@@ -68,9 +68,7 @@ def main():
     for ax in axes:
         ax.axvspan(0, 203.125, color="#89B4A7", alpha=0.12, lw=0)
         ax.axvline(203.125, color="#3C7163", lw=1, ls=":")
-        ax.axvline(2200, color="#888888", lw=1, ls=":")
-    fig.suptitle("提示后群体活动拖尾\n代表记录 VisualCogA_Task-1；留出拟合未收敛；2200 ms 目标未纳入模拟",
-                 fontsize=11)
+    fig.suptitle("Cue-only response through 3000 ms; target event not included", fontsize=11)
     fig.savefig(out / "persistent_activity_decay.png", facecolor="white")
     plt.close(fig)
 
@@ -110,7 +108,7 @@ def main():
     ax.grid(alpha=0.2)
     ax.legend(ncol=3, frameon=False, loc="upper right")
     fig.suptitle(f"相同零相位滤波下，800 ms 后补零会改变分析窗内曲线\n"
-                 f"代表记录 VisualCogA_Task-1 相对 RMSE={relative_rmse:.3f}；8 个记录×条件中位数=0.149（0.123–0.166）",
+                 f"VisualCogA_Task-1; refitted candidate; relative RMSE={relative_rmse:.3f}; no target event included",
                  fontsize=10.5)
     fig.savefig(out / "zero_padding_filter_effect.png", facecolor="white")
     plt.close(fig)

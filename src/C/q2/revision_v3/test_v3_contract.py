@@ -8,6 +8,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from head_model import build_sensor_leadfield
+import config
 from model import (_causal_history_sample, calibrate_drive_scales,
                    project_frontend, simulate_forward)
 from observation import filter_resample_baseline
@@ -82,6 +83,25 @@ def test_observation_operator_matches_q1_filter_resample_and_baseline():
     expected -= expected[:, baseline].mean(axis=1, keepdims=True)
     np.testing.assert_allclose(observed, expected, rtol=1e-12, atol=1e-12)
     np.testing.assert_allclose(observed_time, out_time, rtol=0.0, atol=1e-12)
+
+
+def test_model_axis_extends_past_fit_window_before_zero_phase_filtering():
+    assert config.TIME_MS[-1] >= 2990.0
+    time_ms = config.TIME_MS
+    tail = np.exp(-np.maximum(time_ms - 200.0, 0.0) / 450.0)
+    tail[time_ms < 200.0] = 0.0
+    full = np.stack([tail, 0.5 * tail, -0.25 * tail])
+    hard_cut = full.copy()
+    hard_cut[:, time_ms > 800.0] = 0.0
+
+    from observation import model_curve_to_q1_grid
+    natural_filtered, observed_time = model_curve_to_q1_grid(full, time_ms)
+    cut_filtered, _ = model_curve_to_q1_grid(hard_cut, time_ms)
+    fit_window = (observed_time >= 0.0) & (observed_time <= 800.0)
+    relative_rmse = np.sqrt(np.mean((natural_filtered[:, fit_window]
+                                     - cut_filtered[:, fit_window]) ** 2)) / np.sqrt(
+        np.mean(natural_filtered[:, fit_window] ** 2))
+    assert relative_rmse > 0.01
 
 
 def test_optimizer_budget_exhaustion_does_not_reuse_a_stale_objective_value():
