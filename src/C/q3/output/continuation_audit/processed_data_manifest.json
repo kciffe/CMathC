@@ -1,0 +1,178 @@
+{
+  "analysis_outputs": [
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\trial_table.csv",
+      "sha256": "81da176b9a1f370d9d48926c754cc94d7680ef355e45cea18ef7be955f3f772d",
+      "rows": 400
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\trial_features.csv",
+      "sha256": "beec6effeeb8c925a08f40fba8b27c96fb17122978dd1804fcc58a63482cee74",
+      "rows": 2800
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\state_scores.csv",
+      "sha256": "f81bcad67c1471fde468dcc08e0ea70276f9251d22cd488f4caea2b9cbb013d3",
+      "rows": 2800
+    }
+  ],
+  "raw_inputs": [
+    {
+      "record": "VisualCogA_Task-1",
+      "raw_mat_path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogA_Task-1.mat",
+      "raw_mat_sha256": "02a8167b243815c3d048763528641f002eeef3b3903a31ea130b1f4e0cfc6b33",
+      "raw_mat_bytes": 8530840,
+      "sample_rate_hz": 256.0,
+      "raw_samples": 223845,
+      "cue_events": 100,
+      "channel9_response_edges": 100,
+      "q1_time_mapped_trials": 54,
+      "target_time_source": "0.2s_cue_plus_approx_2.0s_wait_schedule_assumption"
+    },
+    {
+      "record": "VisualCogA_Task-2",
+      "raw_mat_path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogA_Task-2.mat",
+      "raw_mat_sha256": "c120ef16ed6bd1a2f1e86e0ab030c6306d08e555a71359cf455744a9904cb748",
+      "raw_mat_bytes": 8938094,
+      "sample_rate_hz": 256.0,
+      "raw_samples": 230157,
+      "cue_events": 100,
+      "channel9_response_edges": 100,
+      "q1_time_mapped_trials": 80,
+      "target_time_source": "0.2s_cue_plus_approx_2.0s_wait_schedule_assumption"
+    },
+    {
+      "record": "VisualCogB_Task-1",
+      "raw_mat_path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogB_Task-1.mat",
+      "raw_mat_sha256": "e6fb2684bddeed0f43e541a52928ce73c690a9b1f91e23a6404e0537f0ef0fc9",
+      "raw_mat_bytes": 8675808,
+      "sample_rate_hz": 256.0,
+      "raw_samples": 223005,
+      "cue_events": 100,
+      "channel9_response_edges": 100,
+      "q1_time_mapped_trials": 83,
+      "target_time_source": "0.2s_cue_plus_approx_2.0s_wait_schedule_assumption"
+    },
+    {
+      "record": "VisualCogB_Task-2",
+      "raw_mat_path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogB_Task-2.mat",
+      "raw_mat_sha256": "c58c998880682027119548029ba92240604b9ecf4138e6c4ea3efe4522212e9d",
+      "raw_mat_bytes": 8924222,
+      "sample_rate_hz": 256.0,
+      "raw_samples": 228330,
+      "cue_events": 100,
+      "channel9_response_edges": 100,
+      "q1_time_mapped_trials": 80,
+      "target_time_source": "0.2s_cue_plus_approx_2.0s_wait_schedule_assumption"
+    }
+  ],
+  "source_manifest": [
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\record_audit.csv",
+      "sha256": "1f05ee34defa334d75586b0a9d730bde26548fad3346f76c9a17a5f4057da646",
+      "bytes": 2356
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\trial_table.csv",
+      "sha256": "81da176b9a1f370d9d48926c754cc94d7680ef355e45cea18ef7be955f3f772d",
+      "bytes": 138145
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\trial_features.csv",
+      "sha256": "beec6effeeb8c925a08f40fba8b27c96fb17122978dd1804fcc58a63482cee74",
+      "bytes": 2876615
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\state_scores.csv",
+      "sha256": "f81bcad67c1471fde468dcc08e0ea70276f9251d22cd488f4caea2b9cbb013d3",
+      "bytes": 3192740
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\validation_summary.json",
+      "sha256": "63e9912a4166f6bd7dcc7066d5981b5be34e9a0a48ead01a6ca476d392c435cc",
+      "bytes": 71309
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\behavior_model_status.json",
+      "sha256": "54c46bd7d2dae290230e0c0eaa795434e078787e0fe2e45dd0273bbe9087baa5",
+      "bytes": 11065
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\experiments\\20260925_model_search_v1\\summary.json",
+      "sha256": "4f26cc60c7592139d61e1eff1686e61a9efcd6ff6811e795711154c6a1e2eb85",
+      "bytes": 8116
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\feature_definitions.csv",
+      "sha256": "53e2d51c8db9e87f463b9a4a8912947802e6af729ae6212dc430d93090308a76",
+      "bytes": 1539
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\README.md",
+      "sha256": "c751919b49bb9da13b1554f425e1414f6981c3d03009a48a4f40ca77bf957ed3",
+      "bytes": 7105
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\TODO.md",
+      "sha256": "2d6a3b4988f5fa39872a1d086d167becac2df21ca0dd8b4e03e2ba0f29447acc",
+      "bytes": 17515
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\config.py",
+      "sha256": "1b5431e861420c3b1c0074a95f3ba1247b3c6813f0d4edf1a10af8a17d24209b",
+      "bytes": 2033
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\continuation_audit\\data_dictionary.csv",
+      "sha256": "8c7a8f74aaeb02e61af627f8bc180bdab8bc12cf5455a63e58d09179b19ad762",
+      "bytes": 2763
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\continuation_audit\\build_continuation_audit.py",
+      "sha256": "b29cac3fc3eb45b0fb8dfacef5a9d8ac192b42e787913eaf33da0580966f9200",
+      "bytes": 28420
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\common.py",
+      "sha256": "873a3d56e2ea4c3657c036103ceb508d8051394f0822fa0e58bef99b9faae833",
+      "bytes": 19908
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\服务于脑机接口与精神性疾病诊断的脑电图计算模型.docx",
+      "sha256": "440494e17914f704657838b23ebb1f44ec371e4f3c7209bc9581091b1dab01f8",
+      "bytes": 417431
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\第三.pdf",
+      "sha256": "c56e1ecc923739c4b479c4fc602e900167d3265397a232125692d81d77bacfed",
+      "bytes": 1027080
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogA_Task-1.mat",
+      "sha256": "02a8167b243815c3d048763528641f002eeef3b3903a31ea130b1f4e0cfc6b33",
+      "bytes": 8530840
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogA_Task-2.mat",
+      "sha256": "c120ef16ed6bd1a2f1e86e0ab030c6306d08e555a71359cf455744a9904cb748",
+      "bytes": 8938094
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogB_Task-1.mat",
+      "sha256": "e6fb2684bddeed0f43e541a52928ce73c690a9b1f91e23a6404e0537f0ef0fc9",
+      "bytes": 8675808
+    },
+    {
+      "path": "D:\\8\\Desktop\\CMathc\\data\\第二十三届中国研究生数学建模竞赛+-+中文题目\\中文题目\\C题\\VisualCogB_Task-2.mat",
+      "sha256": "c58c998880682027119548029ba92240604b9ecf4138e6c4ea3efe4522212e9d",
+      "bytes": 8924222
+    }
+  ],
+  "derived_files_created": [
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\continuation_audit\\state_proxy_effects_by_record.csv",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\continuation_audit\\state_proxy_effects_by_record.png",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\continuation_audit\\response_timing_anchor_sensitivity.csv",
+    "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\continuation_audit\\response_code_mapping.csv"
+  ],
+  "raw_data_modified": false
+}

@@ -1,0 +1,12 @@
+{
+  "artifact_kind": "section_fragment",
+  "markdown_exists": true,
+  "figure_links_exist": {
+    "src/C/q3/output/features_by_cue_side.png": true,
+    "src/C/q3/output/eeg_heldout_record_confusion.png": true,
+    "src/C/q3/output/state_proxy_scores.png": true,
+    "src/C/q3/reports/figures/F11_scope_sensitivity.png": true
+  },
+  "full_cumcm_pdf_layout_validated": false,
+  "reason": "This deliverable is a Markdown section for later insertion into the full contest manuscript; final pagination and PDF rendering require the integrated manuscript."
+}

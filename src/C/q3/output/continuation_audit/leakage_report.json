@@ -1,0 +1,35 @@
+{
+  "status": "PASS_FOR_CUE_EEG_CLASSIFIER_FEATURE_MATRIX",
+  "target": "VisCue cue_side (-1/+1)",
+  "features": [
+    "erp_mean_F3",
+    "erp_mean_Fz",
+    "erp_mean_F4",
+    "log_theta_power_F3",
+    "log_theta_power_Fz",
+    "log_theta_power_F4",
+    "log_alpha_power_F3",
+    "log_alpha_power_Fz",
+    "log_alpha_power_F4",
+    "log_beta_power_F3",
+    "log_beta_power_Fz",
+    "log_beta_power_F4",
+    "AI_alpha"
+  ],
+  "forbidden_predictor_fields": [
+    "response_raw",
+    "response_code",
+    "choice_side",
+    "response_time_s",
+    "reaction_time_s",
+    "correct",
+    "is_omission",
+    "VisCue label"
+  ],
+  "channel9_in_cue_classifier_feature_set": false,
+  "cue_label_as_feature": false,
+  "folding": "leave one complete recording file out",
+  "scaling_and_selection": "standardization and candidate selection performed using inner training records only",
+  "scope_note": "Response columns remain in the audit trial table as metadata; the explicitly listed EEG feature matrix is separate.",
+  "researcher_selection_note": "Several exploratory searches reused these four recording groups; this score is a development estimate and needs untouched-record replication."
+}

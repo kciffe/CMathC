@@ -138,11 +138,16 @@ def detect_cues(cue_signal: np.ndarray, timestamps: np.ndarray) -> list[dict[str
 
 
 def standardize_response_code(raw_response: np.ndarray) -> np.ndarray:
-    """Map either Action/TgtAct sign convention to -2/0/+2 without mutation."""
+    """Map raw {-2,-1,0,+1,+2} codes to the shared {-2,0,+2} scale."""
     raw = np.asarray(raw_response, dtype=np.float64)
+    valid = np.isfinite(raw)
+    unsupported = valid & ~np.isin(raw, (-2.0, -1.0, 0.0, 1.0, 2.0))
+    if unsupported.any():
+        values = np.unique(raw[unsupported]).tolist()
+        raise ValueError(f"unsupported response code(s): {values}")
     standardized = np.zeros(raw.shape, dtype=np.int8)
-    standardized[raw < 0] = -2
-    standardized[raw > 0] = 2
+    standardized[np.isin(raw, (-2.0, -1.0))] = -2
+    standardized[np.isin(raw, (1.0, 2.0))] = 2
     return standardized
 
 
@@ -155,8 +160,9 @@ def detect_response_events(
         raise ValueError(f"Response and timestamp lengths differ: {raw.size} vs {time.size}")
     standardized = standardize_response_code(raw)
     active = standardized != 0
-    sign_change = np.r_[False, (standardized[1:] != 0) & (standardized[1:] != standardized[:-1])]
-    starts = np.flatnonzero((active & ~np.r_[False, active[:-1]]) | sign_change)
+    # A response is one onset edge from inactive to active. A direction-code
+    # change inside a sustained nonzero segment must not create a second event.
+    starts = np.flatnonzero(active & ~np.r_[False, active[:-1]])
     return [
         {
             "response_sample_index": int(index),

@@ -1,0 +1,417 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{iftex}
+\ifPDFTeX
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage{longtable,booktabs,array}
+\usepackage{calc} % for calculating minipage widths
+% Correct order of tables after \paragraph or \subparagraph
+\usepackage{etoolbox}
+\makeatletter
+\patchcmd\longtable{\par}{\if@noskipsec\mbox{}\fi\par}{}{}
+\makeatother
+% Allow footnotes in longtable head/foot
+\IfFileExists{footnotehyper.sty}{\usepackage{footnotehyper}}{\usepackage{footnote}}
+\makesavenoteenv{longtable}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifLuaTeX
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\author{}
+\date{}
+
+\begin{document}
+
+\hypertarget{ux95eeux9898ux4e09ux89c6ux89c9ux8ba4ux77e5ux5b8fux89c2ux8111ux7535ux6a21ux578bux4e0eux5b9eux6d4bux9a8cux8bc1}{%
+\section{5.3
+问题三：视觉认知宏观脑电模型与实测验证}\label{ux95eeux9898ux4e09ux89c6ux89c9ux8ba4ux77e5ux5b8fux89c2ux8111ux7535ux6a21ux578bux4e0eux5b9eux6d4bux9a8cux8bc1}}
+
+\hypertarget{ux95eeux9898ux5206ux6790ux4e0eux5efaux6a21ux8defux7ebf}{%
+\subsection{5.3.1
+问题分析与建模路线}\label{ux95eeux9898ux5206ux6790ux4e0eux5efaux6a21ux8defux7ebf}}
+
+问题三要求在问题二脑电形成机制的基础上建立认知宏观模型，并用题目提供的
+EEG 验证模型；同时需考虑应答可能错误或未及时发生{[}1{]}。题目数据记录了
+F3、Fz、F4 三个原始脑电通道、视觉提示通道 VisCue、应答通道 Action/TgtAct
+及时间戳。三路额区 EEG 是有限的头皮观测，不能据此唯一反演
+LGN、海马或前额叶的脑源活动。因此，本文把问题二的视觉通路和源---场映射作为认知模型的机制约束，但第三问的数值分析直接使用题目提供的原始
+EEG，不把问题二生成的模拟信号当作第三问的观测数据。
+
+据此将第三问分为三个相互区分的分析环节：首先从原始 EEG
+建立试次级观测特征；其次以视觉前馈、记忆匹配和认知控制为解释框架，构造与特征一一对应的
+V/H/P 宏观代理状态；最后分别检验 EEG 对提示方向的跨记录预测能力、V/H/P
+代理的消融表现，以及应答侧是否能由 EEG
+状态补充解释。由于当前数据没有经独立核验的目标出现时刻、反应截止时间和逐试次正确答案，本文不把应答选择分类称为正确率，也不在不合理的反应时上拟合漂移扩散模型（DDM）。
+
+整体计算链为：
+
+\begin{verbatim}
+原始 F3/Fz/F4 连续 EEG
+       ↓ 连续滤波、事件切段与质量标记
+试次级 ERP / 频带功率特征
+       ↓ 固定特征定义
+V/H/P 可观测功能代理与描述性路径
+       ↓ 按完整记录留出
+提示方向验证、代理消融与应答侧补充分析
+\end{verbatim}
+
+\hypertarget{ux6570ux636eux5904ux7406ux4e0eux8bd5ux6b21ux7ea7ux7279ux5f81}{%
+\subsection{5.3.2
+数据处理与试次级特征}\label{ux6570ux636eux5904ux7406ux4e0eux8bd5ux6b21ux7ea7ux7279ux5f81}}
+
+四份 MAT 记录的采样率均为 256 Hz，每份记录含 100 个 VisCue 事件，共 400
+个候选试次。所有 EEG 特征仅由原始 F3、Fz、F4 计算；数据集自带的
+F3Decon、FzDecon、F4Decon 不进入特征矩阵。VisCue 提供左、右提示标签
+\(u_i\in\{-1,+1\}\)。Action/TgtAct 与时间戳只用于应答元数据，不进入 EEG
+特征。程序保留原始应答值，并统一生成标准码：原码 \texttt{-1/-2} 映射为
+\texttt{response\_code=-2}（左），原码 \texttt{+1/+2} 映射为
+\texttt{response\_code=+2}（右）；对检出应答边沿的试次，令应答侧
+\(a_i=\text{response\_code}/2\)，得到左 \(-1\)、右 \(+1\)。通道 9 只检测
+\(0\to\text{非零}\)
+的起始沿，每个起始沿计作一次应答，持续的非零段不重复计数。四份记录共检出
+400 个应答边沿，边沿原码为 \texttt{-1} 的有 196 个、\texttt{+1} 的有 204
+个；连续信号中出现的少量 \texttt{±2}
+采样点不是额外的应答边沿。若试次没有检出边沿，则 \texttt{response\_code}
+记为 0，原始 \texttt{response\_raw} 留空，应答侧保持缺失。
+
+原始连续 EEG 分为 ERP 与时频两条支路。ERP 支路使用四阶零相位 Butterworth
+带通滤波（0.5--30 Hz），时频支路使用四阶零相位 Butterworth
+带通滤波（1--80
+Hz）；滤波在整段连续记录上完成，再按事件切段。提示锁定窗为
+({[}-0.10,0.50)) s；目标锁定窗为 ({[}-0.10,0.80)) s。题目说明提示持续约
+0.2 s、随后等待约 2 s，因此程序暂用 (t\_\{target\}=t\_\{cue\}+2.2) s
+作为目标时刻，并另检查 2.0--2.4 s
+的时间偏移。该目标时刻来自实验排程推定，不是独立检测到的目标事件标记。
+
+ERP 特征以提示前 \([-0.10,0)\) s 的均值为基线，对 250--500 ms
+区间作基线校正。记第 \(i\) 个试次、通道 \(c\) 的信号为
+\(x_{i,c}(t)\)，则额区 ERP 候选均值为
+
+\[
+E_{i,c}=\frac{1}{|W_E|}\sum_{t\in W_E}x_{i,c}(t)-\frac{1}{|W_B|}\sum_{t\in W_B}x_{i,c}(t),
+\quad W_B=[-0.10,0),\quad W_E=[0.25,0.50).
+\]
+
+频带功率由事件后窗内的 Welch 功率谱密度积分得到，并取自然对数：
+
+\[
+L_{i,c,b}=\log\left(\int_{f_{b,\min}}^{f_{b,\max}}\widehat S_{i,c}(f)\,df\right),
+\]
+
+其中 \(b\) 分别为 theta（4--8 Hz）、alpha（8--13 Hz）、beta（13--30
+Hz）和 gamma（30--80 Hz）。提示锁定功率窗为 0--500
+ms，目标锁定功率窗为目标事件后 0--800
+ms。提示窗较短，低频功率估计的频率分辨率有限；gamma 仅作为探索性特征。
+
+用于提示方向分类的 13 维 EEG 特征向量为
+
+\[
+\mathbf f_i=\big[E_{i,F3},E_{i,Fz},E_{i,F4},
+L_{i,F3,\theta},L_{i,Fz,\theta},L_{i,F4,\theta},
+L_{i,F3,\alpha},L_{i,Fz,\alpha},L_{i,F4,\alpha},
+L_{i,F3,\beta},L_{i,Fz,\beta},L_{i,F4,\beta},
+A_{i,\alpha}\big]^T,
+\]
+
+其中 \(A_{i,\alpha}=L_{i,F4,\alpha}-L_{i,F3,\alpha}\)。13 维特征由 3 个
+ERP 均值、9 个三通道频带功率及 1 个额区 alpha
+对数功率差组成。程序另外提取 ERP
+峰值、峰潜伏期、额区不对称和应答终点窗口特征；这些变量不全部纳入主提示分类器，避免无依据地扩大特征空间。
+
+应答终点支路以通道 9 检出的应答标记时刻 (t\_\{act\})
+为终点，提取从提示开始至 (t\_\{act\}-0.10) s 的累计信号，并计算末端 500
+ms
+汇总特征。该支路用于探索题目指定的应答前信号，不并入提示方向分类器；在应答标记语义尚未核实前，也不将它解释为经行为反应时校准的认知终点。
+
+质量控制只标记，不插值或改写信号：若试次窗含非有限值、通道平线，或任一绝对值达到原始数据截断阈值
+999.5，则该窗判为无效。没有独立眼电参考且仅有三路额区
+EEG，故不宣称实施了 ICA 眼动去除。原始单位未由数据说明单独确认，ERP
+数值以下均称为原始数据单位。
+
+\begin{longtable}[]{@{}lrrl@{}}
+\toprule
+分析阶段 & 候选试次数 & 通过原始 EEG 质量控制 & 用途 \\
+\midrule
+\endhead
+提示锁定 & 400 & 387 & 主提示方向验证及 V/H/P 代理建模 \\
+目标锁定（偏移 2.2 s） & 400 & 396 & 次要阶段比较与时间敏感性分析 \\
+应答标记前窗口 & 400 & 381 & 应答前信号描述，不作为主分类输入 \\
+Q1 质量匹配敏感性样本 & --- & 297 & 检查前序质量筛选口径的影响；不作为
+Q3 EEG 特征来源 \\
+\bottomrule
+\end{longtable}
+
+图 5.3-1
+展示目标锁定特征在左右提示下的分布。箱体重叠意味着单变量分布不能单独支持稳定的左右效应；该图用于描述，不用于筛选特征或调分类器。
+
+\begin{figure}
+\centering
+\includegraphics{../output/features_by_cue_side.png}
+\caption{图 5.3-1 左右提示下的目标锁定 EEG 特征分布}
+\end{figure}
+
+\hypertarget{vhp-ux8bd5ux6b21ux7ea7ux5b8fux89c2ux4ee3ux7406ux6a21ux578b}{%
+\subsection{5.3.3 V/H/P
+试次级宏观代理模型}\label{vhp-ux8bd5ux6b21ux7ea7ux5b8fux89c2ux4ee3ux7406ux6a21ux578b}}
+
+题目提出的视觉前馈、记忆匹配和认知控制分别记为
+(V\_i,H\_i,P\_i)。在三通道头皮 EEG 上拟合自由稀疏观测矩阵 (C)
+会面临源混合与状态旋转不可辨识问题；当前程序因此不估计自由潜变量载荷，也不把代理变量称为
+LGN、海马或 PFC 的直接活动。程序用三组可重复计算的 EEG
+特征构造功能代理：
+
+\[
+V_i=\frac{1}{3}\sum_{c\in\{F3,Fz,F4\}}E_{i,c},\qquad
+H_i=\frac{1}{3}\sum_c L_{i,c,\theta},\qquad
+P_i=\frac{1}{3}\sum_c L_{i,c,\beta}.
+\]
+
+其中 (V\_i) 为额区 ERP 候选均值，(H\_i) 为额区 theta
+对数功率均值，(P\_i) 为额区 beta 对数功率均值。gamma
+功率只用于扩展消融。上述定义是对可观测特征的功能性命名，不能据此定位深部来源。
+
+在该代理层上，以提示方向 \(u_i\) 描述视觉输入与 \(V_i\)
+的关系，并以记录文件名中的 Task-1/Task-2 后缀构造中心化候选变量
+\(T_i^*=\text{task code}-1.5\)，拟合以下描述性路径：
+
+\[
+\begin{aligned}
+V_i &= \alpha_V+\beta_Vu_i+\varepsilon_{V,i},\\
+H_i &= \alpha_H+\beta_{HV}V_i+\beta_{HT}T_i^*+\varepsilon_{H,i},\\
+P_i &= \alpha_P+\beta_{PH}H_i+\beta_{PV}V_i+\beta_{PT}T_i^*+\varepsilon_{P,i}.
+\end{aligned}
+\]
+
+系数由全部质量合格试次作 OLS
+描述性估计，没有按独立被试层级计算的显著性检验；(T\_i\^{}*)
+的正式项目语义亦未由实验元数据核实。因此路径系数用于检查特征间的样本内关联，不作因果路径或脑区强度解释。提示侧
+(u\_i) 只出现在上述描述性 (V\_i) 方程中，不作为 EEG-only
+提示分类器的输入。
+
+\hypertarget{ux9a8cux8bc1ux65b9ux6848}{%
+\subsection{5.3.4 验证方案}\label{ux9a8cux8bc1ux65b9ux6848}}
+
+\textbf{提示方向验证。} 以 VisCue 的左/右标签为目标变量，对 13 维真实
+EEG 特征使用固定 L2 Logistic 回归。按完整 MAT
+记录留一：每次留出一份记录测试、其余三份训练；所有标准化参数仅由该折训练数据估计。分别报告提示锁定与目标锁定结果。主指标为每个留出记录的平衡准确率（BA）和
+AUC，准确率与宏平均 F1 作为补充。
+
+\[
+BA_r=\frac{1}{2}\left(\frac{TP_{L,r}}{N_{L,r}}+\frac{TP_{R,r}}{N_{R,r}}\right),\qquad
+\overline{BA}=\frac{1}{4}\sum_{r=1}^{4}BA_r.
+\]
+
+四份记录是当前可用的外层分组；由于文件与独立被试的映射未确认，本文称其为留一记录验证，不称为留一被试验证。另做记录内随机折诊断，但不以其作为泛化证据，因为训练与测试会共享同一记录。
+
+\textbf{代理消融与重建。} 在同一留一记录划分下比较 V-only、V/H/P
+代理组合、加入候选任务码及 gamma
+的方案，并进行逐特征留出重建。重建误差越低表示留出特征在该代理组合下越容易预测；该结果是特征结构的描述性证据，不等于隐源模型得到识别。AIC/BIC
+仅作同一数据口径下的辅助拟合量，不作为显著性检验。
+
+\textbf{应答侧与 DDM 门槛。} 将标准 \texttt{response\_code} 除以 2
+得到应答侧 \(a_i\in\{-1,+1\}\)，在留一记录验证下比较``提示方向 +
+文件名任务码候选''基线与加入 EEG
+代理后的模型。该分析预测的是记录到的应答侧，不代表判断正确与否。DDM
+需要可信的目标时刻、反应时、截止时间及正确/错误/未及时标签；上述信息不齐全时不拟合
+DDM，也不将缺少 marker 直接认定为漏答。
+
+\hypertarget{ux7ed3ux679cux4e0eux5206ux6790}{%
+\subsection{5.3.5 结果与分析}\label{ux7ed3ux679cux4e0eux5206ux6790}}
+
+\hypertarget{ux5b9eux6d4b-eeg-ux7684ux5de6ux53f3ux63d0ux793aux89e3ux7801}{%
+\subsubsection{（1）实测 EEG
+的左右提示解码}\label{ux5b9eux6d4b-eeg-ux7684ux5de6ux53f3ux63d0ux793aux89e3ux7801}}
+
+提示锁定窗有 387 个质量合格试次，留出记录的 BA 均值为 0.460、AUC 均值为
+0.483；目标锁定窗有 396 个合格试次，BA 均值为 0.522、AUC 均值为
+0.526。下表保留每个留出方向，避免均值掩盖记录差异。提示锁定分类整体接近机会水平；目标锁定结果略高，但主要由
+VisualCogB\_Task-1 一折拉高，其他三折 BA 为
+0.478--0.510，且目标时刻本身是排程推定值，故不能据此声称稳定的目标诱发左右解码。
+
+\begin{longtable}[]{@{}llrrrrr@{}}
+\toprule
+阶段 & 留出记录 & 测试数 & Accuracy & Balanced Accuracy & AUC &
+Macro-F1 \\
+\midrule
+\endhead
+提示锁定 & VisualCogA\_Task-1 & 100 & 0.490 & 0.491 & 0.516 & 0.490 \\
+提示锁定 & VisualCogA\_Task-2 & 96 & 0.448 & 0.417 & 0.443 & 0.392 \\
+提示锁定 & VisualCogB\_Task-1 & 98 & 0.480 & 0.480 & 0.497 & 0.479 \\
+提示锁定 & VisualCogB\_Task-2 & 93 & 0.452 & 0.454 & 0.478 & 0.435 \\
+提示锁定 & 四记录等权均值 & 387 & 0.467 & 0.460 & 0.483 & 0.449 \\
+目标锁定 & VisualCogA\_Task-1 & 100 & 0.490 & 0.489 & 0.494 & 0.489 \\
+目标锁定 & VisualCogA\_Task-2 & 98 & 0.500 & 0.478 & 0.452 & 0.471 \\
+目标锁定 & VisualCogB\_Task-1 & 98 & 0.612 & 0.612 & 0.618 & 0.612 \\
+目标锁定 & VisualCogB\_Task-2 & 100 & 0.510 & 0.510 & 0.538 & 0.465 \\
+目标锁定 & 四记录等权均值 & 396 & 0.528 & 0.522 & 0.526 & 0.509 \\
+\bottomrule
+\end{longtable}
+
+\begin{figure}
+\centering
+\includegraphics{../output/eeg_heldout_record_confusion.png}
+\caption{图 5.3-2 留一记录 EEG 提示方向预测的混淆矩阵}
+\end{figure}
+
+将提示时间偏移作为敏感性分析时，目标锁定 BA 在 cue 后 2.0--2.4 s 范围为
+0.483--0.541。该范围反映未标记目标时刻带来的不确定性，不是通过搜索选出的最佳时间点。对同一
+297 个 Q1 质量匹配试次重算后，提示锁定 BA 为 0.487，目标锁定 BA 为
+0.510；与旧 Q1-clean 基线相比变化分别为 +0.027 和
++0.003，说明质量口径会影响小幅数值，但没有形成强的跨记录提示解码证据。
+
+\hypertarget{vhp-ux4ee3ux7406ux8defux5f84ux4e0eux72b6ux6001ux5206ux5e03}{%
+\subsubsection{（2）V/H/P
+代理路径与状态分布}\label{vhp-ux4ee3ux7406ux8defux5f84ux4e0eux72b6ux6001ux5206ux5e03}}
+
+目标锁定下左右提示的三类 V/H/P 描述性代理分布见图
+5.3-3。图中以全体目标锁定试次计算的 z
+分数仅用于可视化；预测模型中的标准化仍在每个训练折内单独估计。该图中左右分布高度重叠，不能作为显著左右状态差异的证据。
+
+\begin{figure}
+\centering
+\includegraphics{../output/state_proxy_scores.png}
+\caption{图 5.3-3 目标锁定 V/H/P 功能代理的左右提示分布}
+\end{figure}
+
+表 5.3-2 汇总全体质量合格试次上的路径回归系数。提示锁定的 \(u_i\to V_i\)
+系数为 0.851，目标锁定为 -0.191；而 \(V_i\to H_i\) 系数分别为 0.0023 和
+0.00013。由于目标阶段与提示阶段的信号尺度、时间锚点和特征分布不同，加上系数是未标准化的样本内
+OLS
+估计，不能直接比较其大小并解释为神经通路增益。其用途是给出当前代理特征之间的拟合关系，而不是验证一个已识别的潜变量因果模型。
+
+\begin{longtable}[]{@{}lrrrrrr@{}}
+\toprule
+阶段 & (\beta\_V) & (\beta\_\{HV\}) & (\beta\_\{HT\}) & (\beta\_\{PH\})
+& (\beta\_\{PV\}) & (\beta\_\{PT\}) \\
+\midrule
+\endhead
+提示锁定 & 0.8513 & 0.00235 & 0.1341 & 0.1029 & 0.00055 & -0.2101 \\
+目标锁定 & -0.1905 & 0.00013 & -0.0687 & 0.1297 & 0.00124 & -0.2367 \\
+\bottomrule
+\end{longtable}
+
+注：(T) 为文件名 Task-1/Task-2 后缀的中心化候选码；系数为原始尺度 OLS
+描述值，不附加试次级显著性解释。
+
+\hypertarget{ux4ee3ux7406ux6d88ux878dux5e94ux7b54ux4fa7ux548cux63a2ux7d22ux6027ux5206ux7c7bux5668ux6bd4ux8f83}{%
+\subsubsection{（3）代理消融、应答侧和探索性分类器比较}\label{ux4ee3ux7406ux6d88ux878dux5e94ux7b54ux4fa7ux548cux63a2ux7d22ux6027ux5206ux7c7bux5668ux6bd4ux8f83}}
+
+在 raw-QC 样本上，V-only 与完整 V/H/P 加任务码候选的提示 BA 分别为 0.494
+和 0.489；目标 BA 分别为 0.497 和 0.530。加入 gamma 后，提示和目标 BA
+分别为 0.475 和 0.522。逐特征留出重建 RMSE 从 V-only 的 1.026 降到完整
+V/H/P 加任务码候选的 0.954（提示阶段），从 1.015 降到
+0.856（目标阶段）。这说明组合代理在目标阶段对部分特征的重建更好，但分类提升并不一致，且所有数值只来自四个记录折，不能把重建改进写成海马或前额叶源活动得到验证。
+
+应答侧留一记录 BA 为：提示/任务码候选基线 0.755、EEG 代理单独
+0.490、提示/任务码与 EEG 代理合并 0.747。当前代码没有显示 EEG
+代理在基线之外带来增益。并且任务后缀与提示---应答关系的正式含义尚未核实，所以该分析只能称为应答侧选择预测，不是行为正确率。
+
+另对 49 个预设分类器配置做过嵌套留一记录探索：raw-QC 提示阶段 BA 从固定
+Logistic 基线的 0.460 升至 0.521（+6.05 个百分点）。但是 Q1
+质量匹配提示样本上变化为 -0.02
+个百分点，目标阶段没有相同提升；四份记录也已在多轮开发中被查看。因此该
+0.521
+仅作为模型搜索敏感性结果，不作为第三问的主要确认性证据，也不称为完整
+V/H/P 模型准确率。
+
+\begin{figure}
+\centering
+\includegraphics{figures/F11_scope_sensitivity.png}
+\caption{图 5.3-4 分类器搜索结果的样本口径敏感性}
+\end{figure}
+
+\hypertarget{ux8ba8ux8bbaux4e0eux7ed3ux8bba}{%
+\subsection{5.3.6 讨论与结论}\label{ux8ba8ux8bbaux4e0eux7ed3ux8bba}}
+
+题目提出的视觉前馈---记忆匹配---认知控制链条，可以作为第三问的机制组织框架；但在当前三路额区
+EEG 与四份记录下，V/H/P 只能由 ERP
+和频带功率构造为可观测代理。留一记录提示方向分类整体接近机会水平，代理组合的分类增益不稳定，应答侧模型中
+EEG
+也没有在提示/任务码候选基线上带来提升。因此，当前数据支持的是``可以建立并审计试次级
+EEG 特征与功能代理''，而不是``已经从头皮 EEG 识别出海马---PFC
+因果状态链''。
+
+应答行为的限制尤其重要。四份记录中均检测到通道 9
+的非零事件，但这只能说明记录中有 marker，不能单独证明没有漏答。程序按
+(cue+2.2) s 估计目标时刻后，所得反应时中位数仅 0.0148 s，399/400 小于
+0.10 s，且该时刻没有独立目标 onset
+marker、正式截止时间也未提供。因而当前没有足够可信的 RT 和删失标签，DDM
+不拟合；正确/错误/未及时应答也不从通道 9 单独推断。
+
+综上，本文按``机制继承、数值解耦''的路线完成了原始 EEG
+的试次级特征提取、V/H/P
+功能代理构造、记录留出预测和消融诊断。当前结果显示，三通道额区 EEG
+对左右提示的跨记录可解码性有限，V/H/P
+代理尚不能被解释为深部源定位或经识别的因果状态。若后续获得经核验的任务/被试映射、逐试次目标真值、目标实际
+onset、反应截止时间及漏答定义，可再开展正确性分层和 DDM
+验证；在这些信息到位前，应将结论限制在当前可观测特征与选择标签范围内。
+
+\textbf{代码对应关系：} \texttt{01\_audit\_events.py}
+审核事件与记录；\texttt{02\_extract\_trials.py}
+建立试次表；\texttt{02b\_preprocess\_raw.py} 处理连续原始 EEG
+并切段；\texttt{03\_extract\_features.py}
+提取试次特征；\texttt{04\_cognitive\_state.py} 构造 V/H/P
+代理与描述性路径；\texttt{05\_behavior\_model.py} 比较应答侧 Logistic
+模型并执行 DDM 门槛判断；\texttt{06\_validate.py} 完成留一记录 EEG
+验证；\texttt{07\_ablation.py} 完成代理消融与重建比较。
+
+\hypertarget{ux53c2ux8003ux6587ux732e}{%
+\subsection{参考文献}\label{ux53c2ux8003ux6587ux732e}}
+
+{[}1{]} 2026 年中国研究生数学建模竞赛 C
+题：《服务于脑机接口与精神性疾病诊断的脑电图计算模型》；题目附件与实验数据说明。
+
+\end{document}

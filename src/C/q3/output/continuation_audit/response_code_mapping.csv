@@ -1,0 +1,6 @@
+﻿response_raw,response_code,meaning,raw_channel_sample_count,detected_response_edge_count,trial_table_event_count,mapping_rule
+-2,-2,left response,94,0,0,-2 -> -2
+-1,-2,left response,63983,196,196,-1 -> -2
+0,0,inactive/no response marker,776724,0,0,0 -> 0
+1,2,right response,64430,204,204,1 -> 2
+2,2,right response,106,0,0,2 -> 2

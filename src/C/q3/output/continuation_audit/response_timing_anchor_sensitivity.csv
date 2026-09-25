@@ -1,0 +1,3 @@
+﻿assumed_target_offset_s,median_marker_minus_assumed_target_s,n_under_100ms,status
+2.0,0.21484375,0,sensitivity only; not selected by plausibility
+2.2,0.014843749999999822,399,protocol schedule assumption; no per-trial target marker

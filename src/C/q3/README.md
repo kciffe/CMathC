@@ -17,15 +17,17 @@ python src/C/q3/06_validate.py
 python src/C/q3/07_ablation.py
 ```
 
-The scripts write tables, summaries, and figures to `src/C/q3/output/`. Run `python -m pytest src/C/q3/tests -q` for the Q3 unit tests.
+After `02_extract_trials.py`, optionally run `python src/C/q3/08_behavior_event_audit.py` to audit target truth, target onset, response deadlines, and record mapping. Missing external labels stay blank and are reported as unknown.
+
+The scripts write tables, summaries, and figures to `src/C/q3/output/`. Run `python -m pytest src/C/q3/tests src/C/q3/experiments -q` for the Q3 unit and experiment tests.
 
 ## Signal and event handling
 
 - The raw data contain 400 VisCue trials across four files at 256 Hz. Q1-clean output is used for event timestamp mapping and a same-trial quality comparison; it is not the source of the main EEG features.
 - `02b_preprocess_raw.py` reads only raw F3/Fz/F4 EEG channels and filters each complete record before epoching. The ERP branch is zero-phase 0.5-30 Hz; the time-frequency branch is zero-phase 1-80 Hz. ICA is not claimed because there are only three EEG channels and no separate EOG reference.
 - Cue epochs cover [-0.10, 0.50) s relative to VisCue. Target epochs cover [-0.10, 0.80) s relative to cue+2.2 s. The target time has no independent event marker, so target-offset sensitivity is checked from 2.0 to 2.4 s.
-- Channel 9 preserves its original event values and maps negative codes to -2, zero to 0, positive to +2. Only zero-to-nonzero edges count as events. It supplies side/time metadata and the response-endpoint window; it is excluded from all EEG features.
-- The pre-response signal window is [cue, channel-9 event time - 0.10 s], with cumulative and terminal-500-ms summaries. The marker semantics and the cue+2.2 s target-time anchor must be verified before interpreting these as behavioral RT windows.
+- The official problem appendix defines channel 9 as the left/right target-click response. Q3 preserves its raw values and maps `-2/-1 → -2` (left), `0 → 0` (inactive/no marker), and `+1/+2 → +2` (right); only zero-to-nonzero edges count as response events. The normalized code supplies response side/time metadata and never enters EEG feature matrices. See `output/continuation_audit/response_code_mapping.csv` for raw sample, edge, and trial-event counts.
+- The pre-response signal window is [cue, channel-9 event time - 0.10 s], with cumulative and terminal-500-ms summaries. The response direction is documented, while the exact per-trial target onset, response deadline, and omission labels remain unavailable; cue+2.2 s is only the task-schedule anchor, not a verified RT origin.
 - The raw QC flags windows with non-finite samples, a flat channel, or any absolute value at/above 999.5 raw data units. The source unit is not independently documented. Each stage keeps its QC flag and exclusion reason; no epoch is silently deleted.
 - PLV and theta-gamma PAC remain uncomputed because the event windows are short and no validated surrogate test is available. Gamma power is exploratory.
 

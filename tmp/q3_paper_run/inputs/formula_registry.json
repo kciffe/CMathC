@@ -1,0 +1,24 @@
+{
+  "formulas": [
+    {
+      "id": "F1",
+      "expression": "E_ic = mean(x_ic over [0.25,0.50)) - mean(x_ic over [-0.10,0))",
+      "implementation": "src/C/q3/signal_processing.py:summarize_epoch_features"
+    },
+    {
+      "id": "F2",
+      "expression": "L_icb = log(integral of Welch PSD over band b)",
+      "implementation": "src/C/q3/signal_processing.py:_integrated_bandpowers"
+    },
+    {
+      "id": "F3",
+      "expression": "V=mean frontal ERP candidate; H=mean frontal log theta power; P=mean frontal log beta power",
+      "implementation": "src/C/q3/04_cognitive_state.py"
+    },
+    {
+      "id": "F4",
+      "expression": "V~cue_side; H~V+centered filename task-code candidate; P~H+V+centered filename task-code candidate",
+      "implementation": "src/C/q3/04_cognitive_state.py:fit_path_models; descriptive OLS only"
+    }
+  ]
+}

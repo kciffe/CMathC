@@ -1,4 +1,5 @@
 import numpy as np
+import pytest
 
 from common import detect_response_events, standardize_response_code
 
@@ -12,8 +13,13 @@ def test_action_and_tgtact_sign_codes_map_to_common_left_right_scale():
     np.testing.assert_array_equal(raw, [-2, -1, 0, 1, 2])
 
 
+def test_unknown_response_code_is_rejected_instead_of_assigned_by_sign():
+    with pytest.raises(ValueError, match="unsupported response code"):
+        standardize_response_code(np.asarray([-3.0, 3.0]))
+
+
 def test_only_zero_to_nonzero_edges_are_response_events():
-    raw = np.asarray([0, 1, 1, 1, 0, -2, -2, 0], dtype=float)
+    raw = np.asarray([0, 1, 1, -1, 0, -2, -2, 0], dtype=float)
     timestamps = np.arange(raw.size, dtype=float) / 256
 
     events = detect_response_events(raw, timestamps)

@@ -1,0 +1,7 @@
+{
+  "input_markdown": "src/C/q3/reports/问题三论文正文草稿.md",
+  "tex_fragment": "tmp/q3_paper_run/outputs/问题三论文正文草稿.tex",
+  "when": "After merging the section into the complete CUMCM manuscript",
+  "template": "math-model-agent/skills/write-model-paper/assets/cume-template.tex",
+  "full_pdf_rendered_in_this_run": false
+}

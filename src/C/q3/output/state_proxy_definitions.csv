@@ -1,13 +1,13 @@
 ﻿stage,state_proxy,source_feature,definition,pooled_center,pooled_scale_sd,scope
-cue_locked,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,-3.74645356798946,55.46719992002359,descriptive plot only; held-out predictive models re-standardize within training folds
-cue_locked,H_memory_like,H_memory_like_raw,mean frontal log theta power,2.7513912851359548,0.8671925239533079,descriptive plot only; held-out predictive models re-standardize within training folds
-cue_locked,P_control_like,P_control_like_raw,mean frontal log beta power,2.500160248593752,0.7029808381987791,descriptive plot only; held-out predictive models re-standardize within training folds
+cue_locked,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,-3.7464535679892723,55.467199920023575,descriptive plot only; held-out predictive models re-standardize within training folds
+cue_locked,H_memory_like,H_memory_like_raw,mean frontal log theta power,2.7513912851359548,0.8671925239533077,descriptive plot only; held-out predictive models re-standardize within training folds
+cue_locked,P_control_like,P_control_like_raw,mean frontal log beta power,2.500160248593752,0.702980838198779,descriptive plot only; held-out predictive models re-standardize within training folds
 pre_response_endpoint,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,,1.0,descriptive plot only; held-out predictive models re-standardize within training folds
 pre_response_endpoint,H_memory_like,H_memory_like_raw,mean frontal log theta power,,1.0,descriptive plot only; held-out predictive models re-standardize within training folds
 pre_response_endpoint,P_control_like,P_control_like_raw,mean frontal log beta power,,1.0,descriptive plot only; held-out predictive models re-standardize within training folds
-target_locked,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,0.5605692052775985,31.440332346589948,descriptive plot only; held-out predictive models re-standardize within training folds
-target_locked,H_memory_like,H_memory_like_raw,mean frontal log theta power,1.84597536014182,0.7361792392714837,descriptive plot only; held-out predictive models re-standardize within training folds
+target_locked,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,0.5605692052783824,31.44033234658963,descriptive plot only; held-out predictive models re-standardize within training folds
+target_locked,H_memory_like,H_memory_like_raw,mean frontal log theta power,1.8459753601418207,0.7361792392714834,descriptive plot only; held-out predictive models re-standardize within training folds
 target_locked,P_control_like,P_control_like_raw,mean frontal log beta power,2.543912614455262,0.47829757372504134,descriptive plot only; held-out predictive models re-standardize within training folds
-target_offset_sensitivity,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,0.22993635483903413,32.02912980409334,descriptive plot only; held-out predictive models re-standardize within training folds
-target_offset_sensitivity,H_memory_like,H_memory_like_raw,mean frontal log theta power,1.7505933079554805,0.7386439889510552,descriptive plot only; held-out predictive models re-standardize within training folds
-target_offset_sensitivity,P_control_like,P_control_like_raw,mean frontal log beta power,2.542978857548003,0.4762642554452982,descriptive plot only; held-out predictive models re-standardize within training folds
+target_offset_sensitivity,V_visual_like,V_visual_like_raw,mean frontal baseline-corrected ERP candidate amplitude,0.2299363548356544,32.02912980409413,descriptive plot only; held-out predictive models re-standardize within training folds
+target_offset_sensitivity,H_memory_like,H_memory_like_raw,mean frontal log theta power,1.7505933079554807,0.7386439889510553,descriptive plot only; held-out predictive models re-standardize within training folds
+target_offset_sensitivity,P_control_like,P_control_like_raw,mean frontal log beta power,2.542978857548003,0.4762642554452978,descriptive plot only; held-out predictive models re-standardize within training folds

@@ -1,0 +1,64 @@
+{
+  "status": "PASS_WITH_UNRESOLVED_EVENT_METADATA",
+  "cue_trials": 400,
+  "raw_qc_valid_cue_trials": 387,
+  "q1_timestamp_matched_trials": 297,
+  "channel9_marker_trials": 400,
+  "channel9_raw_code_mapping": [
+    {
+      "response_raw": -2,
+      "response_code": -2,
+      "meaning": "left response",
+      "raw_channel_sample_count": 94,
+      "detected_response_edge_count": 0,
+      "trial_table_event_count": 0,
+      "mapping_rule": "-2 -> -2"
+    },
+    {
+      "response_raw": -1,
+      "response_code": -2,
+      "meaning": "left response",
+      "raw_channel_sample_count": 63983,
+      "detected_response_edge_count": 196,
+      "trial_table_event_count": 196,
+      "mapping_rule": "-1 -> -2"
+    },
+    {
+      "response_raw": 0,
+      "response_code": 0,
+      "meaning": "inactive/no response marker",
+      "raw_channel_sample_count": 776724,
+      "detected_response_edge_count": 0,
+      "trial_table_event_count": 0,
+      "mapping_rule": "0 -> 0"
+    },
+    {
+      "response_raw": 1,
+      "response_code": 2,
+      "meaning": "right response",
+      "raw_channel_sample_count": 64430,
+      "detected_response_edge_count": 204,
+      "trial_table_event_count": 204,
+      "mapping_rule": "1 -> 2"
+    },
+    {
+      "response_raw": 2,
+      "response_code": 2,
+      "meaning": "right response",
+      "raw_channel_sample_count": 106,
+      "detected_response_edge_count": 0,
+      "trial_table_event_count": 0,
+      "mapping_rule": "2 -> 2"
+    }
+  ],
+  "channel9_no_marker_trials": 0,
+  "correctness_labels_present": 0,
+  "deadline_column_present": false,
+  "target_time_per_trial_marker_present": false,
+  "target_time_source": "cue duration about 0.2 s plus about 2 s after cue disappearance per official task appendix; exact onset remains unmarked",
+  "assumed_2p2_rt_median_s": 0.0148437500000113,
+  "assumed_2p2_rt_under_100ms": 399,
+  "assumed_2p0_rt_median_s": 0.21484375,
+  "missingness_note": "A missing correctness/deadline value is structural until target truth/deadline are supplied; it is not a negative outcome.",
+  "data_units_note": "Raw EEG unit is not independently documented in the MAT metadata."
+}

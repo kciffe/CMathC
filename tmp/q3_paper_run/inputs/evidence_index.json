@@ -1,0 +1,36 @@
+{
+  "official_problem": "data/第二十三届中国研究生数学建模竞赛+-+中文题目/中文题目/C题/服务于脑机接口与精神性疾病诊断的脑电图计算模型.docx",
+  "latest_solution_plan": "data/第二十三届中国研究生数学建模竞赛+-+中文题目/中文题目/C题/第三.pdf",
+  "data": [
+    "data/????????????????+-+????/????/C?/VisualCogA_Task-1.mat",
+    "data/????????????????+-+????/????/C?/VisualCogA_Task-2.mat",
+    "data/????????????????+-+????/????/C?/VisualCogB_Task-1.mat",
+    "data/????????????????+-+????/????/C?/VisualCogB_Task-2.mat"
+  ],
+  "code": [
+    "src/C/q3/02b_preprocess_raw.py",
+    "src/C/q3/03_extract_features.py",
+    "src/C/q3/04_cognitive_state.py",
+    "src/C/q3/05_behavior_model.py",
+    "src/C/q3/06_validate.py",
+    "src/C/q3/ablation.py"
+  ],
+  "results": [
+    "src/C/q3/output/raw_signal_processing.json",
+    "src/C/q3/output/raw_feature_qc_summary.json",
+    "src/C/q3/output/trial_features.csv",
+    "src/C/q3/output/cognitive_state_model.json",
+    "src/C/q3/output/cognitive_path_coefficients.csv",
+    "src/C/q3/output/validation_summary.json",
+    "src/C/q3/output/eeg_heldout_record_metrics.csv",
+    "src/C/q3/output/behavior_model_status.json",
+    "src/C/q3/output/ablation_cv_metrics.csv",
+    "src/C/q3/output/ablation_reconstruction_metrics.csv"
+  ],
+  "figures": [
+    "src/C/q3/output/features_by_cue_side.png",
+    "src/C/q3/output/state_proxy_scores.png",
+    "src/C/q3/output/eeg_heldout_record_confusion.png"
+  ],
+  "exploratory_search": "src/C/q3/reports/Q3_52_06_paper_reference_report.md"
+}

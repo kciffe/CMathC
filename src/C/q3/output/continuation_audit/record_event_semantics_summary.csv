@@ -1,0 +1,5 @@
+﻿record,raw_sample_rate_hz,cue_event_count,response_event_count,rt_median_s,rt_under_100ms_count,target_time_source,task_type
+VisualCogA_Task-1,256.0,100,100,0.0148437500000113,99,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
+VisualCogA_Task-2,256.0,100,100,0.0148437500000113,100,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
+VisualCogB_Task-1,256.0,100,100,0.0148437500000113,100,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
+VisualCogB_Task-2,256.0,100,100,0.0187499999999545,100,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels

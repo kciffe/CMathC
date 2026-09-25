@@ -29,15 +29,15 @@
             "status": "fit_descriptive_only",
             "n": 387,
             "rank": 2,
-            "rmse_in_sample": 55.46067408180894,
+            "rmse_in_sample": 55.46067408180895,
             "coefficients": [
               {
                 "parameter": "intercept",
-                "estimate": -3.7178568592733114
+                "estimate": -3.7178568592731294
               },
               {
                 "parameter": "cue_side",
-                "estimate": 0.851302021011502
+                "estimate": 0.8513020210113198
               }
             ],
             "outcome_column": "V_visual_like_raw"
@@ -46,19 +46,19 @@
             "status": "fit_descriptive_only",
             "n": 387,
             "rank": 3,
-            "rmse_in_sample": 0.846537857968513,
+            "rmse_in_sample": 0.8465378579685129,
             "coefficients": [
               {
                 "parameter": "intercept",
-                "estimate": 2.755172080988395
+                "estimate": 2.7551720809883964
               },
               {
                 "parameter": "V_visual_like_raw",
-                "estimate": 0.002345078177654353
+                "estimate": 0.00234507817765438
               },
               {
                 "parameter": "task_filename_code_centered",
-                "estimate": 0.13413697343240436
+                "estimate": 0.13413697343240547
               }
             ],
             "outcome_column": "H_memory_like_raw"
@@ -67,23 +67,23 @@
             "status": "fit_descriptive_only",
             "n": 387,
             "rank": 4,
-            "rmse_in_sample": 0.6895482847852106,
+            "rmse_in_sample": 0.6895482847852107,
             "coefficients": [
               {
                 "parameter": "intercept",
-                "estimate": 2.2161819317334666
+                "estimate": 2.2161819317334746
               },
               {
                 "parameter": "H_memory_like_raw",
-                "estimate": 0.10292496438223331
+                "estimate": 0.10292496438223117
               },
               {
                 "parameter": "V_visual_like_raw",
-                "estimate": 0.0005482466928327101
+                "estimate": 0.0005482466928328072
               },
               {
                 "parameter": "task_filename_code_centered",
-                "estimate": -0.21011534143096705
+                "estimate": -0.21011534143096677
               }
             ],
             "outcome_column": "P_control_like_raw"
@@ -97,15 +97,15 @@
             "status": "fit_descriptive_only",
             "n": 396,
             "rank": 2,
-            "rmse_in_sample": 31.439755885678316,
+            "rmse_in_sample": 31.439755885678007,
             "coefficients": [
               {
                 "parameter": "intercept",
-                "estimate": 0.5528704399871345
+                "estimate": 0.5528704399879519
               },
               {
                 "parameter": "cue_side",
-                "estimate": -0.1905444409389864
+                "estimate": -0.19054444093816927
               }
             ],
             "outcome_column": "V_visual_like_raw"
@@ -114,19 +114,19 @@
             "status": "fit_descriptive_only",
             "n": 396,
             "rank": 3,
-            "rmse_in_sample": 0.7353690332040125,
+            "rmse_in_sample": 0.7353690332040123,
             "coefficients": [
               {
                 "parameter": "intercept",
-                "estimate": 1.8459023214548953
+                "estimate": 1.8459023214548955
               },
               {
                 "parameter": "V_visual_like_raw",
-                "estimate": 0.00013029379109272434
+                "estimate": 0.00013029379109230236
               },
               {
                 "parameter": "task_filename_code_centered",
-                "estimate": -0.06869200687534148
+                "estimate": -0.06869200687534169
               }
             ],
             "outcome_column": "H_memory_like_raw"
@@ -135,23 +135,23 @@
             "status": "fit_descriptive_only",
             "n": 396,
             "rank": 4,
-            "rmse_in_sample": 0.4507402818044707,
+            "rmse_in_sample": 0.45074028180447107,
             "coefficients": [
               {
                 "parameter": "intercept",
-                "estimate": 2.30376563527447
+                "estimate": 2.303765635274465
               },
               {
                 "parameter": "H_memory_like_raw",
-                "estimate": 0.12971586030697416
+                "estimate": 0.1297158603069764
               },
               {
                 "parameter": "V_visual_like_raw",
-                "estimate": 0.0012392711336624285
+                "estimate": 0.001239271133662366
               },
               {
                 "parameter": "task_filename_code_centered",
-                "estimate": -0.23674560128858424
+                "estimate": -0.23674560128858615
               }
             ],
             "outcome_column": "P_control_like_raw"
