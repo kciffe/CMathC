@@ -1,0 +1,10 @@
+{
+  "scope": "figure and evidence caveats from saved revision_v3 artifacts",
+  "fit_status": "all held-out fits reached tau_s upper bound and optimizer_success=False",
+  "low_quality_record": "VisualCogA_Task-1",
+  "record_handling": "prioritize the other three records but retain VisualCogA_Task-1 in every real-data comparison",
+  "head_model": "canonical geometry-based leadfield; not individualized; gain not calibrated to microvolts",
+  "stage_scope": "revision_v3 fits Stage1 cue left/right; no Stage2 target-event fit",
+  "observation_scope": "model cue-only response padded into full Q1 epoch before filtering; target event is not simulated",
+  "independence": "four MAT files are records; independent participant count is not established"
+}

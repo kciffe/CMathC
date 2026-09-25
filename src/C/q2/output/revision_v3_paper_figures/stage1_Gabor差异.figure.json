@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "V3 Gabor 各方向响应的空间差异显示左右 cue 的镜像编码。",
+    "evidence": [
+      "四个 Gabor 方向的左 cue 减右 cue 空间差异图"
+    ],
+    "source_paths": [
+      "input/stage1_cue_left.npy",
+      "input/stage1_cue_right.npy",
+      "revision_v3/frontend.py"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-diagnostic",
+    "model_name": "revision_v3",
+    "scenario": "Stage1 标准左右 cue；V3 前端确定性响应；刺激矩阵第 0 行显示在图像上沿。",
+    "parameter_source": "saved held-out fit summary; no refitting",
+    "randomness": "deterministic forward simulation; no random sampling",
+    "n_definition": "无单试次样本；标准刺激输入的确定性模型前向计算。",
+    "statistic": "差异定义为左减右；显示 100 ms 的 V3 方向响应。",
+    "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
+    "review_risks": [
+      "Gabor 响应为模型内部特征，不是直接观测的神经活动。"
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 74.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-diagnostic",
+      "visible_text_count": 23,
+      "axes_count": 5,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}

@@ -1,0 +1,178 @@
+{
+  "schema_version": 1,
+  "passed": true,
+  "audits": [
+    {
+      "figure_id": "01_v3_gabor_frontend",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 160.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 75,
+        "axes_count": 12,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "stage1_raw_stimulus_preprocessing",
+      "passed": true,
+      "errors": [],
+      "warnings": [
+        "axis '共同圆形基线 B' is missing an x or y label",
+        "axis '左 cue 原始图像 I_L' is missing an x or y label",
+        "axis '右 cue 原始图像 I_R' is missing an x or y label",
+        "axis '左差分 X_L=(I_L−B)/255' is missing an x or y label",
+        "axis '右差分 X_R=(I_R−B)/255' is missing an x or y label",
+        "axis '左右差分 X_R−X_L' is missing an x or y label"
+      ],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 105.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-diagnostic",
+        "visible_text_count": 22,
+        "axes_count": 8,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "stage1_Gabor方向响应总览",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 104.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 49,
+        "axes_count": 12,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "stage1_Gabor差异",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 74.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-diagnostic",
+        "visible_text_count": 23,
+        "axes_count": 5,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "stage1_Gabor空间响应热图",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 105.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 224,
+        "axes_count": 9,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "02_v3_lgn_response",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 139.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 87,
+        "axes_count": 8,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "03_v3_population_dynamics",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 159.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 106,
+        "axes_count": 7,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "04_v3_simulated_eeg",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 131.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-result",
+        "visible_text_count": 76,
+        "axes_count": 5,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "导联矩阵热图",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 80.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-diagnostic",
+        "visible_text_count": 39,
+        "axes_count": 2,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "05_v3_heldout_erp",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 219.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-comparison",
+        "visible_text_count": 180,
+        "axes_count": 13,
+        "minimum_font_size_pt": 5.0
+      }
+    },
+    {
+      "figure_id": "05b_v3_heldout_lr_modes",
+      "passed": true,
+      "errors": [],
+      "warnings": [],
+      "metrics": {
+        "width_mm": 183.0,
+        "height_mm": 201.0,
+        "target_width_mm": 183.0,
+        "figure_role": "model-diagnostic",
+        "visible_text_count": 175,
+        "axes_count": 13,
+        "minimum_font_size_pt": 5.0
+      }
+    }
+  ]
+}

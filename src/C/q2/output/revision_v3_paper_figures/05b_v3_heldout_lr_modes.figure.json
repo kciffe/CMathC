@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "V3 预测的左右差异主要落在侧化模态；真实右减左波形在三种观测模态中的幅度和方向依记录而异。",
+    "evidence": [
+      "四条记录的真实与预测右减左波形",
+      "common/lateral/shape 观测模态",
+      "记录级差异波相关和 NRMSE"
+    ],
+    "source_paths": [
+      "output/revision_v3/heldout_predictions.csv",
+      "output/revision_v3/left_right_difference.csv",
+      "revision_v3/config.py"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-diagnostic",
+    "model_name": "revision_v3",
+    "scenario": "每条记录使用其已保存的 leave-one-MAT-out 参数；u0/u1/u2 为固定正交传感器坐标。",
+    "parameter_source": "saved held-out fit summary; no refitting",
+    "randomness": "deterministic forward simulation; no random sampling",
+    "n_definition": "trial 数与 05 主图一致。",
+    "statistic": "差异波=右 cue ERP−左 cue ERP；模式坐标由配置中的正交矩阵投影。",
+    "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
+    "review_risks": [
+      "观测模态是 F3/Fz/F4 的线性组合，不代表脑源定位。",
+      "B_Task-2 的差异波相关接近零，不能将主图中 ERP 拟合较好解读为左右效应拟合稳定。"
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 201.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-diagnostic",
+      "visible_text_count": 175,
+      "axes_count": 13,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}

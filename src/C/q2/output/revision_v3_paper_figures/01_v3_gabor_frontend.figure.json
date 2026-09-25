@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "V3 前端将左右 cue 映射为空间化的 Gabor 方向能量响应。",
+    "evidence": [
+      "规范化左右 cue 对比图",
+      "100 ms Gabor 空间能量图",
+      "左右视觉半场的 Gabor 能量时程"
+    ],
+    "source_paths": [
+      "input/stage1_cue_left.npy",
+      "input/stage1_cue_right.npy",
+      "output/revision_v3/manifest.json",
+      "revision_v3/frontend.py"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-result",
+    "model_name": "revision_v3",
+    "scenario": "Stage1 标准左右 cue；代表性参数来自三个重点记录的已保存留出拟合中位数。",
+    "parameter_source": "saved held-out fit summary; no refitting",
+    "randomness": "deterministic forward simulation; no random sampling",
+    "n_definition": "无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
+    "statistic": "空间能量按 V3 前端输出绘制；空间差异为右减左。",
+    "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
+    "review_risks": [
+      "Gabor 响应是模型内部特征，不是直接观测到的皮层活动。"
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 160.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-result",
+      "visible_text_count": 75,
+      "axes_count": 12,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}

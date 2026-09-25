@@ -1,0 +1,51 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "V3 的左右 cue 波形拟合在三个重点记录与低质量参考记录间存在异质性。",
+    "evidence": [
+      "四条 MAT 记录的 F3/Fz/F4 左右 cue 真实均值与 held-out 预测",
+      "每条件 trial 数和条件级 NRMSE"
+    ],
+    "source_paths": [
+      "output/revision_v3/heldout_predictions.csv",
+      "output/revision_v3/heldout_metrics.csv",
+      "output/revision_v3/manifest.json"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-comparison",
+    "model_name": "revision_v3",
+    "scenario": "每条记录由其余 MAT 记录训练；不重新拟合；低质量 VisualCogA_Task-1 保留在末行。",
+    "parameter_source": "saved held-out fit summary; no refitting",
+    "randomness": "deterministic forward simulation; no random sampling",
+    "n_definition": "每条件的有效单试次计数列于行标题。",
+    "statistic": "NRMSE 为模型 RMSE / 真实条件 ERP RMS；图中曲线为 trial-average ERP。",
+    "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
+    "review_risks": [
+      "四份 MAT 是记录，未确认是四名独立被试。",
+      "零相位滤波和 cue-only 模型的事件上下文存在已记录限制。"
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 219.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-comparison",
+      "visible_text_count": 180,
+      "axes_count": 13,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}

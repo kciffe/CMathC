@@ -1,0 +1,188 @@
+{
+  "model": "revision_v3",
+  "heldout_fit_count": 4,
+  "record_order_for_figures": [
+    "VisualCogA_Task-2",
+    "VisualCogB_Task-1",
+    "VisualCogB_Task-2",
+    "VisualCogA_Task-1"
+  ],
+  "primary_records": [
+    "VisualCogA_Task-2",
+    "VisualCogB_Task-1",
+    "VisualCogB_Task-2"
+  ],
+  "low_quality_reference_record": "VisualCogA_Task-1",
+  "heldout_metrics": [
+    {
+      "record": "VisualCogA_Task-1",
+      "task": "Task1",
+      "condition": "left",
+      "n_trials": 29,
+      "real_rms": 19.114498974217582,
+      "rmse": 51.12844701587795,
+      "nrmse": 2.674851539914391,
+      "skill_vs_zero": -6.154830760582388,
+      "F3_correlation": -0.882098870138809,
+      "Fz_correlation": 0.6344025303421033,
+      "F4_correlation": -0.8219795366270363
+    },
+    {
+      "record": "VisualCogA_Task-1",
+      "task": "Task1",
+      "condition": "right",
+      "n_trials": 25,
+      "real_rms": 6.316433042820174,
+      "rmse": 36.61650103113429,
+      "nrmse": 5.797021955731155,
+      "skill_vs_zero": -32.60546355522906,
+      "F3_correlation": -0.6494899991787804,
+      "Fz_correlation": 0.3050957997226355,
+      "F4_correlation": 0.1028014440732926
+    },
+    {
+      "record": "VisualCogA_Task-2",
+      "task": "Task1",
+      "condition": "left",
+      "n_trials": 45,
+      "real_rms": 64.90673972832619,
+      "rmse": 54.04704494353712,
+      "nrmse": 0.8326877173273001,
+      "skill_vs_zero": 0.3066311654122504,
+      "F3_correlation": 0.984417013897015,
+      "Fz_correlation": 0.9124517009767308,
+      "F4_correlation": 0.8208956761328494
+    },
+    {
+      "record": "VisualCogA_Task-2",
+      "task": "Task1",
+      "condition": "right",
+      "n_trials": 35,
+      "real_rms": 66.22572824910155,
+      "rmse": 55.09556418418859,
+      "nrmse": 0.8319359505863348,
+      "skill_vs_zero": 0.3078825741220113,
+      "F3_correlation": 0.8643473388020569,
+      "Fz_correlation": 0.917639089503764,
+      "F4_correlation": 0.9692246011312496
+    },
+    {
+      "record": "VisualCogB_Task-1",
+      "task": "Task2",
+      "condition": "left",
+      "n_trials": 41,
+      "real_rms": 20.455786923641003,
+      "rmse": 13.950509451343152,
+      "nrmse": 0.6819835141722355,
+      "skill_vs_zero": 0.5348984863972883,
+      "F3_correlation": 0.9068690775442854,
+      "Fz_correlation": 0.7668495270075336,
+      "F4_correlation": 0.8334298938811967
+    },
+    {
+      "record": "VisualCogB_Task-1",
+      "task": "Task2",
+      "condition": "right",
+      "n_trials": 42,
+      "real_rms": 12.946064423464996,
+      "rmse": 23.43718408219634,
+      "nrmse": 1.810371346500948,
+      "skill_vs_zero": -2.277444412231654,
+      "F3_correlation": 0.6300021871542519,
+      "Fz_correlation": 0.7938522857120724,
+      "F4_correlation": 0.754960203534305
+    },
+    {
+      "record": "VisualCogB_Task-2",
+      "task": "Task2",
+      "condition": "left",
+      "n_trials": 37,
+      "real_rms": 29.34707679623457,
+      "rmse": 31.92914706593462,
+      "nrmse": 1.0879838999852738,
+      "skill_vs_zero": -0.1837089666271663,
+      "F3_correlation": 0.0686073802627741,
+      "Fz_correlation": 0.8816079739359913,
+      "F4_correlation": 0.618517958307786
+    },
+    {
+      "record": "VisualCogB_Task-2",
+      "task": "Task2",
+      "condition": "right",
+      "n_trials": 43,
+      "real_rms": 60.16507929117003,
+      "rmse": 41.84092271186817,
+      "nrmse": 0.6954353456326092,
+      "skill_vs_zero": 0.5163696800448534,
+      "F3_correlation": 0.7962845160107065,
+      "Fz_correlation": 0.8981241517392254,
+      "F4_correlation": 0.9537185952502192
+    }
+  ],
+  "left_right_difference": [
+    {
+      "record": "VisualCogA_Task-1",
+      "task": "Task1",
+      "left_right_difference_rms_measured": 19.799086360916583,
+      "left_right_difference_rms_model": 14.750496434209316,
+      "left_right_difference_nrmse": 1.3816867908628576,
+      "left_right_difference_correlation": -0.3136333546178542,
+      "measured_mode_rms": "[23.948945071839344, 11.71417718299449, 21.569365893612478]",
+      "model_mode_rms": "[1.302231808768812e-05, 25.548609260909735, 7.279430566029772e-06]",
+      "measured_lateral_energy_fraction": 0.1166841918531039,
+      "model_lateral_energy_fraction": 0.9999999999996584
+    },
+    {
+      "record": "VisualCogA_Task-2",
+      "task": "Task1",
+      "left_right_difference_rms_measured": 9.689140369865022,
+      "left_right_difference_rms_model": 5.508440283367207,
+      "left_right_difference_nrmse": 0.8953802821476832,
+      "left_right_difference_correlation": 0.5301403380381956,
+      "measured_mode_rms": "[12.283477129314418, 9.850983157790228, 5.806259015871337]",
+      "model_mode_rms": "[6.2257531727581535e-06, 9.540898441246364, 7.191810219504097e-06]",
+      "measured_lateral_energy_fraction": 0.3445620185166205,
+      "model_lateral_energy_fraction": 0.999999999999006
+    },
+    {
+      "record": "VisualCogB_Task-1",
+      "task": "Task2",
+      "left_right_difference_rms_measured": 14.519325918548336,
+      "left_right_difference_rms_model": 11.866050791347948,
+      "left_right_difference_nrmse": 1.0307614151628737,
+      "left_right_difference_correlation": 0.4391337476276157,
+      "measured_mode_rms": "[16.183525645703526, 11.476365808899235, 15.453769795175331]",
+      "model_mode_rms": "[3.9187376049527154e-06, 20.552602855806352, 5.754347021940695e-06]",
+      "measured_lateral_energy_fraction": 0.2082545999856482,
+      "model_lateral_energy_fraction": 0.9999999999998852
+    },
+    {
+      "record": "VisualCogB_Task-2",
+      "task": "Task2",
+      "left_right_difference_rms_measured": 50.10169981403533,
+      "left_right_difference_rms_model": 9.431960624371971,
+      "left_right_difference_nrmse": 1.0129335310128411,
+      "left_right_difference_correlation": 0.0380407107101955,
+      "measured_mode_rms": "[80.26154843459422, 2.489452913814931, 32.90026504206783]",
+      "model_mode_rms": "[2.7224616283507305e-05, 16.336635016370195, 1.661044014403796e-05]",
+      "measured_lateral_energy_fraction": 0.0008229655522111,
+      "model_lateral_energy_fraction": 0.9999999999961888
+    }
+  ],
+  "representative_step_01_to_04_parameters": {
+    "records_used_for_representative_median": [
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-1",
+      "VisualCogB_Task-2"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.6770764465655795,
+      "tau_a": 80.0
+    },
+    "shared_gain_signed": -7.67572376540552,
+    "tau_s_at_upper_bound_for_all_primary_folds": true,
+    "fits_converged": false
+  },
+  "source_manifest": "output/revision_v3/manifest.json"
+}

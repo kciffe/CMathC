@@ -1,0 +1,350 @@
+{
+  "schema_version": 1,
+  "model": "revision_v3",
+  "primary_records": [
+    "VisualCogA_Task-2",
+    "VisualCogB_Task-1",
+    "VisualCogB_Task-2"
+  ],
+  "retained_low_quality_record": "VisualCogA_Task-1",
+  "representative_parameters": {
+    "records_used_for_representative_median": [
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-1",
+      "VisualCogB_Task-2"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.6770764465655795,
+      "tau_a": 80.0
+    },
+    "shared_gain_signed": -7.67572376540552,
+    "tau_s_at_upper_bound_for_all_primary_folds": true,
+    "fits_converged": false
+  },
+  "figures": [
+    {
+      "figure_id": "01_v3_gabor_frontend",
+      "claim": "V3 前端将左右 cue 映射为空间化的 Gabor 方向能量响应。",
+      "evidence": [
+        "规范化左右 cue 对比图",
+        "100 ms Gabor 空间能量图",
+        "左右视觉半场的 Gabor 能量时程"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\01_v3_gabor_frontend.pdf",
+        "svg": "output\\revision_v3_paper_figures\\01_v3_gabor_frontend.svg",
+        "png": "output\\revision_v3_paper_figures\\01_v3_gabor_frontend.png",
+        "metadata": "output\\revision_v3_paper_figures\\01_v3_gabor_frontend.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-result",
+        "scenario": "Stage1 标准左右 cue；代表性参数来自三个重点记录的已保存留出拟合中位数。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "input/stage1_cue_left.npy",
+          "input/stage1_cue_right.npy",
+          "output/revision_v3/manifest.json",
+          "revision_v3/frontend.py"
+        ],
+        "statistic": "空间能量按 V3 前端输出绘制；空间差异为右减左。",
+        "n_definition": "无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
+        "review_risks": [
+          "Gabor 响应是模型内部特征，不是直接观测到的皮层活动。"
+        ]
+      }
+    },
+    {
+      "figure_id": "stage1_raw_stimulus_preprocessing",
+      "claim": "Stage1 cue 原始图像含共同圆形基线；逐像素相减后共同圆形抵消，仅三角区域保留亮度变化。",
+      "evidence": [
+        "共同圆形基线与左右原始 cue 灰度图",
+        "X_L=(I_L-B)/255、X_R=(I_R-B)/255 及左右差分"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\stage1_raw_stimulus_preprocessing.pdf",
+        "svg": "output\\revision_v3_paper_figures\\stage1_raw_stimulus_preprocessing.svg",
+        "png": "output\\revision_v3_paper_figures\\stage1_raw_stimulus_preprocessing.png",
+        "metadata": "output\\revision_v3_paper_figures\\stage1_raw_stimulus_preprocessing.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-diagnostic",
+        "scenario": "Stage1 原始 256×256 灰度矩阵；不含 EEG 试次或拟合参数。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "input/stage1_baseline_circle.npy",
+          "input/stage1_cue_left.npy",
+          "input/stage1_cue_right.npy",
+          "revision_v3/frontend.py"
+        ],
+        "statistic": "图像除以 255 归一化；signed contrast 按 cue 图像减共同圆形基线计算。",
+        "n_definition": "不涉及样本；展示固定刺激矩阵的确定性预处理。",
+        "review_risks": [
+          "模型使用像素级基线差分，不是减去圆形的学习特征向量。"
+        ]
+      }
+    },
+    {
+      "figure_id": "stage1_Gabor方向响应总览",
+      "claim": "Stage1 左右 cue 在 100 ms 的 V3 Gabor 方向能量空间分布互为镜像。",
+      "evidence": [
+        "左右 cue 相对圆形基线输入",
+        "0°/45°/90°/135° V3 空间方向响应"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\stage1_Gabor方向响应总览.pdf",
+        "svg": "output\\revision_v3_paper_figures\\stage1_Gabor方向响应总览.svg",
+        "png": "output\\revision_v3_paper_figures\\stage1_Gabor方向响应总览.png",
+        "metadata": "output\\revision_v3_paper_figures\\stage1_Gabor方向响应总览.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-result",
+        "scenario": "Stage1 标准左右 cue；V3 前端确定性响应；刺激矩阵第 0 行显示在图像上沿。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "input/stage1_cue_left.npy",
+          "input/stage1_cue_right.npy",
+          "revision_v3/frontend.py"
+        ],
+        "statistic": "显示 V3 audit_maps['V1']，取 100 ms；非旧版 scipy Gabor 结果。",
+        "n_definition": "无单试次样本；标准刺激输入的确定性模型前向计算。",
+        "review_risks": [
+          "Gabor 响应为模型内部特征，不是直接观测的神经活动。"
+        ]
+      }
+    },
+    {
+      "figure_id": "stage1_Gabor差异",
+      "claim": "V3 Gabor 各方向响应的空间差异显示左右 cue 的镜像编码。",
+      "evidence": [
+        "四个 Gabor 方向的左 cue 减右 cue 空间差异图"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\stage1_Gabor差异.pdf",
+        "svg": "output\\revision_v3_paper_figures\\stage1_Gabor差异.svg",
+        "png": "output\\revision_v3_paper_figures\\stage1_Gabor差异.png",
+        "metadata": "output\\revision_v3_paper_figures\\stage1_Gabor差异.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-diagnostic",
+        "scenario": "Stage1 标准左右 cue；V3 前端确定性响应；刺激矩阵第 0 行显示在图像上沿。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "input/stage1_cue_left.npy",
+          "input/stage1_cue_right.npy",
+          "revision_v3/frontend.py"
+        ],
+        "statistic": "差异定义为左减右；显示 100 ms 的 V3 方向响应。",
+        "n_definition": "无单试次样本；标准刺激输入的确定性模型前向计算。",
+        "review_risks": [
+          "Gabor 响应为模型内部特征，不是直接观测的神经活动。"
+        ]
+      }
+    },
+    {
+      "figure_id": "stage1_Gabor空间响应热图",
+      "claim": "V3 Gabor 能量在刺激上方的 4×4 前端网格中呈现左右镜像空间分布。",
+      "evidence": [
+        "左/右 cue × 四方向的 4×4 空间平均 Gabor 能量"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\stage1_Gabor空间响应热图.pdf",
+        "svg": "output\\revision_v3_paper_figures\\stage1_Gabor空间响应热图.svg",
+        "png": "output\\revision_v3_paper_figures\\stage1_Gabor空间响应热图.png",
+        "metadata": "output\\revision_v3_paper_figures\\stage1_Gabor空间响应热图.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-result",
+        "scenario": "Stage1 标准左右 cue；V3 前端确定性响应；空间网格第 1 行位于图像上沿。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "input/stage1_cue_left.npy",
+          "input/stage1_cue_right.npy",
+          "revision_v3/frontend.py"
+        ],
+        "statistic": "由 100 ms 的 V3 128×128 方向响应按 4×4 等面积网格取均值。",
+        "n_definition": "无单试次样本；标准刺激输入的确定性模型前向计算。",
+        "review_risks": [
+          "网格热图为模型内部特征汇总，不是 EEG 通道观测。"
+        ]
+      }
+    },
+    {
+      "figure_id": "02_v3_lgn_response",
+      "claim": "镜像左右 cue 的 LGN 整体 ON/OFF 平均响应近似相同，但空间化中继响应呈镜像分布。",
+      "evidence": [
+        "100 ms 的 8×8 pooled ON+OFF 空间响应",
+        "LGN ON/OFF 群体均值时程"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\02_v3_lgn_response.pdf",
+        "svg": "output\\revision_v3_paper_figures\\02_v3_lgn_response.svg",
+        "png": "output\\revision_v3_paper_figures\\02_v3_lgn_response.png",
+        "metadata": "output\\revision_v3_paper_figures\\02_v3_lgn_response.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-result",
+        "scenario": "Stage1 cue；使用三个重点记录已保存留出参数的中位数 tau_a。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "output/revision_v3/manifest.json",
+          "revision_v3/frontend.py"
+        ],
+        "statistic": "空间图为 pooled ON+OFF 活动；时间曲线为各空间位置的群体均值。",
+        "n_definition": "无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
+        "review_risks": [
+          "这是确定性视觉前端的内部状态，不是 LGN 实测信号。"
+        ]
+      }
+    },
+    {
+      "figure_id": "03_v3_population_dynamics",
+      "claim": "V3 将视觉输入传入早期、形状和方向三个功能群体，内部左右通道响应可在时间上分化。",
+      "evidence": [
+        "三组 E/I 活动时程",
+        "每组 E 群体左通道减右通道"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\03_v3_population_dynamics.pdf",
+        "svg": "output\\revision_v3_paper_figures\\03_v3_population_dynamics.svg",
+        "png": "output\\revision_v3_paper_figures\\03_v3_population_dynamics.png",
+        "metadata": "output\\revision_v3_paper_figures\\03_v3_population_dynamics.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-result",
+        "scenario": "Stage1 cue；代表性 tau_s/g_i/tau_a 和增益取三个重点记录已保存留出拟合的中位数。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "output/revision_v3/heldout_fit_summary.csv",
+          "output/revision_v3/drive_scales.csv",
+          "revision_v3/model.py"
+        ],
+        "statistic": "E/I 曲线为两通道平均；下排为群体内部通道 0 − 通道 1。",
+        "n_definition": "无单试次样本；图中为标准化 cue 输入的确定性模型前向计算。",
+        "review_risks": [
+          "功能群体是模型变量，不应直接等同于 V1/IT/PFC 的实测活动。"
+        ]
+      }
+    },
+    {
+      "figure_id": "04_v3_simulated_eeg",
+      "claim": "V3 的几何导联场将六个源代理映射为 F3/Fz/F4 相对传感器曲线。",
+      "evidence": [
+        "左/右 cue 的 F3/Fz/F4 模型波形",
+        "模型右减左波形"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\04_v3_simulated_eeg.pdf",
+        "svg": "output\\revision_v3_paper_figures\\04_v3_simulated_eeg.svg",
+        "png": "output\\revision_v3_paper_figures\\04_v3_simulated_eeg.png",
+        "metadata": "output\\revision_v3_paper_figures\\04_v3_simulated_eeg.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-result",
+        "scenario": "三个重点记录的已保存留出拟合中位数；固定规范头部几何导联；cue-only。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "output/revision_v3/heldout_fit_summary.csv",
+          "output/revision_v3/drive_scales.csv",
+          "output/revision_v3/leadfield_geometry.json",
+          "revision_v3/observation.py"
+        ],
+        "statistic": "模型曲线经过 0.2–24 Hz 四阶零相位滤波、256→128 Hz 重采样和 -200–0 ms 通道基线校正。",
+        "n_definition": "无单试次样本；图中为代表性固定参数的确定性模型前向计算。",
+        "review_risks": [
+          "传感器增益未标定为 μV；模型仅生成 0–800 ms cue 响应，未模拟 2.2 s 目标事件。",
+          "三个重点记录的 tau_s 候选达到上界且拟合未收敛，代表参数只用于示意。"
+        ]
+      }
+    },
+    {
+      "figure_id": "导联矩阵热图",
+      "claim": "V3 用固定规范头部几何导联矩阵将六个源代理映射到 F3/Fz/F4。",
+      "evidence": [
+        "保存的 3×6 传感器 × 源导联系数矩阵"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\导联矩阵热图.pdf",
+        "svg": "output\\revision_v3_paper_figures\\导联矩阵热图.svg",
+        "png": "output\\revision_v3_paper_figures\\导联矩阵热图.png",
+        "metadata": "output\\revision_v3_paper_figures\\导联矩阵热图.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-diagnostic",
+        "scenario": "canonical 几何点偶极近似；双乳突平均参考；不是个体化头模型。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "output/revision_v3/leadfield.csv",
+          "output/revision_v3/leadfield_geometry.json",
+          "revision_v3/head_model.py"
+        ],
+        "statistic": "颜色和标注为带符号导联系数；单位 V/(A m)。",
+        "n_definition": "不涉及样本；显示固定的确定性 3×6 映射矩阵。",
+        "review_risks": [
+          "导联矩阵基于规范几何和均匀导体假设，传感器增益未校准为 μV。"
+        ]
+      }
+    },
+    {
+      "figure_id": "05_v3_heldout_erp",
+      "claim": "V3 的左右 cue 波形拟合在三个重点记录与低质量参考记录间存在异质性。",
+      "evidence": [
+        "四条 MAT 记录的 F3/Fz/F4 左右 cue 真实均值与 held-out 预测",
+        "每条件 trial 数和条件级 NRMSE"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\05_v3_heldout_erp.pdf",
+        "svg": "output\\revision_v3_paper_figures\\05_v3_heldout_erp.svg",
+        "png": "output\\revision_v3_paper_figures\\05_v3_heldout_erp.png",
+        "metadata": "output\\revision_v3_paper_figures\\05_v3_heldout_erp.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-comparison",
+        "scenario": "每条记录由其余 MAT 记录训练；不重新拟合；低质量 VisualCogA_Task-1 保留在末行。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "output/revision_v3/heldout_predictions.csv",
+          "output/revision_v3/heldout_metrics.csv",
+          "output/revision_v3/manifest.json"
+        ],
+        "statistic": "NRMSE 为模型 RMSE / 真实条件 ERP RMS；图中曲线为 trial-average ERP。",
+        "n_definition": "每条件的有效单试次计数列于行标题。",
+        "review_risks": [
+          "四份 MAT 是记录，未确认是四名独立被试。",
+          "零相位滤波和 cue-only 模型的事件上下文存在已记录限制。"
+        ]
+      }
+    },
+    {
+      "figure_id": "05b_v3_heldout_lr_modes",
+      "claim": "V3 预测的左右差异主要落在侧化模态；真实右减左波形在三种观测模态中的幅度和方向依记录而异。",
+      "evidence": [
+        "四条记录的真实与预测右减左波形",
+        "common/lateral/shape 观测模态",
+        "记录级差异波相关和 NRMSE"
+      ],
+      "files": {
+        "pdf": "output\\revision_v3_paper_figures\\05b_v3_heldout_lr_modes.pdf",
+        "svg": "output\\revision_v3_paper_figures\\05b_v3_heldout_lr_modes.svg",
+        "png": "output\\revision_v3_paper_figures\\05b_v3_heldout_lr_modes.png",
+        "metadata": "output\\revision_v3_paper_figures\\05b_v3_heldout_lr_modes.figure.json"
+      },
+      "contract": {
+        "figure_role": "model-diagnostic",
+        "scenario": "每条记录使用其已保存的 leave-one-MAT-out 参数；u0/u1/u2 为固定正交传感器坐标。",
+        "model_name": "revision_v3",
+        "source_paths": [
+          "output/revision_v3/heldout_predictions.csv",
+          "output/revision_v3/left_right_difference.csv",
+          "revision_v3/config.py"
+        ],
+        "statistic": "差异波=右 cue ERP−左 cue ERP；模式坐标由配置中的正交矩阵投影。",
+        "n_definition": "trial 数与 05 主图一致。",
+        "review_risks": [
+          "观测模态是 F3/Fz/F4 的线性组合，不代表脑源定位。",
+          "B_Task-2 的差异波相关接近零，不能将主图中 ERP 拟合较好解读为左右效应拟合稳定。"
+        ]
+      }
+    }
+  ]
+}

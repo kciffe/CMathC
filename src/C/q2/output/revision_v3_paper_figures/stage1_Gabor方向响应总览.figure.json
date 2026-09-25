@@ -1,0 +1,50 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "Stage1 左右 cue 在 100 ms 的 V3 Gabor 方向能量空间分布互为镜像。",
+    "evidence": [
+      "左右 cue 相对圆形基线输入",
+      "0°/45°/90°/135° V3 空间方向响应"
+    ],
+    "source_paths": [
+      "input/stage1_cue_left.npy",
+      "input/stage1_cue_right.npy",
+      "revision_v3/frontend.py"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-result",
+    "model_name": "revision_v3",
+    "scenario": "Stage1 标准左右 cue；V3 前端确定性响应；刺激矩阵第 0 行显示在图像上沿。",
+    "parameter_source": "saved held-out fit summary; no refitting",
+    "randomness": "deterministic forward simulation; no random sampling",
+    "n_definition": "无单试次样本；标准刺激输入的确定性模型前向计算。",
+    "statistic": "显示 V3 audit_maps['V1']，取 100 ms；非旧版 scipy Gabor 结果。",
+    "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
+    "review_risks": [
+      "Gabor 响应为模型内部特征，不是直接观测的神经活动。"
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 104.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-result",
+      "visible_text_count": 49,
+      "axes_count": 12,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}

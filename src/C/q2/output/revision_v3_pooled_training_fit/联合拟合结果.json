@@ -1,0 +1,404 @@
+{
+  "fit": {
+    "train_records": [
+      "VisualCogA_Task-1",
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-1",
+      "VisualCogB_Task-2"
+    ],
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.6658576280807372,
+      "tau_a": 80.0
+    },
+    "amplitude": -8.36520538097901,
+    "loss": 1165.117137683553,
+    "success": true,
+    "status": "profile_grid_converged",
+    "boundary_flags": {
+      "tau_s": true,
+      "g_i": false,
+      "tau_a": false
+    },
+    "starts": [
+      {
+        "tau_a_profile_ms": 40.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 2,
+        "optimizer_message": "ABNORMAL: ",
+        "nfev_reported": 159,
+        "n_objective_evaluations": 159,
+        "best_loss": 1217.1121309819728,
+        "amplitude": -6.784445999116015,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5039830294584932,
+          "tau_a": 40.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 60.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 2,
+        "optimizer_message": "ABNORMAL: ",
+        "nfev_reported": 117,
+        "n_objective_evaluations": 117,
+        "best_loss": 1180.7024013016194,
+        "amplitude": -7.589332923214746,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.5654147981933944,
+          "tau_a": 60.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "nfev_reported": 72,
+        "n_objective_evaluations": 72,
+        "best_loss": 1165.1328341768651,
+        "amplitude": -8.363671488638936,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6619111238221972,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 100.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 2,
+        "optimizer_message": "ABNORMAL: ",
+        "nfev_reported": 126,
+        "n_objective_evaluations": 126,
+        "best_loss": 1166.4367249657823,
+        "amplitude": -9.144221161966573,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.7929594119470285,
+          "tau_a": 100.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 120.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 2,
+        "optimizer_message": "ABNORMAL: ",
+        "nfev_reported": 165,
+        "n_objective_evaluations": 165,
+        "best_loss": 1176.8936661555035,
+        "amplitude": -9.978387361320925,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.9306744434665671,
+          "tau_a": 120.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 140.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": false,
+        "optimizer_status": 2,
+        "optimizer_message": "ABNORMAL: ",
+        "nfev_reported": 129,
+        "n_objective_evaluations": 129,
+        "best_loss": 1190.804087181062,
+        "amplitude": -10.870813538197137,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.0543735456382233,
+          "tau_a": 140.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 160.0,
+        "start_index": 0,
+        "fit_scope": "profile_primary",
+        "initial": [
+          40.0,
+          1.0
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "nfev_reported": 114,
+        "n_objective_evaluations": 114,
+        "best_loss": 1204.9827047871206,
+        "amplitude": -11.783287564858124,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 1.1542450181808335,
+          "tau_a": 160.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 1,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          28.0,
+          0.7
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "nfev_reported": 105,
+        "n_objective_evaluations": 105,
+        "best_loss": 1165.1196641396575,
+        "amplitude": -8.366180547831183,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6680802269416246,
+          "tau_a": 80.0
+        }
+      },
+      {
+        "tau_a_profile_ms": 80.0,
+        "start_index": 2,
+        "fit_scope": "winner_confirmation",
+        "initial": [
+          75.0,
+          1.3
+        ],
+        "optimizer_success": true,
+        "optimizer_status": 0,
+        "optimizer_message": "CONVERGENCE: RELATIVE REDUCTION OF F <= FACTR*EPSMCH",
+        "nfev_reported": 123,
+        "n_objective_evaluations": 123,
+        "best_loss": 1165.117137683553,
+        "amplitude": -8.36520538097901,
+        "parameters": {
+          "tau_s": 100.0,
+          "g_i": 0.6658576280807372,
+          "tau_a": 80.0
+        }
+      }
+    ],
+    "n_evaluations": 1110,
+    "resolution": 64,
+    "feature_route": "opponent",
+    "observation_rank": 3
+  },
+  "summary": {
+    "evaluation_scope": "IN_SAMPLE_TRAINING_FIT_NOT_VALIDATION_OR_TEST",
+    "records": [
+      "VisualCogA_Task-1",
+      "VisualCogA_Task-2",
+      "VisualCogB_Task-1",
+      "VisualCogB_Task-2"
+    ],
+    "n_records": 4,
+    "n_condition_erps": 8,
+    "n_trials_by_record_condition": {
+      "VisualCogA_Task-1:left": 29,
+      "VisualCogA_Task-1:right": 25,
+      "VisualCogA_Task-2:left": 45,
+      "VisualCogA_Task-2:right": 35,
+      "VisualCogB_Task-1:left": 41,
+      "VisualCogB_Task-1:right": 42,
+      "VisualCogB_Task-2:left": 37,
+      "VisualCogB_Task-2:right": 43
+    },
+    "parameters": {
+      "tau_s": 100.0,
+      "g_i": 0.6658576280807372,
+      "tau_a": 80.0
+    },
+    "shared_signed_gain": -8.36520538097901,
+    "loss": 1165.117137683553,
+    "fit_status": "profile_grid_converged",
+    "optimizer_success": true,
+    "boundary_flags": {
+      "tau_s": true,
+      "g_i": false,
+      "tau_a": false
+    },
+    "n_objective_evaluations": 1110,
+    "resolution": 64,
+    "feature_route": "opponent",
+    "observation_rank": 3,
+    "metrics_are_in_sample": true,
+    "mean_condition_nrmse": 1.4362178441464581,
+    "median_condition_nrmse": 0.895715934937238,
+    "mean_condition_channel_correlation": 0.5457675760717244,
+    "mean_lr_difference_nrmse": 1.0832401953335953,
+    "mean_lr_difference_correlation": 0.16463322253426635,
+    "event_audit": [
+      {
+        "dataset": "VisualCogA_Task-1",
+        "task": "Task1",
+        "total_trials": 54,
+        "sample_rate_hz": 128.0,
+        "epoch_start_s": -1.0,
+        "epoch_end_s": 2.9921875,
+        "unknown_cue_trials": 0,
+        "cue_marker_label": "VisCue:L-1/R+1",
+        "cue_marker_codes_present": "-1;0;1",
+        "cue_marker_trials": 54,
+        "cue_onset_median_ms": 0.0,
+        "cue_onset_min_ms": 0.0,
+        "cue_onset_max_ms": 0.0,
+        "cue_last_active_sample_median_ms": 195.3125,
+        "cue_offset_median_ms": 203.125,
+        "cue_offset_observed_trials": 54,
+        "cue_active_duration_median_ms": 203.125,
+        "cue_type_agreement": 1.0,
+        "cue_type_agreement_trials": 54,
+        "action_channel_label": "Action:L-1/R+1",
+        "action_codes_present": "-1;0;1",
+        "action_absolute_code_2_samples": 0,
+        "action_first_post_target_edge_median_ms": 10.937499999999822,
+        "action_first_post_target_edge_min_ms": 10.937499999999822,
+        "action_first_post_target_edge_max_ms": 128.12499999999983,
+        "action_trials_with_post_target_edge": 54,
+        "action_trials_with_multiple_post_target_edges": 0,
+        "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+        "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
+      },
+      {
+        "dataset": "VisualCogA_Task-2",
+        "task": "Task1",
+        "total_trials": 80,
+        "sample_rate_hz": 128.0,
+        "epoch_start_s": -1.0,
+        "epoch_end_s": 2.9921875,
+        "unknown_cue_trials": 0,
+        "cue_marker_label": "VisCue:L-1/R+1",
+        "cue_marker_codes_present": "-1;0;1",
+        "cue_marker_trials": 80,
+        "cue_onset_median_ms": 0.0,
+        "cue_onset_min_ms": 0.0,
+        "cue_onset_max_ms": 0.0,
+        "cue_last_active_sample_median_ms": 195.3125,
+        "cue_offset_median_ms": 203.125,
+        "cue_offset_observed_trials": 80,
+        "cue_active_duration_median_ms": 203.125,
+        "cue_type_agreement": 1.0,
+        "cue_type_agreement_trials": 80,
+        "action_channel_label": "TgtAct:L-2/R+2",
+        "action_codes_present": "-1;0;1",
+        "action_absolute_code_2_samples": 0,
+        "action_first_post_target_edge_median_ms": 10.937499999999822,
+        "action_first_post_target_edge_min_ms": 10.937499999999822,
+        "action_first_post_target_edge_max_ms": 18.749999999999822,
+        "action_trials_with_post_target_edge": 80,
+        "action_trials_with_multiple_post_target_edges": 0,
+        "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+        "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
+      },
+      {
+        "dataset": "VisualCogB_Task-1",
+        "task": "Task2",
+        "total_trials": 83,
+        "sample_rate_hz": 128.0,
+        "epoch_start_s": -1.0,
+        "epoch_end_s": 2.9921875,
+        "unknown_cue_trials": 0,
+        "cue_marker_label": "VisCue:L-1/R+1",
+        "cue_marker_codes_present": "-1;0;1",
+        "cue_marker_trials": 83,
+        "cue_onset_median_ms": 0.0,
+        "cue_onset_min_ms": 0.0,
+        "cue_onset_max_ms": 0.0,
+        "cue_last_active_sample_median_ms": 195.3125,
+        "cue_offset_median_ms": 203.125,
+        "cue_offset_observed_trials": 83,
+        "cue_active_duration_median_ms": 203.125,
+        "cue_type_agreement": 1.0,
+        "cue_type_agreement_trials": 83,
+        "action_channel_label": "Action:L-1/R+1",
+        "action_codes_present": "-1;0;1",
+        "action_absolute_code_2_samples": 0,
+        "action_first_post_target_edge_median_ms": 10.937499999999822,
+        "action_first_post_target_edge_min_ms": 10.937499999999822,
+        "action_first_post_target_edge_max_ms": 34.37499999999982,
+        "action_trials_with_post_target_edge": 83,
+        "action_trials_with_multiple_post_target_edges": 0,
+        "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+        "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
+      },
+      {
+        "dataset": "VisualCogB_Task-2",
+        "task": "Task2",
+        "total_trials": 80,
+        "sample_rate_hz": 128.0,
+        "epoch_start_s": -1.0,
+        "epoch_end_s": 2.9921875,
+        "unknown_cue_trials": 0,
+        "cue_marker_label": "VisCue:L-1/R+1",
+        "cue_marker_codes_present": "-1;0;1",
+        "cue_marker_trials": 80,
+        "cue_onset_median_ms": 0.0,
+        "cue_onset_min_ms": 0.0,
+        "cue_onset_max_ms": 0.0,
+        "cue_last_active_sample_median_ms": 195.3125,
+        "cue_offset_median_ms": 203.125,
+        "cue_offset_observed_trials": 80,
+        "cue_active_duration_median_ms": 203.125,
+        "cue_type_agreement": 1.0,
+        "cue_type_agreement_trials": 80,
+        "action_channel_label": "TgtAct:L-2/R+2",
+        "action_codes_present": "-1;0;1",
+        "action_absolute_code_2_samples": 0,
+        "action_first_post_target_edge_median_ms": 18.749999999999822,
+        "action_first_post_target_edge_min_ms": 10.937499999999822,
+        "action_first_post_target_edge_max_ms": 18.749999999999822,
+        "action_trials_with_post_target_edge": 80,
+        "action_trials_with_multiple_post_target_edges": 0,
+        "action_channel_role": "diagnostic_only_action_or_response_not_used_for_cue_alignment",
+        "timing_policy": "cue_epoch_aligned_by_VisCue; target_onset_2.20s_from_experiment_schedule"
+      }
+    ]
+  },
+  "drive_scales": [
+    [
+      0.00037220417289063334,
+      0.00037220417289063334
+    ],
+    [
+      0.00029706722125411034,
+      0.0002970671630464494
+    ],
+    [
+      0.009848590940237045,
+      0.009848590940237045
+    ]
+  ]
+}

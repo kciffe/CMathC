@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "contract": {
+    "claim": "Stage1 cue 原始图像含共同圆形基线；逐像素相减后共同圆形抵消，仅三角区域保留亮度变化。",
+    "evidence": [
+      "共同圆形基线与左右原始 cue 灰度图",
+      "X_L=(I_L-B)/255、X_R=(I_R-B)/255 及左右差分"
+    ],
+    "source_paths": [
+      "input/stage1_baseline_circle.npy",
+      "input/stage1_cue_left.npy",
+      "input/stage1_cue_right.npy",
+      "revision_v3/frontend.py"
+    ],
+    "target_venue": "CMathc question 2 paper draft",
+    "column": "double",
+    "figure_role": "model-diagnostic",
+    "model_name": "revision_v3",
+    "scenario": "Stage1 原始 256×256 灰度矩阵；不含 EEG 试次或拟合参数。",
+    "parameter_source": "saved held-out fit summary; no refitting",
+    "randomness": "deterministic forward simulation; no random sampling",
+    "n_definition": "不涉及样本；展示固定刺激矩阵的确定性预处理。",
+    "statistic": "图像除以 255 归一化；signed contrast 按 cue 图像减共同圆形基线计算。",
+    "uncertainty": "not shown; deterministic model curves and trial-mean EEG",
+    "review_risks": [
+      "模型使用像素级基线差分，不是减去圆形的学习特征向量。"
+    ]
+  },
+  "audit": {
+    "passed": true,
+    "errors": [],
+    "warnings": [
+      "axis '共同圆形基线 B' is missing an x or y label",
+      "axis '左 cue 原始图像 I_L' is missing an x or y label",
+      "axis '右 cue 原始图像 I_R' is missing an x or y label",
+      "axis '左差分 X_L=(I_L−B)/255' is missing an x or y label",
+      "axis '右差分 X_R=(I_R−B)/255' is missing an x or y label",
+      "axis '左右差分 X_R−X_L' is missing an x or y label"
+    ],
+    "metrics": {
+      "width_mm": 183.0,
+      "height_mm": 105.0,
+      "target_width_mm": 183.0,
+      "figure_role": "model-diagnostic",
+      "visible_text_count": 22,
+      "axes_count": 8,
+      "minimum_font_size_pt": 5.0
+    }
+  },
+  "export": {
+    "dpi": 450,
+    "formats": [
+      "pdf",
+      "svg",
+      "png"
+    ]
+  }
+}
