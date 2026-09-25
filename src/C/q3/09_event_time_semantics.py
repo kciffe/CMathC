@@ -219,11 +219,11 @@ def _save_timing_figure(frame: pd.DataFrame, out: Path) -> None:
             f"{row.marker_minus_schedule_proxy_s * 1000.0:.1f} ms"
             for row in outside.itertuples(index=False)
         )
-        ax.text(0.98, 0.97, f"Off scale (>40 ms): {detail}", transform=ax.transAxes,
-                ha="right", va="top", fontsize=7.0, color="#555555")
+        ax.text(0.98, 0.49, f"Off scale (>40 ms; point not shown): {detail}",
+                transform=ax.transAxes, ha="right", va="center",
+                fontsize=7.0, color="#555555")
     fig.suptitle("Timing audit: schedule differences are not measured reaction times", fontsize=11)
-    for suffix, kwargs in ((".svg", {}), (".png", {"dpi": 450})):
-        fig.savefig(out.with_suffix(suffix), bbox_inches="tight", **kwargs)
+    fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -265,7 +265,6 @@ def _save_example_trace(example: dict[str, Any], out: Path) -> None:
     axes[2].text(0.99, 0.90,
                  f"marker minus schedule proxy = {(response_time - schedule_time) * 1000.0:.1f} ms",
                  transform=axes[2].transAxes, ha="right", va="top", fontsize=7.3, color="#555555")
-    fig.savefig(out.with_suffix(".svg"), bbox_inches="tight")
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
 
@@ -348,7 +347,6 @@ def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
     for yi, (rate, count, n) in enumerate(zip(rates, counts, ns)):
         axes[1].text(rate + 0.02, yi, f"{count}/{n}", va="center", fontsize=8)
     fig.suptitle("Cue-response agreement is descriptive, not correctness", fontsize=10.5)
-    fig.savefig(out.with_suffix(".svg"), bbox_inches="tight")
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
     return summary
@@ -403,7 +401,6 @@ def _save_q2_leadfield_figure(audit: dict[str, Any], out: Path) -> None:
     fig.colorbar(image, ax=ax, shrink=0.82, label="Leadfield coefficient (saved units)")
     fig.text(0.5, -0.025, "Source nullity = 5 − rank(3×5 matrix) = 2; not uniquely invertible.",
              ha="center", fontsize=8.5, color="#444444")
-    fig.savefig(out.with_suffix(".svg"), bbox_inches="tight")
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
 
@@ -556,51 +553,16 @@ def main() -> None:
         json.dumps(q2_mapping, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
     _save_q2_leadfield_figure(q2_mapping, FIGURE_DIR / "q2_leadfield_rank_audit")
-    for stem, claim, scenario in (
-        (
-            "event_timing_anchor_audit",
-            "The observed channel-9 event edge clusters near both the cue+2.2 schedule reference and the cue-off plus approximately 2 s schedule proxy; these differences cannot be interpreted as reaction times without a trial target-onset log.",
-            "All 400 supplied raw trials; four files, separately colored; approximate target schedule follows the official appendix; no anchor is selected.",
-        ),
-        (
-            "event_channel_trace_example",
-            "A representative raw trial shows the VisCue pulse and sustained channel-9 nonzero segment; the channel-9 onset is near the approximate schedule, not an independently observed target-onset marker.",
-            "VisualCogA_Task-1, zero-based trial 10; raw VisCue and Action channels; relative time from cue onset.",
-        ),
-        (
-            "task_mapping_candidate_audit",
-            "Cue-response side agreement separates the Task-1/Task-2 suffix grouping but not the VisualCogA/VisualCogB prefix grouping; agreement is not correctness and does not independently validate task mapping.",
-            "All 400 raw event pairs grouped by MAT record, filename suffix, and filename prefix; no p-values or correctness interpretation.",
-        ),
-        (
-            "q2_leadfield_rank_audit",
-            "The saved Q2 leadfield is a 3-sensor by 5-source matrix of rank 3 and nullity 2, so the five Q2 source proxies cannot be uniquely reconstructed from these three electrodes.",
-            "Saved Q2 revision_v3 leadfield.csv; canonical source geometry; matrix rank and singular values computed numerically.",
-        ),
+    for stem in (
+        "event_timing_anchor_audit",
+        "event_channel_trace_example",
+        "task_mapping_candidate_audit",
+        "q2_leadfield_rank_audit",
     ):
-        if stem == "q2_leadfield_rank_audit":
-            source_data = ["Q2 revision_v3/output/leadfield.csv"]
-            processing = "SVD-based numerical rank, singular values, and source-space nullity for the saved 3-sensor by 5-source matrix"
-            uncertainty = "This is Q2's canonical forward matrix; it is not an individualized head model and does not uniquely invert five sources from three sensors."
-            units = {"matrix": "saved leadfield coefficient units"}
-        else:
-            source_data = ["raw MAT channels VisCue, Action/TgtAct, TimeStamp"]
-            processing = "event edges are first zero-to-nonzero transitions; cue offset is first inactive sample after the nonzero pulse; target schedule is cue offset plus approximately 2 s from appendix wording"
-            uncertainty = "No independent target onset, response deadline, or trial correctness log was supplied; reference lines are not observed events."
-            units = {"x": "s or ms as labeled", "event_code": "raw channel code"}
-        metadata = {
-            "figure_id": stem,
-            "claim": claim,
-            "source_data": source_data,
-            "scenario": scenario,
-            "units": units,
-            "processing": processing,
-            "uncertainty": uncertainty,
-            "outputs": [f"{stem}.svg", f"{stem}.png"],
-        }
-        (FIGURE_DIR / f"{stem}.figure.json").write_text(
-            json.dumps(metadata, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-        )
+        for suffix in (".svg", ".figure.json"):
+            stale_path = FIGURE_DIR / f"{stem}{suffix}"
+            if stale_path.exists():
+                stale_path.unlink()
     _write_report(trials, summaries, AUDIT_DIR / "event_timing_semantics_report.md")
     print(f"Audited {len(trials)} trials; exactly-one-edge pairing: {overall['n_exactly_one_response_edge_in_cue_interval']}; verified RT labels: 0.")
     print(f"Wrote evidence to {AUDIT_DIR}")
