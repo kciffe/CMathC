@@ -1,0 +1,9 @@
+{
+  "tables": [
+    {"id": "T_COUNTS", "content": "Stage1左右提示在四份记录中的试次数", "source": "condition_audit.csv"},
+    {"id": "T_PARAMETERS", "content": "四个留出折的候选拟合参数与优化状态", "source": "heldout_fit_summary.csv"},
+    {"id": "T_ERP_RESULTS", "content": "逐记录ERP NRMSE及左右差异波相关", "source": "heldout_metrics.csv; left_right_difference.csv"},
+    {"id": "T_FEATURE_RESULTS", "content": "逐记录九维特征分类平衡准确率和AUC", "source": "heldout_9d_electrode_lda_folds.csv; heldout_9d_electrode_lda_summary.csv"},
+    {"id": "T_INTERNAL_CHECKS", "content": "空间位置消融、cue offset控制、源线性求和与侧化能量", "source": "mechanism_controls.csv; source_additivity_audit.csv; left_right_difference.csv"}
+  ]
+}

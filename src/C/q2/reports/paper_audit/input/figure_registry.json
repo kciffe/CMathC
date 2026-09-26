@@ -1,0 +1,9 @@
+{
+  "figures": [
+    {"path": "src/C/q2/documents/figures/视觉刺激与前端空间特征.png", "claim": "镜像刺激产生不同的局部方向与三角空间模板响应", "caption": "左、右提示及模型空间特征示意。"},
+    {"path": "src/C/q2/documents/figures/revision_v3_真实数据与皮层观测模块IO.png", "claim": "模型输入、群体状态、源代理与头皮预测的完整数据流", "caption": "以一个留出记录示例展示视觉输入至头皮观测的模块关系。"},
+    {"path": "src/C/q2/documents/figures/实测与模型左右差异模式.png", "claim": "实测与模型右减左共同、侧化、形状模态对照", "caption": "右减左差异的三种传感器模式。"},
+    {"path": "src/C/q2/documents/figures/留一记录实测与模型ERP.png", "claim": "四折留出ERP波形对照", "caption": "不同记录与电极的实测平均ERP和模型预测。"},
+    {"path": "src/C/q2/documents/figures/九维ERP特征_留一记录分类.png", "claim": "九维特征跨记录平衡准确率", "caption": "固定特征留一记录LDA结果及机会水平。"}
+  ]
+}

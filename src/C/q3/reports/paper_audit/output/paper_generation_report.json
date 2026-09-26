@@ -1,0 +1,47 @@
+{
+  "status": "PASS",
+  "scope": "Q3 dynamic macro-state solution paper only",
+  "primary_data": {
+    "n_trials_audited": 400,
+    "n_trials_included": 355,
+    "n_records_included": 4,
+    "split": "leave one complete record file out; participant independence unverified",
+    "behavioral_labels_used": false,
+    "channel9_used_in_eeg_or_model": false
+  },
+  "primary_result": {
+    "causal": {
+      "q2_only_late_nrmse": 1.6479480749038742,
+      "q2_plus_memory_late_nrmse": 1.6474198444967643,
+      "memory_improvement_nrmse": 0.0005282304071099198,
+      "memory_improvement_percent": 0.03205382591564554
+    },
+    "none": {
+      "q2_only_late_nrmse": 2.332842278261653,
+      "q2_plus_memory_late_nrmse": 2.3511053890824893,
+      "memory_improvement_nrmse": -0.018263110820836204,
+      "memory_improvement_percent": -0.7828695060535851
+    },
+    "zero_phase": {
+      "q2_only_late_nrmse": 1.6143903943576303,
+      "q2_plus_memory_late_nrmse": 1.6355805919498894,
+      "memory_improvement_nrmse": -0.02119019759225904,
+      "memory_improvement_percent": -1.312581991711532
+    }
+  },
+  "onset_cells": {
+    "positive": 2,
+    "total": 9
+  },
+  "numerical_interface_check": 5.953653570145434e-08,
+  "abstract_character_count": 895,
+  "compile": "XeLaTeX executed twice; PDF text extraction contains required headings and headline metrics",
+  "pdf_pages": "Pages:           14",
+  "limitations": [
+    "four record folds only",
+    "participant independence unverified",
+    "candidate event truth not observed",
+    "state parameters fixed",
+    "no behavior labels"
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "primary_code": [
+    "src/C/q2/revision_v3/run_v3.py",
+    "src/C/q2/revision_v3/config.py",
+    "src/C/q2/revision_v3/frontend.py",
+    "src/C/q2/revision_v3/model.py",
+    "src/C/q2/revision_v3/head_model.py",
+    "src/C/q2/revision_v3/observation.py",
+    "src/C/q2/revision_v3/fit.py",
+    "src/C/q2/revision_v3/evaluate.py",
+    "src/C/q2/revision_v3/evidence_chain.py"
+  ],
+  "problem_source": "data/第二十三届中国研究生数学建模竞赛+-+中文题目/中文题目/C题/服务于脑机接口与精神性疾病诊断的脑电图计算模型.docx",
+  "implementation_summary": "src/C/q2/documents/问题二文档.md",
+  "cross_question_context": "src/C/q3/问题三实现流程与模型说明.md",
+  "primary_results": [
+    "src/C/q2/output/revision_v3/README.md",
+    "src/C/q2/output/revision_v3/condition_audit.csv",
+    "src/C/q2/output/revision_v3/heldout_fit_summary.csv",
+    "src/C/q2/output/revision_v3/heldout_metrics.csv",
+    "src/C/q2/output/revision_v3/left_right_difference.csv",
+    "src/C/q2/output/revision_v3/heldout_9d_electrode_lda_summary.csv",
+    "src/C/q2/output/revision_v3/heldout_9d_electrode_lda_folds.csv",
+    "src/C/q2/output/revision_v3/mechanism_controls.csv",
+    "src/C/q2/output/revision_v3/source_additivity_audit.csv",
+    "src/C/q2/output/revision_v3/leadfield.csv"
+  ],
+  "reference_solution": "data/第二十三届中国研究生数学建模竞赛+-+中文题目/中文题目/C题/deepseek_latex_20260924_12fa90(2).pdf",
+  "reference_solution_policy": "只用于行文结构参考。其Kuramoto网络、解剖源定位、分类结果及其他未由revision_v3实现的内容不进入正文。"
+}

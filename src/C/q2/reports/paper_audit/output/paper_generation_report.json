@@ -1,0 +1,29 @@
+{
+  "status": "PASS",
+  "scope": "C题问题二正文草稿",
+  "pdf": "src/C/q2/reports/问题二论文正文草稿.pdf",
+  "data_records": 4,
+  "stage1_trials": 297,
+  "heldout_mean_nrmse": 1.81,
+  "right_minus_left_correlation_mean": -0.147,
+  "nine_feature_macro_balanced_accuracy": 0.4655,
+  "nine_feature_macro_auc": 0.4509,
+  "converged_fit_folds": 0,
+  "pdf_pages": "Pages:           15",
+  "rendered_pages": 15,
+  "text_checks": {
+    "问题重述与分析": true,
+    "LGN ON/OFF中继": true,
+    "结果与分析": true,
+    "参考文献": true,
+    "1.810": true,
+    "0.466": true
+  },
+  "visual_review_required": true,
+  "limitations": [
+    "four MAT records without confirmed participant identities",
+    "cue-only model omits the later target input",
+    "canonical leadfield and uncalibrated source proxies",
+    "all outer fit optimizers report nonconvergence"
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "model_version": "src/C/q2/revision_v3",
+  "model_summary": "Cue图像经DoG与LGN ON/OFF、Gabor与三角边角模板、三组低维兴奋抑制群体、五个功能源代理以及固定3x5点偶极近似映射到F3/Fz/F4。",
+  "primary_result": {
+    "heldout_erp_mean_nrmse": 1.810,
+    "heldout_right_minus_left_correlation_mean": -0.147,
+    "feature_macro_balanced_accuracy": 0.4655195841754314,
+    "feature_macro_auc": 0.45092078677874836,
+    "fit_optimizer_converged_folds": 0,
+    "records": 4,
+    "trials": 297
+  },
+  "conclusion": "模型内部可追踪到依赖空间位置的左右响应差异；当前实测留出证据没有支持稳定的跨记录波形复现或九维特征解码。"
+}

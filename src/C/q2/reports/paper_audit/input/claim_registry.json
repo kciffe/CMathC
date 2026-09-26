@@ -1,0 +1,14 @@
+{
+  "claims": [
+    {"id": "Q2_DATA_COUNTS", "claim": "四份记录共297个Stage1左右提示试次，左152、右145。", "source": "condition_audit.csv"},
+    {"id": "Q2_CUE_MIRROR", "claim": "左右提示矩阵相对共同基线差分后严格水平镜像，模型驱动时长为200 ms。", "source": "问题二文档.md; config.py; frontend.py"},
+    {"id": "Q2_FORWARD_CHAIN", "claim": "带符号图像经DoG/LGN、方向与三角构型特征、三组E/I群体、五源代理及固定3x5映射形成F3/Fz/F4输出。", "source": "frontend.py; model.py; head_model.py"},
+    {"id": "Q2_SOURCE_ADD", "claim": "源贡献重构电极预测的最大相对RMS误差为2.5673e-6。", "source": "source_additivity_audit.csv"},
+    {"id": "Q2_POSITION_ABLATION", "claim": "去除空间位置后的模型左右差异保留比例为1.03e-5至2.68e-5。", "source": "mechanism_controls.csv"},
+    {"id": "Q2_OFFSET_ABLATION", "claim": "只保留提示onset时模型左右差异保留比例为1.22至1.40。", "source": "mechanism_controls.csv"},
+    {"id": "Q2_HELDOUT_ERP", "claim": "留一记录的八个条件ERP平均NRMSE为1.810，右减左差异波相关均值为-0.147。", "source": "heldout_metrics.csv; left_right_difference.csv"},
+    {"id": "Q2_FIT_NONCONVERGENCE", "claim": "四个外层折的优化器均未报告收敛，四折共享增益均为负。", "source": "heldout_fit_summary.csv"},
+    {"id": "Q2_9D_FEATURE", "claim": "九维固定ERP特征的留一记录宏平均平衡准确率为0.4655，宏平均AUC为0.4509。", "source": "heldout_9d_electrode_lda_summary.csv"},
+    {"id": "Q2_EVENT_CONTEXT", "claim": "主模型只模拟提示，不插入约2.2秒目标事件；真实完整记录的滤波上下文因此存在差异。", "source": "run_v3.py; observation.py; README.md"}
+  ]
+}

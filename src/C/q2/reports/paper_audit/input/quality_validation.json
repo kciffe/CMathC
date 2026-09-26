@@ -1,0 +1,44 @@
+{
+  "data": {
+    "records": 4,
+    "sample_rate_hz": 128,
+    "stage1_left_trials": 152,
+    "stage1_right_trials": 145,
+    "stage1_total_trials": 297,
+    "samples_per_epoch": 103,
+    "observed_time_ms": [0.0, 796.875]
+  },
+  "forward_model": {
+    "spatial_resolution": "128x128",
+    "feature_stride_ms": 4,
+    "population_step_ms": 1,
+    "simulation_end_ms": 3000,
+    "source_count": 5,
+    "sensor_count": 3,
+    "source_additivity_max_relative_rms_error": 0.000002567252228426561
+  },
+  "heldout_fit": {
+    "mean_nrmse": 1.810,
+    "mean_right_minus_left_correlation": -0.147,
+    "optimizer_converged_folds": 0,
+    "folds": 4
+  },
+  "feature_validation": {
+    "feature_count": 9,
+    "macro_balanced_accuracy": 0.4655195841754314,
+    "macro_auc": 0.45092078677874836,
+    "record_level_balanced_accuracy_sd": 0.07966224379414412
+  },
+  "internal_controls": {
+    "no_spatial_position_retained_fraction_range": [0.000010254082507311494, 0.000026777410007727925],
+    "cue_onset_only_retained_fraction_range": [1.222328904687227, 1.4008947974010957],
+    "measured_lateral_energy_fraction_mean": 0.167580,
+    "model_lateral_energy_fraction_mean": 0.277512
+  },
+  "limitations": [
+    "No participant identifiers establish independence of the four records.",
+    "The model simulates the cue without a target input near 2.2 s.",
+    "The canonical homogeneous point-dipole geometry is not an individualized head model.",
+    "Source proxies and observation gain are not physically calibrated."
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "used_claims": [
+    {
+      "id": "Q3_DATA_400_355",
+      "where": "数据处理与事件审计",
+      "source": "validation_summary.json"
+    },
+    {
+      "id": "Q3_MARKER_SEMANTICS",
+      "where": "问题重述; 数据处理与事件审计; 模型评价与适用范围",
+      "source": "validation_summary.json and event timing audit"
+    },
+    {
+      "id": "Q3_Q2_PROJECTION",
+      "where": "问题二前向机制接口",
+      "source": "validation_summary.json"
+    },
+    {
+      "id": "Q3_MEMORY_NO_STABLE_GAIN",
+      "where": "结果与分析",
+      "source": "validation_summary.json and dynamic_cv_metrics.csv"
+    },
+    {
+      "id": "Q3_FOUR_RECORD_CV",
+      "where": "记录留出验证; 模型评价与适用范围",
+      "source": "validation_summary.json"
+    }
+  ],
+  "formal_text_contains_registry_tokens": false
+}

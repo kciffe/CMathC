@@ -1,0 +1,594 @@
+from __future__ import annotations
+
+import csv
+import json
+import shutil
+import subprocess
+import sys
+from collections import defaultdict
+from pathlib import Path
+from statistics import mean
+
+
+REPORTS = Path(__file__).resolve().parent
+Q2_ROOT = REPORTS.parent
+WORKSPACE_ROOT = Q2_ROOT.parents[2]
+RESULTS = Q2_ROOT / "output" / "revision_v3"
+INPUTS = REPORTS / "paper_audit" / "input"
+AUDIT_OUTPUTS = REPORTS / "paper_audit" / "output"
+TITLE = "问题二：视觉刺激到头皮脑电的正向计算模型"
+KEYWORDS = "脑电计算模型；视觉空间编码；兴奋-抑制群体；源到头皮映射；记录留出验证"
+
+ABSTRACT = """针对题目要求的LGN至皮层、再到头皮脑电的形成机制，以及左右三角刺激差异和特征表示，本文建立一条低维正向计算链：带符号亮度差分经LGN ON/OFF适应中继、Gabor方向滤波和三角边角模板编码，进入三组兴奋-抑制群体，再映射为五个功能源代理并投影到F3、Fz、F4。使用四份MAT记录按整份记录留出拟合条件平均ERP，并在真实单试次脑电上检验固定九维特征。模型内部去除空间位置编码后，左右差异RMS仅保留1.03e-5至2.68e-5；五源对电极预测的重构误差不超过2.57e-6。真实数据留出ERP平均NRMSE为1.810，右减左差异波相关均值为-0.147；四折参数优化均未报告收敛。九维特征的记录宏平均平衡准确率为46.6%，AUC为0.451。因此，当前实现给出了可追踪的模型内差异和明确的候选特征表示，但现有验证未支持稳定的跨记录波形复现或左右解码。源代理未作解剖定位，输出也没有物理电位标定；结论限于当前四份记录和未完全确认的事件上下文。"""
+
+BODY = r"""# 问题重述与分析
+
+题目要求说明视觉刺激经LGN和皮层后如何形成头皮脑电，解释左、右三角提示可能产生差异的计算机制，并提出可用于区分两类提示响应的特征表示[1]。本问的核心困难有三点：左右图形互为镜像，若把空间图过早压成全局均值就会丢失差异来源；五个内部源代理只对应三个电极，不能从观测端唯一反演源；条件差异既要由模型产生，也要经真实脑电的留出记录检验。
+
+据此，本文沿正向方向建立计算链，并将三类结果分开评价：第一，检查镜像图像是否经空间化前端形成模型内部差异；第二，以整份记录留出检验模拟ERP对真实ERP的波形解释能力；第三，直接从真实单试次脑电构造固定维度特征并检验跨记录分类。模型内部可分性不能替代真实传感器上的泛化证据。
+
+# 模型假设与符号说明
+
+## 模型假设
+
+1. 输入图像矩阵及共同背景矩阵代表模型使用的视觉亮度结构；左右提示的相对差分保留明暗符号与空间位置。
+2. VisCue对齐的提示起点取0 ms，提示显示区间按代码设置为$[0,200)$ ms。提示消失后，LGN和皮层状态按方程自然衰减。
+3. 三组兴奋-抑制活动和五个源均作为低维功能代理；它们刻画模型计算路径，不赋予具体解剖脑区含义。
+4. 电极和乳突参考使用规范头坐标及固定点偶极近似。源坐标、方向和导电率采用统一设定，不从留出记录重新估计。
+5. 外层验证单位为MAT记录。四份文件没有可核实的受试者身份，因此结果只称记录留出验证。
+6. 问题二主模型模拟提示输入，不在约2.2 s加入目标刺激。模型输出与真实完整试次的晚期信号比较时，保留该事件上下文差异作为解释限制。
+
+\newpage
+
+**表1 主要符号说明**
+
+|符号|含义|单位或维度|
+|---|---|---|
+|$X_s(x,y)$|相对共同背景的带符号提示图像，$s\in\{L,R\}$|归一化亮度差|
+|$D,A,T$|中心-周围响应、适应状态与适应后瞬态|相对输入量|
+|$B,H_L,H_R,d_L,d_R$|早期方向能量、左右构型图与模板偏好驱动|相对特征量|
+|$E_{p,c},I_{p,c}$|第$p$组、第$c$通道的兴奋和抑制活动|$[0,1]$|
+|$\mathbf q(t)$|五维功能源代理|相对活动量|
+|$G$|源代理到F3、Fz、F4的固定正向映射|$3\times5$|
+|$\tau_s,g_i,\tau_a$|皮层时间常数、抑制增益、LGN适应时间常数|ms、无量纲、ms|
+|$\alpha$|每折由训练ERP估计的共享有符号幅度因子|相对尺度|
+|$\mathbf z$|单试次九维ERP特征向量|$\mathbb R^9$|
+
+# 数据与视觉刺激编码
+
+实测脑电取自第一问清洗后的四份MAT记录，按通道标签重排为F3、Fz、F4，采样率为128 Hz。每个提示试次先减去提示前$[-200,0)$ ms均值，再计算条件平均ERP。可用于左右提示分析的试次如下。
+
+**表2 Stage1左右提示试次数**
+
+@@TRIAL_TABLE@@
+
+四份记录合计297个提示试次，左提示152次、右提示145次。单条记录有103个可用时间点，覆盖0至796.875 ms；128 Hz网格不含恰好800 ms的采样点。
+
+模型将256×256灰度提示图与共同圆形背景图相减并按255归一化：
+
+$$
+X_s(x,y)=\frac{I_s(x,y)-B(x,y)}{255},\qquad s\in\{L,R\}.
+$$
+
+共同圆环在差分中抵消，三角形相对背景的像素对比约为$-0.451$；左右差分图为严格水平镜像。代码以0 ms提示出现和200 ms提示消失构造外部驱动，后续活动由模型状态递推得到。
+
+图1展示镜像提示在方向和三角形构型前端中的空间响应。图中热图是模型内部特征，不是实测脑电或源定位结果。
+
+![左右视觉提示与前端空间特征](../documents/figures/视觉刺激与前端空间特征.png){width=96%}
+
+# 正向脑电计算模型
+
+## LGN ON/OFF中继
+
+中心-周围差分用于突出局部亮度边界：
+
+$$
+D_t=G_{\sigma_c}*X_t-G_{\sigma_s}*X_t,\qquad \sigma_c=1.5\text{ px},\quad \sigma_s=4\text{ px}.
+$$
+
+随后以一阶适应状态区分持续输入与瞬态变化，并将响应拆分为ON、OFF两支：
+
+$$
+A_{t+\Delta t}=A_t+\frac{\Delta t}{\tau_a}(D_t-A_t),\qquad T_t=D_t-A_t,
+$$
+$$
+U_{\rm ON}=0.8[T_t]_++0.2[D_t]_+,\qquad
+U_{\rm OFF}=0.8[-T_t]_++0.2[-D_t]_+,
+$$
+
+其中$[x]_+=\max(x,0)$。中继细胞TCR、中间神经元IN和网状丘脑核TRN构成简化反馈回路。其稳态目标活动和一阶状态更新写为
+
+$$
+\begin{aligned}
+R^*&=\Phi_{4,0.5}(2.2U-0.9N-0.8Q),\\
+N^*&=\Phi_{4,0.5}(1.2U+0.7R),\\
+Q^*&=\Phi_{4,0.5}(0.9R),\\
+R_{t+\Delta t}&=R_t+\frac{\Delta t}{18}(R^*-R_t),\\
+N_{t+\Delta t}&=N_t+\frac{\Delta t}{12}(N^*-N_t),\\
+Q_{t+\Delta t}&=Q_t+\frac{\Delta t}{25}(Q^*-Q_t).
+\end{aligned}
+$$
+
+激活函数采用零点归零、输出限于$[0,1]$的截断逻辑函数：
+
+$$
+\Phi_{\beta,\theta}(z)=\operatorname{clip}_{[0,1]}\!\left[
+\frac{\sigma(\beta(z-\theta))-\sigma(-\beta\theta)}
+{1-\sigma(-\beta\theta)}\right],\qquad \sigma(z)=\frac{1}{1+e^{-z}}.
+$$
+
+ON和OFF分支各自递推$R,N,Q$，所有状态初值为0，积分步长为1 ms。适应时间常数$\tau_a$在40、60、80、100、120、140、160 ms七个候选值中由训练数据拟合。
+
+## Gabor方向与三角构型编码
+
+令$S=R_{\rm ON}-R_{\rm OFF}$为有符号中继图。为保留三角边缘朝向，代码计算0°、45°、90°和135°四个方向的偶、奇Gabor响应并合成为方向能量：
+
+$$
+V_\theta(x,y,t)=\sqrt{(K^e_\theta*S)^2+(K^o_\theta*S)^2},\qquad
+B(x,y,t)=\frac{1}{2}\sqrt{\sum_\theta V_\theta(x,y,t)^2}.
+$$
+
+Gabor响应由局部方向滤波得到，方向滤波的建模动机参见Gabor的时频局部化分析[2]。为表达边、角与整体排列的共同出现，左右三角模板分别沿三条边和三个顶点设置支持位置；局部响应经平滑后以等权几何汇总形成$H_L,H_R$。模板偏好通道取三角中心邻域响应差的正部：
+
+$$
+d_L(t)=[r_L(t)-r_R(t)]_+,\qquad d_R(t)=[r_R(t)-r_L(t)]_+.
+$$
+
+这里的L/R分别表示左、右模板偏好。代码将空间图按8×8池化，前端特征每4 ms计算一次，再插值到1 ms群体动力学网格。图2把实际数据、群体状态、五个源代理和传感器输出放在同一计算链中；曲线示意取自一个留出记录折。
+
+![视觉输入、皮层状态、源代理与头皮观测](../documents/figures/revision_v3_真实数据与皮层观测模块IO.png){width=96%}
+
+## 三组兴奋-抑制群体动力学
+
+前端特征投影为三组左右通道：早期视觉组接收$B$的左右视野均值，空间构型组接收$H_L+H_R$的左右视野均值，模板偏好组接收$d_L,d_R$。早期组向空间构型组传递视野对应活动；模板偏好组的两个通道共同接收左右早期活动的等权平均，避免将模板偏好误当作视野或半球标签。
+
+兴奋和抑制状态采用Wilson-Cowan型群体方程[3]：
+
+$$
+\begin{aligned}
+J^E_{p,c}&=w_{EE}E_{p,c}-g_iw_{EI}I_{p,c}+g_Pu_{p,c}+F^E_{p,c},\\
+J^I_{p,c}&=w_{IE}E_{p,c}-w_{II}I_{p,c}+g_Qu_{p,c}+F^I_{p,c},\\
+\tau^E_p\dot E_{p,c}&=-E_{p,c}+(1-E_{p,c})\Phi_{5,0.35}(J^E_{p,c}),\\
+\tau^I_p\dot I_{p,c}&=-I_{p,c}+(1-I_{p,c})\Phi_{5,0.35}(J^I_{p,c}).
+\end{aligned}
+$$
+
+其中$p$依次表示早期、构型和模板偏好群体，$c\in\{L,R\}$；$u_{p,c}$为归一化视觉输入，$F^E,F^I$为前馈项。所有状态从0初始化，以1 ms显式Euler递推并限制在$[0,1]$。固定耦合参数为$w_{EE}=1.4,w_{EI}=1.1,w_{IE}=1.0,w_{II}=0.8,g_P=2.2,g_Q=1.2$；早期组$\tau_E=18$ ms、$\tau_I=10$ ms、输入延迟8 ms。后两组使用$\tau_E=\tau_s,\tau_I=0.55\tau_s$，前馈延迟33 ms，兴奋和抑制前馈系数分别为0.9和0.45。三类输入尺度由左右标准提示的0至200 ms视觉驱动预先计算，未使用留出EEG估计。
+
+## 五源代理与头皮正向映射
+
+为将群体状态转为可观测的候选电流代理，对兴奋和抑制活动分别施加因果突触核并作差：
+
+$$
+h_\tau(t)=\frac{t e^{-t/\tau}}{\tau^2},\quad t\ge0,\qquad
+P_{p,c}(t)=(h_{10}*E_{p,c})(t)-(h_{20}*I_{p,c})(t).
+$$
+
+离散核按步长归一化。前两组分别按对侧视野路由至左右半球位置代理；模板偏好差形成一个双侧中线对手代理：
+
+$$
+\mathbf q(t)=\left[
+P_{\rm early,RVF\to LH},P_{\rm early,LVF\to RH},
+P_{\rm config,RVF\to LH},P_{\rm config,LVF\to RH},
+P_{\rm preference,L}-P_{\rm preference,R}
+\right]^{\mathsf T}.
+$$
+
+其中RVF、LVF分别表示右、左视野，LH、RH表示模型中的左、右半球位置标签。第五项表示双侧模板对手量。五项均为功能源代理。
+
+电极和双乳突参考点投影到半径90 mm的外表面，内部源位置和径向方向按规范坐标固定，导电率取$\sigma=0.33$ S/m。均匀无限导体点偶极近似下，电极$e$对源$j$的系数为
+
+$$
+L_{ej}=\frac{\mathbf n_j^{\mathsf T}(\mathbf r_e-\mathbf r_j)}
+{4\pi\sigma\lVert\mathbf r_e-\mathbf r_j\rVert^3},\qquad
+G_{ej}=L_{ej}-\frac{L_{M_1j}+L_{M_2j}}{2},\qquad
+\mathbf y_{\rm model}(t)=\mathbf G\mathbf q(t).
+$$
+
+代码采用的$3\times5$矩阵按F3、Fz、F4为行，按上述源顺序为列：
+
+$$
+\mathbf G\approx\begin{bmatrix}
+0.661&0.961&-2.688&-4.365&-0.330\\
+1.101&1.101&-4.299&-4.299&-0.489\\
+0.961&0.661&-4.365&-2.688&-0.330
+\end{bmatrix}.
+$$
+
+该矩阵给出固定的正向近似。源代理没有以$\mathrm{A\,m}$标定，参考电极和个体头部组织也未由受试者影像确定，因此最终传感器曲线按相对单位报告，不换算为微伏或脑区定位结论。
+
+# 参数估计与验证设计
+
+模型从提示起点连续模拟至3000 ms，将信号嵌入完整$[-1,3]$ s试次后统一处理。模拟曲线和第一问清洗数据采用一致的四阶0.2至24 Hz Butterworth零相位滤波、256 Hz至128 Hz重采样及$[-200,0)$ ms逐通道基线校正；比较窗裁至0至796.875 ms。真实记录的完整试次可能含约2.2 s目标事件，提示模型未加入该目标输入，因而同一滤波器并不消除事件上下文差异。
+
+模型参数仅使用Stage1左右条件平均ERP估计。每折留出一份完整MAT记录，其余三份记录训练；左、右条件共用$\tau_s,g_i,\tau_a$和一个有符号增益$\alpha$。$\tau_a$按七点网格剖面搜索，$\tau_s\in[20,100]$ ms、$g_i\in[0.5,1.5]$由有界L-BFGS-B搜索。对训练记录$r$和提示条件$c$，增益通过最小二乘闭式解给定：
+
+$$
+\alpha^*=\frac{\sum_{r,c}w_{r,c}\langle\widehat{\mathbf Y}_{r,c},\mathbf Y_{r,c}\rangle}
+{\sum_{r,c}w_{r,c}\lVert\widehat{\mathbf Y}_{r,c}\rVert_F^2},\qquad
+\mathcal L=\sum_{r,c}w_{r,c}\operatorname{MSE}\!\left(\mathbf Y_{r,c}-\alpha^*\widehat{\mathbf Y}_{r,c}\right),
+$$
+
+其中记录和左右条件等权，$\mathbf Y$为实测平均ERP，$\widehat{\mathbf Y}$为未缩放模型曲线。拟合参数描述当前搜索的最优候选；若优化器未报告收敛，不解释为识别出的生理参数。
+
+留出ERP以$\mathrm{NRMSE}=\mathrm{RMSE}/\sqrt{\operatorname{mean}(Y^2)}$评价，左右差异波相关用于比较预测和观测形状。三电极差异还投影到共同、侧化、形状三个正交模式：
+
+$$
+u_0=\frac{F3+Fz+F4}{\sqrt3},\qquad
+u_1=\frac{F4-F3}{\sqrt2},\qquad
+u_2=\frac{F3-2Fz+F4}{\sqrt6}.
+$$
+
+左右特征表示直接从真实单试次EEG提取。对$W_1=[100,250)$ ms、$W_2=[250,500)$ ms、$W_3=[500,800)$ ms，计算三个电极各自的窗口均值并按电极顺序拼接：
+
+$$
+\mathbf z=\left[
+\bar y_{F3,W_1},\bar y_{Fz,W_1},\bar y_{F4,W_1},
+\bar y_{F3,W_2},\bar y_{Fz,W_2},\bar y_{F4,W_2},
+\bar y_{F3,W_3},\bar y_{Fz,W_3},\bar y_{F4,W_3}
+\right]^{\mathsf T}\in\mathbb R^9.
+$$
+
+分类使用收缩系数0.1的线性判别分析；标准化参数只由训练记录估计。该分类仅输入真实脑电，模型源变量不作为分类特征。
+
+# 结果与分析
+
+## 模型内左右差异及数值核查
+
+在固定参数下，去除空间位置编码后模型左右差异RMS只保留完整模型的$1.03\times10^{-5}$至$2.68\times10^{-5}$。只保留提示onset、去掉约200 ms offset后，模型差异增至完整模型的1.22至1.40倍。该对照说明当前模型内左右差异主要由空间化输入产生，提示消失阶段响应对onset差异有部分抵消作用。
+
+五个源贡献经同一线性矩阵求和后重构电极预测，四折最大相对RMS误差为$2.57\times10^{-6}$。这是实现内部的线性加和核对。模型左右差异的侧化能量比例均值为0.278，实测为0.168；实测各记录在0.001至0.345间变化。固定对称几何形成的模式比数据均值更侧化，未复现记录间多样的共同和形状成分。
+
+**表3 模型内部机制核查**
+
+@@INTERNAL_TABLE@@
+
+图3显示真实与模型右减左差异在三个观测模式上的比较。模型的侧化分量存在，但共同和形状分量与实测波形并未同步；源可加和只核验了代码映射关系，不意味着源代理已经由三个电极唯一识别。
+
+![实测与模型左右差异模式](../documents/figures/实测与模型左右差异模式.png){width=96%}
+
+## 留出ERP拟合
+
+四折候选参数显示在表4。它们描述搜索结果，优化器均未报告收敛，因此不作为已识别的生理参数。
+
+\Needspace{12\baselineskip}
+**表4 四折候选拟合参数**
+
+@@FIT_TABLE@@
+
+**表5 留一记录留出结果**
+
+@@ERP_TABLE@@
+
+四折拟合的$\tau_s$候选约为75至79 ms，$g_i$为0.629至1.096，$\tau_a$为100、120、120和160 ms；$\tau_a$仅在最后一折达到搜索上界。四折优化器均未报告收敛，且共享增益均为负值。增益的符号受源方向约定和相对尺度影响，不据此解释真实神经极性。
+
+八个“记录×左右提示”条件的平均NRMSE为1.810，即误差规模大于实测ERP自身RMS。右减左差异波相关均值为-0.147，跨记录没有出现稳定的形状一致性。A-2和B-2的条件平均NRMSE低于1，但A-1为4.313，B-1为1.383；总体结果不支持当前模型已稳定复现真实ERP。图4给出各记录和电极的完整留出曲线。
+
+![留一记录实测ERP与模型预测](../documents/figures/留一记录实测与模型ERP.png){width=96%}
+
+\Needspace{12\baselineskip}
+## 九维脑电特征及分类结果
+
+**表6 九维固定特征的留一记录分类**
+
+@@FEATURE_TABLE@@
+
+九维特征宏平均平衡准确率为46.6%，宏平均AUC为0.451，两个指标均未超过0.5。四个外层记录中，只有两个平衡准确率略高于0.5，单个高于机会水平的记录不足以构成跨记录结论。因而九维向量给出了一个可计算、可复核的传感器表征，但当前运行没有验证其能稳定区分左右提示；该结论也不能反推左右脑电差异不存在。
+
+图5逐折显示该特征的平衡准确率与50%参考线。记录间差异和低宏平均值说明现有特征及数据条件下的跨记录泛化有限。
+
+![九维ERP特征留一记录分类](../documents/figures/九维ERP特征_留一记录分类.png){width=96%}
+
+# 模型评价与适用范围
+
+本模型的计算路径从视觉像素出发，经明暗适应、方向和构型特征、兴奋-抑制动力学及固定头皮正向映射到三个电极；左右差异可以逐级追踪。拟合和分类使用不同的数据单位与目的：平均ERP留出检验波形生成能力，单试次九维特征检验方向标签的跨记录可分性。留出拆分按整份MAT记录进行，降低了同一记录同时参与拟合和评价造成的信息共享。
+
+结论仍受四项限制。第一，四份记录没有独立受试者标识，结果不构成跨个体验证。第二，模型只生成提示响应，未生成约2.2 s目标事件；零相位滤波会使完整试次的后续活动影响较早时刻，绝对ERP误差因此依赖事件上下文。第三，均匀无限导体点偶极映射和规范源坐标没有个体MRI、真实参考配置及源电流标定，源代理和头皮输出不具备解剖或微伏解释。第四，外层优化均未收敛且分类指标低于机会水平；因此参数、机制及特征应作为当前数据下的待验证模型，而非已确立的生理规律或稳定解码器。
+
+若获得明确的目标呈现标记、个体头模型和更多可追踪受试者记录，可先补入完整刺激时序，再预先固定留出方案复验ERP与九维特征。当前论文结论限定为：模型内部的左右差异依赖空间位置编码；实测留出结果尚未支持良好的波形复现或稳健的跨记录分类。
+
+\clearpage
+# 参考文献
+
+\renewcommand{\refname}{}
+\begin{thebibliography}{99}
+\setlength{\itemsep}{2pt}
+\bibitem{problem2026} 第二十三届中国研究生数学建模竞赛组委会. 服务于脑机接口与精神性疾病诊断的脑电图计算模型：C题题目[Z]. 2026.
+\bibitem{gabor1946} Gabor D. Theory of communication. Part 1: The analysis of information[J]. Journal of the Institution of Electrical Engineers - Part III: Radio and Communication Engineering, 1946, 93(26): 429-441. DOI: 10.1049/ji-3-2.1946.0074.
+\bibitem{wilsonCowan1972} Wilson H R, Cowan J D. Excitatory and inhibitory interactions in localized populations of model neurons[J]. Biophysical Journal, 1972, 12(1): 1-24. DOI: 10.1016/S0006-3495(72)86068-5.
+\end{thebibliography}
+"""
+
+
+def read_csv(path: Path) -> list[dict[str, str]]:
+    with path.open("r", encoding="utf-8-sig", newline="") as stream:
+        return list(csv.DictReader(stream))
+
+
+def display_record(name: str) -> str:
+    return name.replace("VisualCogA_Task-", "A-").replace("VisualCogB_Task-", "B-")
+
+
+def markdown_table(rows: list[list[str]]) -> str:
+    if not rows:
+        return ""
+    header = "|" + "|".join(rows[0]) + "|"
+    rule = "|" + "|".join("---" for _ in rows[0]) + "|"
+    return "\n".join([header, rule, *["|" + "|".join(row) + "|" for row in rows[1:]]])
+
+
+def get_summary() -> dict[str, object]:
+    conditions = [row for row in read_csv(RESULTS / "condition_audit.csv")
+                  if row["stage"] == "Stage1"]
+    counts: dict[str, dict[str, int]] = defaultdict(lambda: {"left": 0, "right": 0})
+    tasks: dict[str, str] = {}
+    for row in conditions:
+        counts[row["record"]][row["condition"]] = int(row["n_trials"])
+        tasks[row["record"]] = row["task"]
+
+    fit_rows = read_csv(RESULTS / "heldout_fit_summary.csv")
+    metric_rows = read_csv(RESULTS / "heldout_metrics.csv")
+    difference_rows = read_csv(RESULTS / "left_right_difference.csv")
+    feature_rows = read_csv(RESULTS / "heldout_9d_electrode_lda_folds.csv")
+    feature_summary = read_csv(RESULTS / "heldout_9d_electrode_lda_summary.csv")[0]
+    controls = read_csv(RESULTS / "mechanism_controls.csv")
+    source_audit = read_csv(RESULTS / "source_additivity_audit.csv")
+
+    per_record_metrics: dict[str, list[float]] = defaultdict(list)
+    for row in metric_rows:
+        per_record_metrics[row["record"]].append(float(row["nrmse"]))
+    difference_by_record = {row["record"]: float(row["left_right_difference_correlation"])
+                            for row in difference_rows}
+    measured_lateral = mean(float(row["measured_lateral_energy_fraction"])
+                            for row in difference_rows)
+    model_lateral = mean(float(row["model_lateral_energy_fraction"])
+                         for row in difference_rows)
+    no_position = [float(row["retained_fraction"]) for row in controls
+                   if row["control"] == "no_spatial_position"]
+    onset_only = [float(row["retained_fraction"]) for row in controls
+                  if row["control"] == "cue_onset_only"]
+    max_additivity_error = max(float(row["max_relative_rms_error"]) for row in source_audit)
+
+    trial_table = [["记录", "实验任务", "左提示", "右提示"]]
+    for record in sorted(counts):
+        trial_table.append([display_record(record), tasks[record], str(counts[record]["left"]),
+                            str(counts[record]["right"])])
+    trial_table.append(["合计", "", str(sum(item["left"] for item in counts.values())),
+                        str(sum(item["right"] for item in counts.values()))])
+
+    fit_table = [["留出记录", "$\\tau_s$ (ms)", "$g_i$", "$\\tau_a$ (ms)", "共享增益$\\alpha$", "优化状态"]]
+    for row in fit_rows:
+        fit_table.append([
+            display_record(row["heldout_record"]), f"{float(row['tau_s_ms']):.2f}",
+            f"{float(row['g_i']):.3f}", f"{float(row['tau_a_ms']):.0f}",
+            f"{float(row['shared_gain_signed']):.2f}",
+            "未收敛" if row["optimizer_success"].lower() != "true" else "收敛",
+        ])
+
+    erp_table = [["留出记录", "左右试次数", "条件平均NRMSE", "右减左波形相关"]]
+    for record in sorted(per_record_metrics):
+        erp_table.append([
+            display_record(record), f"{counts[record]['left']}/{counts[record]['right']}",
+            f"{mean(per_record_metrics[record]):.3f}", f"{difference_by_record[record]:.3f}",
+        ])
+    overall_nrmse = mean(float(row["nrmse"]) for row in metric_rows)
+    overall_corr = mean(float(row["left_right_difference_correlation"]) for row in difference_rows)
+    erp_table.append(["四记录总体", "152/145", f"{overall_nrmse:.3f}", f"{overall_corr:.3f}"])
+
+    feature_table = [["留出记录", "试次数", "平衡准确率", "AUC"]]
+    for row in feature_rows:
+        feature_table.append([
+            display_record(row["heldout_record"]), row["n_test_trials"],
+            f"{float(row['balanced_accuracy']):.3f}", f"{float(row['roc_auc']):.3f}",
+        ])
+    feature_table.append([
+        "记录宏平均", feature_summary["trial_count"],
+        f"{float(feature_summary['macro_balanced_accuracy']):.3f}",
+        f"{float(feature_summary['macro_roc_auc']):.3f}",
+    ])
+
+    internal_table = [
+        ["内部核查", "结果", "解释范围"],
+        ["去除空间位置后左右差异保留比例",
+         f"{min(no_position):.2e}至{max(no_position):.2e}", "当前模型内的空间输入依赖"],
+        ["仅保留提示onset后的差异保留比例",
+         f"{min(onset_only):.2f}至{max(onset_only):.2f}", "提示offset活动部分抵消onset差异"],
+        ["五源重构电极预测最大相对RMS误差", f"{max_additivity_error:.2e}", "线性映射的数值加和核查"],
+        ["模型/实测侧化能量比例均值", f"{model_lateral:.3f}/{measured_lateral:.3f}", "模型差异较实测更侧化"],
+    ]
+
+    return {
+        "trial_table": markdown_table(trial_table),
+        "fit_table": markdown_table(fit_table),
+        "erp_table": markdown_table(erp_table),
+        "feature_table": markdown_table(feature_table),
+        "internal_table": markdown_table(internal_table),
+        "trial_count": sum(item["left"] + item["right"] for item in counts.values()),
+        "left_count": sum(item["left"] for item in counts.values()),
+        "right_count": sum(item["right"] for item in counts.values()),
+        "mean_nrmse": overall_nrmse,
+        "mean_difference_correlation": overall_corr,
+        "feature_ba": float(feature_summary["macro_balanced_accuracy"]),
+        "feature_auc": float(feature_summary["macro_roc_auc"]),
+        "fit_rows": fit_rows,
+        "record_count": len(counts),
+        "no_position_range": [min(no_position), max(no_position)],
+        "onset_only_range": [min(onset_only), max(onset_only)],
+        "max_additivity_error": max_additivity_error,
+        "measured_lateral_mean": measured_lateral,
+        "model_lateral_mean": model_lateral,
+    }
+
+
+def build_markdown(summary: dict[str, object]) -> str:
+    body = BODY.replace("@@TRIAL_TABLE@@", str(summary["trial_table"]))
+    body = body.replace("@@FIT_TABLE@@", str(summary["fit_table"]))
+    body = body.replace("@@ERP_TABLE@@", str(summary["erp_table"]))
+    body = body.replace("@@FEATURE_TABLE@@", str(summary["feature_table"]))
+    body = body.replace("@@INTERNAL_TABLE@@", str(summary["internal_table"]))
+    return (
+        f"# {TITLE}\n\n## 摘要\n\n{ABSTRACT}\n\n"
+        f"**关键词：** {KEYWORDS}\n\n"
+        + body.strip()
+        + "\n"
+    )
+
+
+def tex_escape(value: str) -> str:
+    return value.replace("%", r"\%").replace("&", r"\&").replace("#", r"\#")
+
+
+def build_tex(markdown: str) -> str:
+    body_md = markdown.split("# 问题重述与分析", 1)[1]
+    body_md = "# 问题重述与分析" + body_md
+    body_md_path = AUDIT_OUTPUTS / "body_for_tex.md"
+    body_tex_path = AUDIT_OUTPUTS / "body_for_tex.tex"
+    body_md_path.write_text(body_md + "\n", encoding="utf-8")
+    subprocess.run([
+        "pandoc", str(body_md_path),
+        "--from=markdown+tex_math_dollars+pipe_tables+implicit_figures+link_attributes",
+        "--to=latex", "--wrap=none", "--output", str(body_tex_path),
+    ], cwd=REPORTS, check=True, capture_output=True, text=True, encoding="utf-8")
+
+    template = WORKSPACE_ROOT / "math-model-agent" / "skills" / "write-model-paper" / "assets" / "cume-template.tex"
+    preamble = template.read_text(encoding="utf-8").split(r"\begin{document}", 1)[0]
+    preamble = preamble.replace(r"\usepackage{calc}", r"\usepackage{calc}" + "\n" + r"\usepackage{etoolbox}")
+    preamble = preamble.replace(r"\usepackage{calc}", r"\usepackage{calc}" + "\n" + r"\usepackage{needspace}")
+    preamble = preamble.replace(r"\newcommand{\PaperTitle}{在此填写论文标题}", r"\newcommand{\PaperTitle}{" + TITLE + "}")
+    preamble += "\n\\setkeys{Gin}{keepaspectratio}\n"
+    preamble += "\n\\providecommand{\\tightlist}{\\setlength{\\itemsep}{0pt}\\setlength{\\parskip}{0pt}}\n"
+    preamble += "% Optional appendix environment from the contest template: \\begin{pycode}\n"
+    title_tex, abstract_tex, keywords_tex = map(tex_escape, (TITLE, ABSTRACT, KEYWORDS))
+    body_tex = body_tex_path.read_text(encoding="utf-8")
+    front = rf"""\begin{{document}}
+\thispagestyle{{plain}}
+\begin{{center}}
+  {{\fontsize{{16pt}}{{24pt}}\selectfont\bfseries\heitifont {title_tex}\par}}
+\end{{center}}
+\section*{{摘\quad 要}}
+{abstract_tex}
+
+\noindent{{\bfseries 关键词：}}{keywords_tex}
+
+\newpage
+\tableofcontents
+\newpage
+\pagenumbering{{arabic}}\setcounter{{page}}{{1}}
+
+"""
+    return preamble + front + body_tex + "\n\\end{document}\n"
+
+
+def write_contract_outputs(summary: dict[str, object]) -> dict[str, str]:
+    pdf_path = REPORTS / "问题二论文正文草稿.pdf"
+    md_path = REPORTS / "问题二论文正文草稿.md"
+    tex_path = REPORTS / "问题二论文正文草稿.tex"
+    tmp_dir = WORKSPACE_ROOT / "tmp" / "pdfs" / "q2_paper_current"
+    tmp_dir.mkdir(parents=True, exist_ok=True)
+    for path in tmp_dir.glob("问题二论文正文草稿.*"):
+        if path.is_file():
+            path.unlink()
+
+    subprocess.run([
+        "xelatex", "-interaction=nonstopmode", "-halt-on-error",
+        f"-output-directory={tmp_dir}", tex_path.name,
+    ], cwd=REPORTS, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    subprocess.run([
+        "xelatex", "-interaction=nonstopmode", "-halt-on-error",
+        f"-output-directory={tmp_dir}", tex_path.name,
+    ], cwd=REPORTS, check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    compiled_pdf = tmp_dir / pdf_path.name
+    shutil.copy2(compiled_pdf, pdf_path)
+
+    image_prefix = tmp_dir / "page"
+    for stale_page in tmp_dir.glob("page-*.png"):
+        stale_page.unlink()
+    subprocess.run(["pdftoppm", "-png", "-r", "120", str(pdf_path), str(image_prefix)],
+                   check=True, capture_output=True, text=True, encoding="utf-8", errors="replace")
+    extracted = subprocess.run(["pdftotext", "-layout", str(pdf_path), "-"], check=True,
+                               capture_output=True, text=True, encoding="utf-8", errors="replace").stdout
+    (tmp_dir / "extracted_text.txt").write_text(extracted, encoding="utf-8")
+    pdf_info = subprocess.run(["pdfinfo", str(pdf_path)], check=True, capture_output=True,
+                              text=True, encoding="utf-8", errors="replace").stdout
+    page_line = next((line.strip() for line in pdf_info.splitlines() if line.startswith("Pages:")), "Pages: unknown")
+    required = ("问题重述与分析", "LGN ON/OFF中继", "结果与分析", "参考文献", "1.810", "0.466")
+    missing = [value for value in required if value not in extracted]
+    if missing:
+        raise RuntimeError(f"PDF is missing required manuscript text: {missing}")
+    page_renders = sorted(path.name for path in tmp_dir.glob("page-*.png"))
+    if not page_renders:
+        raise RuntimeError("PDF page rendering produced no PNG files")
+
+    paper_report = {
+        "status": "PASS",
+        "scope": "C题问题二正文草稿",
+        "pdf": str(pdf_path.relative_to(WORKSPACE_ROOT)).replace("\\", "/"),
+        "data_records": summary["record_count"],
+        "stage1_trials": summary["trial_count"],
+        "heldout_mean_nrmse": round(float(summary["mean_nrmse"]), 3),
+        "right_minus_left_correlation_mean": round(float(summary["mean_difference_correlation"]), 3),
+        "nine_feature_macro_balanced_accuracy": round(float(summary["feature_ba"]), 4),
+        "nine_feature_macro_auc": round(float(summary["feature_auc"]), 4),
+        "converged_fit_folds": sum(row["optimizer_success"].lower() == "true" for row in summary["fit_rows"]),
+        "pdf_pages": page_line,
+        "rendered_pages": len(page_renders),
+        "text_checks": {value: value not in missing for value in required},
+        "visual_review_required": True,
+        "limitations": [
+            "four MAT records without confirmed participant identities",
+            "cue-only model omits the later target input",
+            "canonical leadfield and uncalibrated source proxies",
+            "all outer fit optimizers report nonconvergence",
+        ],
+    }
+    (AUDIT_OUTPUTS / "paper_generation_report.json").write_text(
+        json.dumps(paper_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    claim_report = {
+        "used_claims": [
+            {"id": "Q2_FORWARD_CHAIN", "where": "正向脑电计算模型", "source": "current revision_v3 code"},
+            {"id": "Q2_POSITION_ABLATION", "where": "模型内左右差异及数值核查", "source": "mechanism_controls.csv"},
+            {"id": "Q2_HELDOUT_ERP", "where": "留出ERP拟合", "source": "heldout_metrics.csv and left_right_difference.csv"},
+            {"id": "Q2_9D_FEATURE", "where": "九维脑电特征及分类结果", "source": "heldout_9d_electrode_lda_summary.csv"},
+            {"id": "Q2_EVENT_CONTEXT", "where": "模型评价与适用范围", "source": "run_v3.py and observation.py"},
+        ],
+        "reader_facing_text_contains_contract_terms": False,
+    }
+    (AUDIT_OUTPUTS / "claim_usage_report.json").write_text(
+        json.dumps(claim_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    layout_path = AUDIT_OUTPUTS / "cumcm_layout_validation.json"
+    layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    render_request = {
+        "pdf": str(pdf_path.relative_to(WORKSPACE_ROOT)).replace("\\", "/"),
+        "rendered_pages_directory": str(tmp_dir.relative_to(WORKSPACE_ROOT)).replace("\\", "/"),
+        "page_renders": page_renders,
+        "layout_status": layout["status"],
+        "visual_review_required": True,
+    }
+    (AUDIT_OUTPUTS / "render_request.json").write_text(
+        json.dumps(render_request, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    return {"markdown": str(md_path), "tex": str(tex_path), "pdf": str(pdf_path),
+            "pages": page_line, "layout": str(layout["status"])}
+
+
+def main() -> None:
+    AUDIT_OUTPUTS.mkdir(parents=True, exist_ok=True)
+    summary = get_summary()
+    markdown = build_markdown(summary)
+    md_path = REPORTS / "问题二论文正文草稿.md"
+    tex_path = REPORTS / "问题二论文正文草稿.tex"
+    md_path.write_text(markdown, encoding="utf-8")
+    tex = build_tex(markdown)
+    tex_path.write_text(tex, encoding="utf-8")
+
+    validator = WORKSPACE_ROOT / "math-model-agent" / "skills" / "write-model-paper" / "scripts" / "validate_cumcm_layout.py"
+    layout_path = AUDIT_OUTPUTS / "cumcm_layout_validation.json"
+    subprocess.run([sys.executable, str(validator), "--tex", str(tex_path), "--report", str(layout_path)],
+                   cwd=WORKSPACE_ROOT, check=True, capture_output=True, text=True, encoding="utf-8")
+    layout = json.loads(layout_path.read_text(encoding="utf-8"))
+    if layout["status"] != "PASS":
+        raise RuntimeError(f"paper layout validation failed: {layout}")
+    print(json.dumps(write_contract_outputs(summary), ensure_ascii=False, indent=2))
+
+
+if __name__ == "__main__":
+    main()

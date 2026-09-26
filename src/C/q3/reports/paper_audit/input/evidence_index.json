@@ -1,0 +1,46 @@
+{
+  "sources": [
+    {
+      "path": "data/第二十三届中国研究生数学建模竞赛+-+中文题目/中文题目/C题/服务于脑机接口与精神性疾病诊断的脑电图计算模型.docx",
+      "exists": true,
+      "bytes": 417431,
+      "sha256": "440494e17914f704657838b23ebb1f44ec371e4f3c7209bc9581091b1dab01f8"
+    },
+    {
+      "path": "data/第二十三届中国研究生数学建模竞赛+-+中文题目/中文题目/C题/deepseek_latex_20260925_4ed4dc(1).pdf",
+      "exists": true,
+      "bytes": 1027080,
+      "sha256": "c56e1ecc923739c4b479c4fc602e900167d3265397a232125692d81d77bacfed"
+    },
+    {
+      "path": "src/C/q3/问题三实现流程与模型说明.md",
+      "exists": true,
+      "bytes": 26963,
+      "sha256": "99598b137a119626b20026c69a07bf750b464fccaf2773106c648defc166a863"
+    },
+    {
+      "path": "src/C/q3/dynamic_cognitive_model.py",
+      "exists": true,
+      "bytes": 31766,
+      "sha256": "7c113a613addd6fc2be5ab0e52e6c8b06542eb9c0ac41b644c260b6ee772ded4"
+    },
+    {
+      "path": "src/C/q3/dynamic_validation.py",
+      "exists": true,
+      "bytes": 99339,
+      "sha256": "5a1a57ae03c84be7af34d2d2775b88c3f7718d8755990b6842538543e0ea8c00"
+    },
+    {
+      "path": "src/C/q3/output/dynamic_heldout_validation/validation_summary.json",
+      "exists": true,
+      "bytes": 4336,
+      "sha256": "c2fd4c6c0a3237b6b17f7fe5fc8b63ce9094873949114f2ee851d0be0a780db6"
+    },
+    {
+      "path": "src/C/q3/output/dynamic_heldout_validation/dynamic_cv_metrics.csv",
+      "exists": true,
+      "bytes": 908216,
+      "sha256": "bd5dab8a8ee7f4bbb0382c0bfc789f6a6b2db296743c54fcc28486d159276b80"
+    }
+  ]
+}

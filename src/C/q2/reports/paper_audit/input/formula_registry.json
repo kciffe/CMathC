@@ -1,0 +1,11 @@
+{
+  "formulas": [
+    {"id": "F_SIGNED_CONTRAST", "purpose": "保留提示相对共同背景的亮度变化与符号", "implementation": "frontend.py:load_stimulus"},
+    {"id": "F_DOG_LGN", "purpose": "通过中心周围对比、适应状态及ON/OFF分路表示视觉中继", "implementation": "frontend.py:simulate_frontend"},
+    {"id": "F_GABOR_SHAPE", "purpose": "保留四方向边缘响应以及三角边角的空间构型", "implementation": "frontend.py:_gabor_pair; _shape_maps"},
+    {"id": "F_WILSON_COWAN", "purpose": "递推早期视觉、空间构型与模板偏好的兴奋抑制群体活动", "implementation": "model.py:_wc_populations"},
+    {"id": "F_SOURCE_MAP", "purpose": "将群体兴奋抑制代理转为五源并正向映射到三电极", "implementation": "model.py:map_population_to_source_channels; head_model.py:build_sensor_leadfield"},
+    {"id": "F_LOO_ERP", "purpose": "用训练记录估计共享参数和一个有符号增益并预测整份留出记录", "implementation": "fit.py:fit_model; fit_leave_one_record"},
+    {"id": "F_9D_FEATURE", "purpose": "描述三个电极在三个固定时间窗内的单试次均值", "implementation": "evaluate.py:extract_features; classification_leave_one_record"}
+  ]
+}

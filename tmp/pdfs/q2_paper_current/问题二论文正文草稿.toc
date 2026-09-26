@@ -1,0 +1,16 @@
+\contentsline {section}{\numberline {1}问题重述与分析}{1}{section.1}%
+\contentsline {section}{\numberline {2}模型假设与符号说明}{1}{section.2}%
+\contentsline {subsection}{\numberline {2.1}模型假设}{1}{subsection.2.1}%
+\contentsline {section}{\numberline {3}数据与视觉刺激编码}{2}{section.3}%
+\contentsline {section}{\numberline {4}正向脑电计算模型}{3}{section.4}%
+\contentsline {subsection}{\numberline {4.1}LGN ON/OFF中继}{3}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Gabor方向与三角构型编码}{4}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}三组兴奋-抑制群体动力学}{5}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}五源代理与头皮正向映射}{6}{subsection.4.4}%
+\contentsline {section}{\numberline {5}参数估计与验证设计}{7}{section.5}%
+\contentsline {section}{\numberline {6}结果与分析}{8}{section.6}%
+\contentsline {subsection}{\numberline {6.1}模型内左右差异及数值核查}{8}{subsection.6.1}%
+\contentsline {subsection}{\numberline {6.2}留出ERP拟合}{8}{subsection.6.2}%
+\contentsline {subsection}{\numberline {6.3}九维脑电特征及分类结果}{11}{subsection.6.3}%
+\contentsline {section}{\numberline {7}模型评价与适用范围}{12}{section.7}%
+\contentsline {section}{\numberline {8}参考文献}{13}{section.8}%
