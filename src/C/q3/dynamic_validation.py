@@ -399,8 +399,12 @@ def filter_continuous_eeg(
 
 def _load_observed_epochs(
     preprocessing_modes: Iterable[str],
-) -> tuple[dict[str, dict[tuple[str, int], np.ndarray]], pd.DataFrame]:
-    """Extract cue-locked EEG means and audit channel-9 response endpoints."""
+) -> tuple[
+    dict[str, dict[tuple[str, int], np.ndarray]],
+    pd.DataFrame,
+    dict[str, dict[tuple[str, int], list[dict[str, Any]]]],
+]:
+    """Extract cue-locked EEG means, trial epochs, and response-endpoint audit."""
 
     mode_list = tuple(preprocessing_modes)
     config_by_mode = {
@@ -412,6 +416,9 @@ def _load_observed_epochs(
         for mode in mode_list
     }
     grouped: dict[str, dict[tuple[str, int], list[np.ndarray]]] = {
+        mode: {} for mode in mode_list
+    }
+    response_trials: dict[str, dict[tuple[str, int], list[dict[str, Any]]]] = {
         mode: {} for mode in mode_list
     }
     audit_rows: list[dict[str, Any]] = []
@@ -523,6 +530,7 @@ def _load_observed_epochs(
                 audit_rows.append(row)
                 continue
             try:
+                processed_by_mode: dict[str, np.ndarray] = {}
                 for mode, cfg in config_by_mode.items():
                     filtered_epoch, filtered_time = extract_fixed_epoch(
                         filtered_by_mode[mode], timestamps, cue_time, next_cue,
@@ -532,11 +540,21 @@ def _load_observed_epochs(
                     processed = _preprocess_aligned(
                         filtered_epoch, filtered_time, MODEL_RATE_HZ, resample_config
                     )
-                    grouped[mode].setdefault((record, side), []).append(processed)
+                    processed_by_mode[mode] = processed
             except ValueError as error:
                 row["exclusion_reason"] = f"preprocessing_error:{error}"
                 audit_rows.append(row)
                 continue
+            group_key = (record, side)
+            for mode, processed in processed_by_mode.items():
+                grouped[mode].setdefault(group_key, []).append(processed)
+                if len(trial_responses) == 1 and np.isfinite(endpoint_relative_s):
+                    response_trials[mode].setdefault(group_key, []).append({
+                        "trial_index": int(event["original_trial_index"]),
+                        "eeg": processed,
+                        "t_act_relative_to_cue_s": t_act_relative_s,
+                        "pre_response_endpoint_s": endpoint_relative_s,
+                    })
             row["included"] = True
             audit_rows.append(row)
 
@@ -548,7 +566,7 @@ def _load_observed_epochs(
             if epochs
         }
     audit = pd.DataFrame(audit_rows)
-    return means, audit
+    return means, audit, response_trials
 
 
 def _response_window_summaries(trial_audit: pd.DataFrame) -> dict[tuple[str, int], dict[str, float | int]]:
@@ -706,6 +724,56 @@ def _score_prediction(
     return rmse, nrmse, correlation
 
 
+def _score_trialwise_response_window(
+    trial_rows: list[dict[str, Any]],
+    predicted: np.ndarray,
+    relative_time_s: np.ndarray,
+    window_name: str,
+) -> dict[str, float | int] | None:
+    """Score samples only after cropping each trial at its own t_act - 100 ms."""
+
+    actual_parts: list[np.ndarray] = []
+    predicted_parts: list[np.ndarray] = []
+    scored_endpoints: list[float] = []
+    scored_starts: list[float] = []
+    for trial in trial_rows:
+        endpoint = float(trial["pre_response_endpoint_s"])
+        if not np.isfinite(endpoint) or endpoint <= 0.0:
+            continue
+        start = 0.0 if window_name == "t_act_pre_response_cumulative" else max(0.0, endpoint - 0.5)
+        mask = (relative_time_s >= start) & (relative_time_s < endpoint)
+        if not mask.any():
+            continue
+        actual_parts.append(np.asarray(trial["eeg"], dtype=float)[..., mask].reshape(-1))
+        predicted_parts.append(np.asarray(predicted, dtype=float)[..., mask].reshape(-1))
+        scored_endpoints.append(endpoint)
+        scored_starts.append(start)
+    if not actual_parts:
+        return None
+
+    actual = np.concatenate(actual_parts)
+    estimate = np.concatenate(predicted_parts)
+    residual = actual - estimate
+    rmse = float(np.sqrt(np.mean(residual ** 2)))
+    scale = float(np.std(actual, ddof=0))
+    nrmse = rmse / scale if scale > 1e-12 else float("nan")
+    if np.std(actual) <= 1e-12 or np.std(estimate) <= 1e-12:
+        correlation = float("nan")
+    else:
+        correlation = float(np.corrcoef(actual, estimate)[0, 1])
+    return {
+        "rmse_raw_units": rmse,
+        "nrmse_by_heldout_sd": nrmse,
+        "correlation": correlation,
+        "n_test_trials_scored": len(scored_endpoints),
+        "window_start_s": float(np.median(scored_starts)),
+        "window_stop_s": float(np.median(scored_endpoints)),
+        "pre_response_endpoint_min_s": float(np.min(scored_endpoints)),
+        "pre_response_endpoint_median_s": float(np.median(scored_endpoints)),
+        "pre_response_endpoint_max_s": float(np.max(scored_endpoints)),
+    }
+
+
 def _candidate_window(onset_s: float | None) -> tuple[float, float] | None:
     if onset_s is None:
         return None
@@ -753,6 +821,7 @@ def _run_record_heldout(
     scenarios: tuple[macro.DynamicScenario, ...],
     basis_lookup: dict[tuple[str, str, str, float | None, float], dict[str, Any]],
     response_windows: dict[tuple[str, int], dict[str, float | int]],
+    response_trials: dict[str, dict[tuple[str, int], list[dict[str, Any]]]],
 ) -> tuple[pd.DataFrame, list[dict[str, Any]], dict[str, Any] | None]:
     metric_rows: list[dict[str, Any]] = []
     prediction_records: list[dict[str, Any]] = []
@@ -829,13 +898,6 @@ def _run_record_heldout(
                         if candidate_window is not None:
                             windows["candidate_target_600ms"] = candidate_window
                         response_summary = response_windows.get(group_key)
-                        if response_summary is not None:
-                            endpoint_s = float(response_summary["pre_response_endpoint_median_s"])
-                            if 0.0 < endpoint_s <= float(OUTPUT_TIME_S[-1]):
-                                windows["t_act_pre_response_cumulative"] = (0.0, endpoint_s)
-                                windows["t_act_pre_response_terminal_500ms"] = (
-                                    max(0.0, endpoint_s - 0.5), endpoint_s
-                                )
                         for window_name, window_bounds in windows.items():
                             rmse, nrmse, corr = _score_prediction(
                                 y_test[group_index], y_pred[group_index],
@@ -861,12 +923,13 @@ def _run_record_heldout(
                                 "n_train_records": len({key[0] for key in train_keys}),
                                 "n_train_record_cue_means": len(train_keys),
                                 "n_test_trials_in_cue_group": np.nan,
+                                "n_test_trials_scored": np.nan,
                                 "fit_parameters_train_only": True,
                                 "response_channel_used": window_name.startswith("t_act_"),
                                 "response_channel_used_as_predictor": False,
                                 "t_act_used_for_window_endpoint": window_name.startswith("t_act_"),
                                 "window_endpoint_source": (
-                                    "median_unique_channel9_t_act_minus_100ms"
+                                    "per_trial_unique_channel9_t_act_minus_100ms"
                                     if window_name.startswith("t_act_") else "fixed_cue_locked_or_candidate_window"
                                 ),
                                 "n_test_trials_with_unique_t_act": (
@@ -889,7 +952,71 @@ def _run_record_heldout(
                                     response_summary["pre_response_endpoint_median_s"]
                                     if response_summary is not None else np.nan
                                 ),
+                                "pre_response_endpoint_min_s": np.nan,
+                                "pre_response_endpoint_max_s": np.nan,
+                                "window_bounds_summary": "fixed_window"
                             })
+                        group_trials = response_trials.get(mode, {}).get(group_key, [])
+                        if group_trials:
+                            for response_window in (
+                                "t_act_pre_response_cumulative",
+                                "t_act_pre_response_terminal_500ms",
+                            ):
+                                response_score = _score_trialwise_response_window(
+                                    group_trials, y_pred[group_index], OUTPUT_TIME_S,
+                                    response_window,
+                                )
+                                if response_score is None:
+                                    continue
+                                metric_rows.append({
+                                    "preprocessing": mode,
+                                    "target_stimulus_candidate": target_type,
+                                    "target_onset_candidate_s": onset_s,
+                                    "target_duration_s_assumption": next(
+                                        s.target_duration_s for s in scenarios
+                                        if s.target_stimulus == target_type
+                                        and s.target_onset_s == onset_s
+                                    ),
+                                    "match_evidence_scenario": evidence if onset_s is not None else np.nan,
+                                    "heldout_record": heldout_record,
+                                    "cue_side": "left" if group_key[1] < 0 else "right",
+                                    "model": model_name,
+                                    "evaluation_window": response_window,
+                                    "window_start_s": response_score["window_start_s"],
+                                    "window_stop_s": response_score["window_stop_s"],
+                                    "rmse_raw_units": response_score["rmse_raw_units"],
+                                    "nrmse_by_heldout_sd": response_score["nrmse_by_heldout_sd"],
+                                    "correlation": response_score["correlation"],
+                                    "n_train_records": len({key[0] for key in train_keys}),
+                                    "n_train_record_cue_means": len(train_keys),
+                                    "n_test_trials_in_cue_group": np.nan,
+                                    "n_test_trials_scored": response_score["n_test_trials_scored"],
+                                    "fit_parameters_train_only": True,
+                                    "response_channel_used": True,
+                                    "response_channel_used_as_predictor": False,
+                                    "t_act_used_for_window_endpoint": True,
+                                    "window_endpoint_source": "per_trial_unique_channel9_t_act_minus_100ms",
+                                    "n_test_trials_with_unique_t_act": (
+                                        response_summary["n_trials_with_unique_t_act"]
+                                        if response_summary is not None else 0
+                                    ),
+                                    "t_act_median_from_cue_s": (
+                                        response_summary["t_act_median_from_cue_s"]
+                                        if response_summary is not None else np.nan
+                                    ),
+                                    "t_act_q05_from_cue_s": (
+                                        response_summary["t_act_q05_from_cue_s"]
+                                        if response_summary is not None else np.nan
+                                    ),
+                                    "t_act_q95_from_cue_s": (
+                                        response_summary["t_act_q95_from_cue_s"]
+                                        if response_summary is not None else np.nan
+                                    ),
+                                    "pre_response_endpoint_median_s": response_score["pre_response_endpoint_median_s"],
+                                    "pre_response_endpoint_min_s": response_score["pre_response_endpoint_min_s"],
+                                    "pre_response_endpoint_max_s": response_score["pre_response_endpoint_max_s"],
+                                    "window_bounds_summary": "median trial-specific bounds; score pooled after each trial crop",
+                                })
                     if (
                         model_name == "Q2_plus_memory_control"
                         and mode == preferred_mode
@@ -937,6 +1064,8 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
                         label=f"候选目标时刻 {candidate:.1f} 秒")
     median_marker = float(np.median(marker_relative))
     endpoint_median = median_marker - 0.100
+    endpoint_q05 = float(np.quantile(marker_relative, 0.05) - 0.100)
+    endpoint_q95 = float(np.quantile(marker_relative, 0.95) - 0.100)
     axes[0].axvline(median_marker, color="#383838", linewidth=1.2,
                     label=f"t_act 中位数 {median_marker:.3f} 秒")
     axes[0].set_xlim(1.7, 2.6)
@@ -972,16 +1101,17 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
         ax.axvspan(candidate, min(candidate + 0.6, 3.0), color=color, alpha=0.08)
     ax.axvspan(0.0, endpoint_median, color="#C9A66B", alpha=0.10)
     ax.axvspan(max(0.0, endpoint_median - 0.5), endpoint_median, color="#BD806F", alpha=0.16)
+    ax.axvspan(max(0.0, endpoint_q05), endpoint_q95, color="#A35C47", alpha=0.08)
     ax.axvline(median_marker, color="#383838", linewidth=1.0, alpha=0.8)
     ax.axvline(endpoint_median, color="#A35C47", linewidth=1.0, linestyle=":", alpha=0.9)
     ax.set_xlim(-0.45, 3.1)
     ax.set_ylim(0.0, 3.8)
     ax.set_yticks([])
     ax.set_xlabel("相对视觉提示的时间（秒）")
-    ax.set_title("\u7d2f\u8ba1\u7a97 [0, t_act - 0.1 s) \u548c\u7ec8\u672b500 ms\u7a97\u53e3")
+    ax.set_title("\u7d2f\u8ba1\u7a97 [0, t_act - 0.1 s) \u548c\u7ec8\u672b500 ms\uff1b\u8bc4\u5206\u6309\u9010\u8bd5\u6b21\u7ec8\u70b9")
     ax.grid(axis="x", color="#e5e5e5", linewidth=0.55)
     fig.suptitle(
-        f"\u53c2\u8003\u6a21\u578b t_act \u4e2d\u4f4d\u6570 = {median_marker:.3f} s\uff1b\u5e94\u7b54\u524d\u622a\u6b62 = {endpoint_median:.3f} s",
+        f"\u603b\u4f53\u4e2d\u4f4d t_act = {median_marker:.3f} s\uff1b\u7ec8\u70b9 5\u201395% \u8303\u56f4 = {endpoint_q05:.3f}\u2013{endpoint_q95:.3f} s\uff1b\u8bc4\u5206\u4f7f\u7528\u6bcf\u8bd5\u6b21\u81ea\u8eab\u7ec8\u70b9",
         fontsize=10, y=0.99,
     )
     handles, labels = axes[0].get_legend_handles_labels()
@@ -1000,6 +1130,9 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
         "marker_relative_q95_s": float(np.quantile(marker_relative, 0.95)),
         "t_act_definition": "unique channel-9 zero-to-nonzero edge per reference model",
         "pre_response_endpoint_median_from_cue_s": float(endpoint_median),
+        "pre_response_endpoint_q05_from_cue_s": endpoint_q05,
+        "pre_response_endpoint_q95_from_cue_s": endpoint_q95,
+        "response_window_scoring": "trial-specific endpoint t_act minus 0.100 s; plotted aggregate markers are visualization only",
     }
 
 
@@ -1739,6 +1872,78 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
     output_path.write_text(document, encoding="utf-8")
 
 
+def _write_run_summary_report(
+    output_path: Path,
+    event_summary: dict[str, Any],
+    trial_audit: pd.DataFrame,
+    metrics: pd.DataFrame,
+    summary: dict[str, Any],
+    resolution: int,
+    target_duration_s: float | None,
+) -> None:
+    """Write a compact UTF-8 report for the current run."""
+
+    late = summary["late_model_metrics"]
+    late_rows = []
+    for row in late.itertuples(index=False):
+        late_rows.append(
+            f"| {row.preprocessing} | {row.model} | {row.mean:.4f} | {row.std:.4f} | {int(row.count)} |"
+        )
+    endpoint = metrics.loc[metrics["t_act_used_for_window_endpoint"]].copy()
+    response_rows = []
+    if not endpoint.empty:
+        grouped = endpoint.groupby(
+            ["preprocessing", "model", "evaluation_window"], as_index=False
+        ).agg(
+            mean_nrmse=("nrmse_by_heldout_sd", "mean"),
+            sd_nrmse=("nrmse_by_heldout_sd", "std"),
+            n_scenario_fold_groups=("nrmse_by_heldout_sd", "count"),
+            median_trials_scored=("n_test_trials_scored", "median"),
+        )
+        for row in grouped.itertuples(index=False):
+            response_rows.append(
+                f"| {row.preprocessing} | {row.model} | {row.evaluation_window} | "
+                f"{row.mean_nrmse:.4f} | {row.sd_nrmse:.4f} | "
+                f"{int(row.n_scenario_fold_groups)} | {row.median_trials_scored:.1f} |"
+            )
+    duration = "until end" if target_duration_s is None else f"{target_duration_s:g} s"
+    report = f'''# Q3 动态模型本次运行摘要
+
+## 运行配置与数据
+
+- 纳入 EEG epoch：{int(trial_audit["included"].sum())}/{len(trial_audit)}；记录数：{trial_audit.loc[trial_audit["included"], "record"].nunique()}。
+- 通道9操作性应答标记相对 cue 的总体中位数：{event_summary["marker_relative_median_s"]:.4f} s；5%–95% 分位数：{event_summary["marker_relative_q05_s"]:.4f}–{event_summary["marker_relative_q95_s"]:.4f} s。
+- 应答前 EEG 端点定义为每个试次自己的 (t_act - 0.100 s)。只有 EEG 质控通过且 cue 区间内恰有一个通道9边沿的试次进入应答前评分。
+- 目标持续时长候选：{duration}；所有 target onset 与类型仍是敏感性场景，不代表已核实的真实试次事件。
+- Q2 仿真分辨率：{resolution}；拟合与模型预测不使用通道9。
+
+## 固定晚期窗口 [0.8, 2.8) s
+
+下表为每个预处理×模型跨留出记录的晚期 NRMSE 汇总。NRMSE 越低，预测误差相对该留出 EEG 的标准差越小。
+
+| 预处理 | 模型 | 平均 NRMSE | 记录间标准差 | 留出记录数 |
+|---|---|---:|---:|---:|
+{chr(10).join(late_rows)}
+
+## 逐试次应答前窗口评分
+
+每个试次先按自身端点分别截取累计窗 [0, t_act - 0.1) 与末 500 ms 窗，再在留出“记录×cue 侧”组内拼接截取后的 EEG 样本，计算 pooled RMSE、NRMSE 与相关系数。表中数值对候选场景和留出组作描述性平均，场景并非独立样本。
+
+| 预处理 | 模型 | 窗口 | 平均 NRMSE | NRMSE行间标准差 | 场景/留出组数 | 每组计分试次数中位数 |
+|---|---|---|---:|---:|---:|---:|
+{chr(10).join(response_rows)}
+
+各试次的实际端点与每个留出组的计分试次数见 `t_act_endpoint_cv_metrics.csv`。CSV 中 `window_start_s`、`window_stop_s` 是各试次窗口界限的中位数摘要；评分本身逐试次使用各自界限。
+
+## 解释边界
+
+通道9首次零到非零边沿作为操作性 (t_{{act}})，但是否等于实际动作启动时刻仍需外部同步资料核实。通道9只定义评分窗口，不作为 EEG 特征、模型状态输入或观测回归预测变量。固定晚期窗口是统一 cue 锁定窗；候选目标时刻 2.2 s 和 2.4 s 晚于总体中位数应答前端点约 2.115 s，因此这些候选场景下应答前窗不含候选目标后的加工。结果支持模型流程已运行并接受留出检验，不能单独证明模型较好解释脑电。
+
+详细条件行、事件审计及 PNG 中间图分别保存在 `dynamic_cv_metrics.csv`、`observed_trial_audit.csv` 与 `figures/`。
+'''
+    output_path.write_text(report, encoding="utf-8")
+
+
 def run_validation(
     output_dir: Path = OUTPUT_DIR,
     *,
@@ -1767,7 +1972,7 @@ def run_validation(
         tuple(target_types), tuple(target_onsets_s), target_duration_s,
         tuple(float(x) for x in match_evidence_values),
     )
-    observed, trial_audit = _load_observed_epochs(preprocessing_modes)
+    observed, trial_audit, response_trials = _load_observed_epochs(preprocessing_modes)
     if trial_audit.empty or not trial_audit["included"].any():
         raise RuntimeError("no usable cue-locked EEG epochs remain after QC")
     trial_audit.to_csv(output_dir / "observed_trial_audit.csv", index=False, encoding="utf-8-sig")
@@ -1830,7 +2035,7 @@ def run_validation(
 
     response_windows = _response_window_summaries(trial_audit)
     metrics, predictions, exemplar = _run_record_heldout(
-        observed, scenarios, basis_lookup, response_windows
+        observed, scenarios, basis_lookup, response_windows, response_trials
     )
     if metrics.empty:
         raise RuntimeError("record-held-out validation produced no score rows")
@@ -1906,7 +2111,9 @@ def run_validation(
         "channel9_used_for_response_window_scoring": True,
         "t_act_definition": "unique channel-9 zero-to-nonzero edge; absolute timestamp",
         "pre_response_endpoint_definition": "t_act minus 0.100 s",
-        "response_window_grouping": "QC-included trials grouped by record and cue side; median group t_act defines the mean-waveform score endpoint",
+        "response_window_grouping": "for each QC-included trial with exactly one channel-9 edge, crop its EEG at its own t_act minus 0.100 s; pool cropped samples within record-by-cue group for scoring",
+        "response_window_scoring_aggregation": "concatenate trial-specific cropped channel-by-time samples within held-out record-by-cue group, then compute pooled RMSE, NRMSE, and correlation",
+        "response_channel_role": "channel 9 defines the scoring endpoint only; it is not an EEG predictor, state input, or fit target",
         "n_record_cue_groups_with_t_act_windows": int(len(response_windows)),
         "n_trials_with_unique_t_act_included": int(sum(
             item["n_trials_with_unique_t_act"] for item in response_windows.values()
@@ -1919,11 +2126,10 @@ def run_validation(
     (output_dir / "validation_summary.json").write_text(
         json.dumps(summary_json, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    report_path = OUTPUT_DIR / "dynamic_validation_report.md"
-    _write_detailed_report(
+    report_path = output_dir / "dynamic_validation_report.md"
+    _write_run_summary_report(
         report_path, event_summary, trial_audit, metrics, summary,
-        scenarios, figure_dir, resolution, target_duration_s,
-        max(base["projection_max_abs_error"] for base in base_cache.values()),
+        resolution, target_duration_s,
     )
     # Keep figures PNG-only; Q2 simulation arrays are held in memory and are
     # never written as persistent NPZ cache files.

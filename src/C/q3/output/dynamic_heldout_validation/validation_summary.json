@@ -141,18 +141,37 @@
     "marker_relative_q05_s": 2.21484375,
     "marker_relative_q95_s": 2.21875,
     "t_act_definition": "unique channel-9 zero-to-nonzero edge per reference model",
-    "pre_response_endpoint_median_from_cue_s": 2.11484375
+    "pre_response_endpoint_median_from_cue_s": 2.11484375,
+    "pre_response_endpoint_q05_from_cue_s": 2.11484375,
+    "pre_response_endpoint_q95_from_cue_s": 2.11875,
+    "response_window_scoring": "trial-specific endpoint t_act minus 0.100 s; plotted aggregate markers are visualization only"
   },
   "target_onset_status": "candidate sensitivity only; no independent target marker",
   "behavioral_labels_used": false,
+  "behavioral_outcome_labels_derived": true,
+  "behavioral_direction_consistent_count": 293,
+  "behavioral_direction_inconsistent_count": 107,
+  "cue_intervals_with_action_marker_count": 400,
+  "cue_intervals_without_action_marker_count": 0,
+  "declared_response_code_in_analysis_window_count": 400,
   "behavioral_response_duration_labeled_count": 400,
+  "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
+  "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_deadline",
+  "cue_interval_action_marker_rule": "event marker count only; not a verified omission rate without the official response interval",
+  "analysis_window_s_relative_to_channel8_cue": [
+    -1.0,
+    5.0
+  ],
+  "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; not a timeliness classification",
   "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count / sample rate; not target-to-response reaction time",
   "channel9_used_in_eeg_or_model": false,
   "channel9_used_as_predictor_or_state_input": false,
   "channel9_used_for_response_window_scoring": true,
   "t_act_definition": "unique channel-9 zero-to-nonzero edge; absolute timestamp",
   "pre_response_endpoint_definition": "t_act minus 0.100 s",
-  "response_window_grouping": "QC-included trials grouped by record and cue side; median group t_act defines the mean-waveform score endpoint",
+  "response_window_grouping": "for each QC-included trial with exactly one channel-9 edge, crop its EEG at its own t_act minus 0.100 s; pool cropped samples within record-by-cue group for scoring",
+  "response_window_scoring_aggregation": "concatenate trial-specific cropped channel-by-time samples within held-out record-by-cue group, then compute pooled RMSE, NRMSE, and correlation",
+  "response_channel_role": "channel 9 defines the scoring endpoint only; it is not an EEG predictor, state input, or fit target",
   "n_record_cue_groups_with_t_act_windows": 8,
   "n_trials_with_unique_t_act_included": 355,
   "response_time_duration_status": "unknown without an independently verified per-trial target onset",
@@ -167,19 +186,5 @@
     "memory_to_control_gain": 0.25,
     "conflict_gain": 0.8,
     "topdown_control_gain": 0.1
-  },
-  "direction_consistency_labels_derived": true,
-  "behavioral_direction_consistent_count": 293,
-  "behavioral_direction_inconsistent_count": 107,
-  "cue_intervals_with_action_marker_count": 400,
-  "cue_intervals_without_action_marker_count": 0,
-  "trials_with_declared_code_in_analysis_window_count": 400,
-  "cue_interval_action_marker_rule": "count channel-9 zero-to-nonzero action edges from each channel-8 cue to the next cue; this is an event count, not an omission label",
-  "analysis_window_s_relative_to_channel8_cue": [
-    -1.0,
-    5.0
-  ],
-  "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples in the custom analysis window only; this window does not define experimental timeliness",
-  "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
-  "actual_lateness_status": "undetermined_without_verified_target_onset_and_formal_deadline"
+  }
 }

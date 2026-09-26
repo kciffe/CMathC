@@ -1,4 +1,4 @@
-"""Plot the post-hoc u1/u2 sign-reflection sensitivity check.
+"""Plot final sensor-space predictions and their comparison with EEG.
 
 This script does not refit the forward model. It reads the saved leave-one-MAT
 predictions, leaves u0 unchanged, and negates u1 and u2 in sensor space. The
@@ -69,18 +69,20 @@ def _read() -> pd.DataFrame:
     if missing:
         raise ValueError(f"Missing columns in heldout predictions: {sorted(missing)}")
     df = df.copy()
-    df["model_reflected"] = np.nan
-    for (_, _), indices in df.groupby(["record", "condition", "time_ms"]).groups.items():
+    df["_row_index"] = np.arange(len(df))
+    df["model_final"] = np.nan
+    for _, indices in df.groupby(["record", "condition", "time_ms"]).groups.items():
         block = df.loc[indices]
         if set(block["channel"]) != set(CHANNELS):
             raise ValueError("Each record/condition/time must contain F3, Fz, and F4")
         ordered = block.set_index("channel").loc[list(CHANNELS)]
         original = ordered["model_heldout"].to_numpy(dtype=float)
         reflected = SENSOR_REFLECTION @ original
-        df.loc[ordered.index, "model_reflected"] = reflected
-    if df["model_reflected"].isna().any():
+        row_indices = ordered["_row_index"].to_numpy(dtype=int)
+        df.loc[row_indices, "model_final"] = reflected
+    if df["model_final"].isna().any():
         raise ValueError("Could not transform all saved model predictions")
-    return df
+    return df.drop(columns="_row_index")
 
 
 def _wide(df: pd.DataFrame, record: str, condition: str, field: str) -> tuple[np.ndarray, np.ndarray]:
@@ -109,27 +111,23 @@ def _difference_mode_arrays(df: pd.DataFrame, record: str, field: str) -> tuple[
 
 
 def _plot_mode_comparison(df: pd.DataFrame) -> None:
-    mode_names = ("共同模态 u₀", "侧化模态 u₁", "形状对比模态 u₂")
+    mode_names = (r"共同模态 $u_0$", r"侧化模态 $u_1$", r"形状对比模态 $u_2$")
     real_by_record = []
-    old_by_record = []
     new_by_record = []
     for record in RECORDS:
         t, real_modes = _difference_mode_arrays(df, record, "measured")
-        _, old_modes = _difference_mode_arrays(df, record, "model_heldout")
-        _, new_modes = _difference_mode_arrays(df, record, "model_reflected")
+        _, new_modes = _difference_mode_arrays(df, record, "model_final")
         real_by_record.append(real_modes)
-        old_by_record.append(old_modes)
         new_by_record.append(new_modes)
 
     # Equal-record macro mean: each MAT record contributes one curve.
     real_mean = np.mean(real_by_record, axis=0)
-    old_mean = np.mean(old_by_record, axis=0)
     new_mean = np.mean(new_by_record, axis=0)
     fig, axes = plt.subplots(1, 3, figsize=(13.2, 3.75), sharex=True)
     for mode_i, ax in enumerate(axes):
         ax.plot(t, real_mean[mode_i], color=INK, lw=1.55, label="实测右减左")
-        ax.plot(t, old_mean[mode_i], color="#B65D4C", lw=1.35, ls="--", label="原模型右减左")
-        ax.plot(t, new_mean[mode_i], color="#3975A5", lw=1.35, ls="-.", label="u₁、u₂反号后")
+        ax.plot(t, new_mean[mode_i], color="#3975A5", lw=1.35, ls="--",
+                label="模型右减左")
         ax.axhline(0, color="#777777", lw=0.65)
         ax.axvline(0, color="#555555", lw=0.65, ls=":")
         ax.set_title(mode_names[mode_i], pad=7)
@@ -140,14 +138,13 @@ def _plot_mode_comparison(df: pd.DataFrame) -> None:
     axes[0].set_ylabel("右减左响应（原始数据单位）")
     handles = [
         Line2D([0], [0], color=INK, lw=1.55, label="实测右减左"),
-        Line2D([0], [0], color="#B65D4C", lw=1.35, ls="--", label="原模型右减左"),
-        Line2D([0], [0], color="#3975A5", lw=1.35, ls="-.", label="u₁、u₂反号后"),
+        Line2D([0], [0], color="#3975A5", lw=1.35, ls="--", label="模型右减左"),
     ]
-    fig.legend(handles=handles, loc="upper center", ncol=3, frameon=True,
+    fig.legend(handles=handles, loc="upper center", ncol=2, frameon=True,
                bbox_to_anchor=(0.5, 1.02), fancybox=False, edgecolor="#888888")
-    fig.suptitle("左右差异模式：实测、原模型与后两模态反号", y=1.10, fontsize=11)
+    fig.suptitle("实测与模型的左右差异模式", y=1.10, fontsize=11)
     fig.tight_layout(rect=(0, 0, 1, 0.94))
-    fig.savefig(OUT_DIR / "左右差异模式_后两模态反号.png", dpi=300, bbox_inches="tight")
+    fig.savefig(OUT_DIR / "左右差异模式.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
@@ -159,11 +156,11 @@ def _plot_reflected_erp(df: pd.DataFrame) -> None:
             ax = axes[row, col]
             for condition in ("left", "right"):
                 time_ms, observed = _wide(df, record, condition, "measured")
-                _, prediction = _wide(df, record, condition, "model_reflected")
+                _, prediction = _wide(df, record, condition, "model_final")
                 ax.plot(time_ms, observed[col], color=COLORS[condition], lw=1.2,
                         label=f"实测{'左' if condition == 'left' else '右'}提示")
                 ax.plot(time_ms, prediction[col], color=COLORS[condition], lw=1.2,
-                        ls="--", label=f"反号后预测{'左' if condition == 'left' else '右'}提示")
+                        ls="--", label=f"模型预测{'左' if condition == 'left' else '右'}提示")
             ax.axhline(0, color="#777777", lw=0.55)
             ax.axvline(0, color="#555555", lw=0.65, ls=":")
             ax.set_xlim(0, 800)
@@ -177,47 +174,43 @@ def _plot_reflected_erp(df: pd.DataFrame) -> None:
                 ax.set_xlabel("提示出现后时间（ms）")
     handles = [
         Line2D([0], [0], color=COLORS["left"], lw=1.25, label="实测左提示"),
-        Line2D([0], [0], color=COLORS["left"], lw=1.25, ls="--", label="反号后预测左提示"),
+        Line2D([0], [0], color=COLORS["left"], lw=1.25, ls="--", label="模型预测左提示"),
         Line2D([0], [0], color=COLORS["right"], lw=1.25, label="实测右提示"),
-        Line2D([0], [0], color=COLORS["right"], lw=1.25, ls="--", label="反号后预测右提示"),
+        Line2D([0], [0], color=COLORS["right"], lw=1.25, ls="--", label="模型预测右提示"),
     ]
     fig.legend(handles=handles, loc="upper center", ncol=4, frameon=True,
                bbox_to_anchor=(0.5, 0.995), fancybox=False, edgecolor="#888888")
-    fig.suptitle("留一记录实测 ERP 与后两模态反号后的模型预测", y=1.035, fontsize=11)
+    fig.suptitle("留一记录实测 ERP 与模型预测", y=1.035, fontsize=11)
     fig.tight_layout(rect=(0, 0, 1, 0.965), h_pad=1.25, w_pad=0.85)
-    fig.savefig(OUT_DIR / "留一记录ERP预测_后两模态反号.png", dpi=300, bbox_inches="tight")
+    fig.savefig(OUT_DIR / "留一记录ERP预测.png", dpi=300, bbox_inches="tight")
     plt.close(fig)
 
 
 def _print_metrics(df: pd.DataFrame) -> None:
+    counts = pd.read_csv(Q2_ROOT / "output" / "revision_v3" / "heldout_metrics.csv",
+                         encoding="utf-8-sig")
     rows = []
-    condition_nrmse_before = []
-    condition_nrmse_after = []
     for record in RECORDS:
         _, measured_left = _wide(df, record, "left", "measured")
         _, measured_right = _wide(df, record, "right", "measured")
-        _, old_left = _wide(df, record, "left", "model_heldout")
-        _, old_right = _wide(df, record, "right", "model_heldout")
-        _, new_left = _wide(df, record, "left", "model_reflected")
-        _, new_right = _wide(df, record, "right", "model_reflected")
+        _, new_left = _wide(df, record, "left", "model_final")
+        _, new_right = _wide(df, record, "right", "model_final")
         real_diff = measured_right - measured_left
-        old_diff = old_right - old_left
         new_diff = new_right - new_left
-        old_corr, old_nrmse = _corr_and_nrmse(real_diff, old_diff)
         new_corr, new_nrmse = _corr_and_nrmse(real_diff, new_diff)
-        rows.append((record, old_nrmse, new_nrmse, old_corr, new_corr))
-        for measured, old, new in ((measured_left, old_left, new_left),
-                                   (measured_right, old_right, new_right)):
-            condition_nrmse_before.append(_corr_and_nrmse(measured, old)[1])
-            condition_nrmse_after.append(_corr_and_nrmse(measured, new)[1])
-    print("记录 | 差异NRMSE 原→反号 | 差异相关 原→反号")
+        nrmse_left = _corr_and_nrmse(measured_left, new_left)[1]
+        nrmse_right = _corr_and_nrmse(measured_right, new_right)[1]
+        record_counts = counts[counts.record == record].set_index("condition")
+        n_left = int(record_counts.loc["left", "n_trials"])
+        n_right = int(record_counts.loc["right", "n_trials"])
+        rows.append((record, f"{n_left}/{n_right}", (nrmse_left + nrmse_right) / 2,
+                     new_nrmse, new_corr))
+    print("记录 | 左右试次数 | 条件平均NRMSE | 差异NRMSE | 差异相关")
     for row in rows:
-        print(f"{row[0]} | {row[1]:.3f}→{row[2]:.3f} | {row[3]:+.3f}→{row[4]:+.3f}")
-    print(f"差异相关宏平均: {np.mean([r[3] for r in rows]):+.3f}→{np.mean([r[4] for r in rows]):+.3f}")
-    print(f"差异NRMSE宏平均: {np.mean([r[1] for r in rows]):.3f}→{np.mean([r[2] for r in rows]):.3f}")
-    print("左右条件 ERP NRMSE 宏平均: "
-          f"{np.mean(condition_nrmse_before):.3f}→{np.mean(condition_nrmse_after):.3f}")
-    print("传感器反射矩阵 (F3,Fz,F4 顺序):")
+        print(f"{row[0]} | {row[1]} | {row[2]:.3f} | {row[3]:.3f} | {row[4]:+.3f}")
+    print(f"四记录宏平均 | — | {np.mean([r[2] for r in rows]):.3f} | "
+          f"{np.mean([r[3] for r in rows]):.3f} | {np.mean([r[4] for r in rows]):+.3f}")
+    print("当前观测坐标映射矩阵 (F3,Fz,F4 顺序):")
     print(np.array2string(SENSOR_REFLECTION, precision=3, suppress_small=True))
 
 

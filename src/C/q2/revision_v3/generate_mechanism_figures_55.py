@@ -47,8 +47,8 @@ RECORD_SHORT = {
     "VisualCogB_Task-1": "B组记录1", "VisualCogB_Task-2": "B组记录2",
 }
 POPULATIONS = ("早期视觉群", "空间构型群", "三角模板偏好群")
-POPULATION_CHANNELS = (("左视野", "右视野"), ("左视野", "右视野"),
-                       ("左偏好", "右偏好"))
+POPULATION_CHANNELS = (("图像左半区", "图像右半区"), ("图像左半区", "图像右半区"),
+                       ("左指模板偏好", "右指模板偏好"))
 
 plt.rcParams.update(paper_figure_rc_params())
 plt.rcParams["font.family"] = "sans-serif"
@@ -344,15 +344,18 @@ def _plot_cortical_difference(time_ms, cortical, counts, n_total):
     right_i = _weighted_cortical(cortical, counts, "right", "inhibitory")
     diff_e, diff_i = right_e - left_e, right_i - left_i
     fig, axes = plt.subplots(3, 1, figsize=(10.8, 7.2), sharex=True)
-    fig.suptitle(f"皮层群体右提示减左提示差异诊断\n左右输入使用同一记录拟合参数；按入选试次记录构成加权，n={n_total}", fontsize=13, y=0.99)
+    fig.suptitle("皮层群体条件差异：右指三角减左指三角", fontsize=13, y=0.99)
+    fig.text(0.5, 0.955,
+             f"前两组为图像左/右半区；第三组为左/右模板偏好；同一记录拟合参数，按入选试次加权，n={n_total}",
+             ha="center", va="center", fontsize=9.2)
     handles = [
         Line2D([0], [0], color="#3265A8", linestyle="-", label="兴奋性 · 通道1"),
         Line2D([0], [0], color="#3265A8", linestyle="--", label="兴奋性 · 通道2"),
         Line2D([0], [0], color="#D17A35", linestyle="-", label="抑制性 · 通道1"),
         Line2D([0], [0], color="#D17A35", linestyle="--", label="抑制性 · 通道2"),
     ]
-    _boxed_legend(fig, handles, y=0.925, ncol=4)
-    fig.subplots_adjust(left=0.105, right=0.98, bottom=0.10, top=0.83, hspace=0.28)
+    _boxed_legend(fig, handles, y=0.91, ncol=4)
+    fig.subplots_adjust(left=0.105, right=0.98, bottom=0.10, top=0.82, hspace=0.28)
     mask = (time_ms >= 0) & (time_ms <= 800)
     for group, ax in enumerate(axes):
         ax.plot(time_ms[mask], diff_e[group, 0, mask], color="#3265A8", lw=1.35)
@@ -362,15 +365,11 @@ def _plot_cortical_difference(time_ms, cortical, counts, n_total):
         ax.axhline(0, color="#555555", lw=0.75)
         ax.axvline(0, color="#555555", ls=":", lw=0.75)
         ax.axvline(200, color="#555555", ls="--", lw=0.75)
-        ax.set_ylabel(f"{POPULATIONS[group]}\n差值（相对活动）")
+        ax.set_ylabel("差值（相对活动）")
+        ax.set_title(f"{POPULATIONS[group]}：第1通道={POPULATION_CHANNELS[group][0]}，第2通道={POPULATION_CHANNELS[group][1]}",
+                     loc="left", fontsize=9, pad=2)
         ax.set_xlim(0, 800)
         ax.grid(alpha=0.22); ax.set_axisbelow(True)
-        if group == 0:
-            ax.text(0.99, 0.92, "通道：" + "、".join(POPULATION_CHANNELS[group]),
-                    transform=ax.transAxes, ha="right", va="top", fontsize=8, color="#555555")
-        else:
-            ax.text(0.99, 0.92, "通道：" + "、".join(POPULATION_CHANNELS[group]),
-                    transform=ax.transAxes, ha="right", va="top", fontsize=8, color="#555555")
     axes[-1].set_xlabel("提示出现后时间（ms）")
     fig.savefig(FIGURE_DIR / SELECTED_OUTPUTS[4], dpi=300, facecolor="white")
     plt.close(fig)
