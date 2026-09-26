@@ -14,7 +14,8 @@ import scipy
 try:
     from . import config
     from .evaluate import classification_leave_one_record
-    from .fit import _cached_left_frontend, fit_leave_one_record, register_frontend
+    from .evidence_chain import run_evidence_chain
+    from .fit import FitResult, _cached_left_frontend, fit_leave_one_record, register_frontend
     from .frontend import (choose_resolution, load_stimulus, mirror_stage1_frontend,
                            simulate_frontend, temporal_stride_audit)
     from .head_model import build_sensor_leadfield, geometry_manifest
@@ -25,7 +26,8 @@ try:
 except ImportError:
     import config
     from evaluate import classification_leave_one_record
-    from fit import _cached_left_frontend, fit_leave_one_record, register_frontend
+    from evidence_chain import run_evidence_chain
+    from fit import FitResult, _cached_left_frontend, fit_leave_one_record, register_frontend
     from frontend import (choose_resolution, load_stimulus, mirror_stage1_frontend,
                           simulate_frontend, temporal_stride_audit)
     from head_model import build_sensor_leadfield, geometry_manifest
@@ -383,7 +385,7 @@ def _plot_source_electrode_contributions(result, path):
 
 
 def _write_readme(out, resolution, stride, scales, fits, metrics, differences,
-                  classification, controls, max_nfev):
+                  classification, controls, max_nfev, evidence=None):
     nrmse = np.asarray([r["nrmse"] for r in metrics], dtype=float)
     diff_corr = np.asarray([r["left_right_difference_correlation"] for r in differences], dtype=float)
     fit_lines = [f"- `{record}`: tau_s={fit.parameters['tau_s']:.2f} ms, "
@@ -434,10 +436,125 @@ def _write_readme(out, resolution, stride, scales, fits, metrics, differences,
         "- `source_to_electrode_contributions.png`：五个源代理对 F3/Fz/F4 的逐源贡献；图中校验各贡献之和等于电极预测。",
         "- `heldout_metrics.csv`、`left_right_difference.csv`、`fixed_feature_lda.csv`、`mechanism_controls.csv`。",
     ]
+    if evidence is not None:
+        result = evidence["classification_summary"]
+        lines.extend([
+            "", "## Fixed nine-dimensional electrode ERP feature validation", "",
+            (f"The predeclared feature consists of F3, Fz, and F4 means in "
+             f"[100,250), [250,500), and [500,800) ms. Leave-one-MAT-out "
+             f"shrinkage-LDA balanced accuracy is **{result['macro_balanced_accuracy']:.3f}**, "
+             f"macro AUC is **{result['macro_roc_auc']:.3f}** over "
+             f"{result['heldout_record_count']} held-out records. The windows and channels "
+             "were fixed before examining these fold results; scaling was estimated from training records only."),
+            "Four MAT files are recordings, not verified independent participants. This result is evidence about this fixed feature under record holdout, not evidence that the forward mechanism is correct.",
+            "The associated model population/source differences use the same fitted parameters, drive scales, gain, and observation operator for the left/right pair in each held-out fold. Five-source additivity is checked after filtering, resampling, and baseline correction.",
+        "New outputs: `model_population_right_minus_left.png`, `model_source_electrode_right_minus_left.png`, `measured_vs_model_candidate_features.png`, `heldout_9d_electrode_lda.png`, `heldout_9d_electrode_lda_folds.csv`, `measured_candidate_features_exploratory.csv`, and `model_source_contribution_summary.csv`.",
+        ])
     (out / "README.md").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
-def run(resolution=None, max_nfev=60):
+def _write_evidence_report(out, metrics, differences, fit_rows, evidence, event_rows):
+    """Write a paper-facing summary with only PNG figures and explicit evidence tiers."""
+    report = config.Q2_ROOT / "output" / "修改3.md"
+    summary = evidence["classification_summary"]
+    fold_rows = evidence["classification_folds"]
+    mean_nrmse = float(np.nanmean([row["nrmse"] for row in metrics]))
+    mean_difference_corr = float(np.nanmean(
+        [row["left_right_difference_correlation"] for row in differences]))
+    nonconverged = sum(row["fit_status"] != "profile_grid_converged" for row in fit_rows)
+    above_chance_ba = sum(row.get("status") == "complete" and row["balanced_accuracy"] > .5
+                          for row in fold_rows)
+    above_chance_auc = sum(row.get("status") == "complete" and row["roc_auc"] > .5
+                           for row in fold_rows)
+    cue_onsets = [float(row["cue_onset_median_ms"]) for row in event_rows
+                  if np.isfinite(float(row["cue_onset_median_ms"]))]
+    cue_offsets = [float(row["cue_offset_median_ms"]) for row in event_rows
+                   if np.isfinite(float(row["cue_offset_median_ms"]))]
+    tail_audit_path = config.Q2_ROOT / "output" / "revision_v3_validation" / "observation_tail_audit.csv"
+    with tail_audit_path.open("r", newline="", encoding="utf-8-sig") as stream:
+        tail_errors = [float(row["tail_vs_zero_pad_relative_rmse_0_800"])
+                       for row in csv.DictReader(stream)]
+    if (summary["macro_balanced_accuracy"] <= .5
+            or summary["macro_roc_auc"] <= .5):
+        classification_conclusion = (
+            "当前 9 维特征没有获得留一记录验证支持：宏平均平衡准确率或 AUC 未超过 0.5。"
+            "这表示固定特征在当前跨记录测试中未显示可靠区分能力。")
+    else:
+        classification_conclusion = (
+            "当前 9 维特征的两个宏平均指标均高于 0.5；由于只有四份记录，"
+            "仍应作为初步跨记录支持，而非稳定普遍规律。")
+    lines = [
+        "# 问题二第一小问：修正后的正向模型与左右特征证据链", "",
+        "## 本轮处理", "",
+        "- 前端和皮层动力学模拟延长至 0–3000 ms，使 0–800 ms 评价段之后的模型响应自然演化；再统一执行第一问观测算子，最后截取评价窗口。没有在 800 ms 处把活动硬截断后补零。",
+        "- 未把 2.2 s 目标加入 cue-only 模型。目标场景和真实记录参考电极信息仍未完全核实，分别作为上下文假设和导联近似的局限。",
+        (f"- 事件核对：四份记录的 VisCue 中位起点均为 {np.median(cue_onsets):.3f} ms；"
+         f"记录到的 cue 中位偏移为 {np.median(cue_offsets):.3f} ms，接近名义 200 ms。"
+         "2.20 s 目标时刻来自实验流程假设，Action 通道是应答/动作标记，未被当作已确认目标触发输入。"),
+        "- 每个留一 MAT 折只用其余记录拟合参数；同一折的左、右提示由完全相同的参数、输入尺度、增益和观测算子生成。",
+        "- 真实 EEG 候选特征预先固定为 F3/Fz/F4 在 `[100,250)`、`[250,500)`、`[500,800)` ms 的均值，共 9 维。窗口、通道和 LDA 收缩系数没有根据留出记录调整；特征标准化只在训练记录拟合。",
+        "", "## 结果概览", "",
+        f"- 左右条件留出 ERP 平均 NRMSE：**{mean_nrmse:.3f}**。这是绝对波形拟合指标；数值越接近 0 越好。",
+        f"- 实测与模型右减左波形相关的记录均值：**{mean_difference_corr:.3f}**。相关为负表示当前模型差波形的时间形状没有复现实测差波形。",
+        f"- 四折中有 **{nonconverged}/4** 折的优化器未报告收敛；使用的是预算内最优候选，不能将其描述为已收敛或已识别的生理参数。",
+        f"- 固定 9 维特征的留一 MAT 记录平衡准确率宏平均：**{summary['macro_balanced_accuracy']:.3f}**；宏平均 AUC：**{summary['macro_roc_auc']:.3f}**。四个 MAT 文件是记录而非已确认的四名独立受试者。",
+        f"- 留出折中，平衡准确率高于 0.5 的记录为 {above_chance_ba}/{summary['heldout_record_count']}；AUC 高于 0.5 的记录为 {above_chance_auc}/{summary['heldout_record_count']}。**{classification_conclusion}**",
+        f"- 源加和检查最大相对 RMS 残差：**{evidence['source_sum_max_relative_rms_error']:.3e}**；阈值 `1e-5`。残差来自保存电极信号时的 `float32` 舍入。",
+        "", "### 留出记录结果", "",
+        "| 留出记录 | 测试试次数 | 平衡准确率 | AUC | 训练记录 |", "|---|---:|---:|---:|---|",
+    ]
+    for row in fold_rows:
+        if row.get("status") == "complete":
+            lines.append(f"| {row['heldout_record']} | {row['n_test_trials']} | "
+                         f"{row['balanced_accuracy']:.3f} | {row['roc_auc']:.3f} | "
+                         f"{row['training_records']} |")
+    lines.extend([
+        "", "## 800 ms 截断与滤波尾部审计", "",
+        (f"在 8 个记录×左右条件中，保留模型自然尾部与 800 ms 后强制补零两种处理所得的 0–800 ms 波形，"
+         f"相对 RMSE 中位数为 **{np.median(tail_errors):.4f}**、均值为 **{np.mean(tail_errors):.4f}**，"
+         f"范围 **{np.min(tail_errors):.4f}–{np.max(tail_errors):.4f}**。这量化的是滤波边界处理对分析窗的影响；"
+         "延长模拟并消除这项边界差异，不代表实测 ERP 拟合因此变好，也没有解决未知目标事件上下文。"),
+        "![cue-only神经群体活动自然衰减到3000ms](revision_v3_validation/persistent_activity_decay.png)",
+        "![保留自然尾部与800ms后补零的滤波差异](revision_v3_validation/zero_padding_filter_effect.png)",
+        "", "## 左右差异的模型分解", "",
+        "模型差异按同一折的配对计算：`右提示输出 − 左提示输出`。因此这些差异没有混入左右条件各自重新拟合造成的参数变化。第一幅图显示三组皮层 E/I 通道的右减左活动；第二幅图显示五个内部源分别对 F3、Fz、F4 差波形的贡献。代码逐折、逐电极检查源贡献之和与观测电极输出的一致性。",
+        "", "### 三组皮层活动：右减左", "",
+        "![三组皮层E/I群体活动的右减左差异](revision_v3/model_population_right_minus_left.png)",
+        "", "### 五个源到三个电极的差异贡献", "",
+        "![源到电极的右减左贡献](revision_v3/model_source_electrode_right_minus_left.png)",
+        "",
+        "| 电极 | 模型源代理 | 跨折平均源差 RMS | 源 RMS / 总差 RMS |",
+        "|---|---|---:|---:|",
+    ])
+    for row in evidence["source_contribution_summary"]:
+        if row["source"] != "TOTAL":
+            lines.append(f"| {row['sensor']} | {row['source']} | {row['mean_record_rms']:.4g} | "
+                         f"{row['mean_record_rms_ratio_to_total']:.3f} |")
+    lines.extend([
+        "各源带符号相加得到电极差波形；RMS 比值因源间可相消，不应解释为百分比份额。",
+        "", "## 真实 EEG 的固定候选特征", "",
+        "下图中的蓝点和区间是每份记录内实测右减左窗口均值及试次重采样区间，红菱形是没有用该记录拟合的交叉拟合模型预测。试次重采样区间只描述单份记录内的试次不确定性，不等同于被试总体置信区间。",
+        "", "![每份记录固定窗口实测特征与模型预测](revision_v3/measured_vs_model_candidate_features.png)",
+        "", "## 留出检验", "",
+        "分类只检验固定的 9 维 EEG 特征在未参与训练的整份 MAT 记录上的可分性。它不证明该特征来自模型指定的神经机制；模型拟合也不替代留出分类。",
+        "", "![固定9维特征的留一记录分类结果](revision_v3/heldout_9d_electrode_lda.png)",
+        "", "## 波形和前端检查图", "",
+        "![左右条件实测与留出模型ERP](revision_v3/heldout_erp.png)",
+        "", "![模型与实测的右减左观测模式](revision_v3/heldout_difference_modes.png)",
+        "", "![LGN ON/OFF时空响应](revision_v3/lgn_spatiotemporal.png)",
+        "", "## 结论", "",
+        f"本轮完成了可审计的左右差异分解与固定时域特征留出检验。模型内部差异可从空间/模板通道追踪到群体活动、五个源代理及 F3/Fz/F4；但留出 ERP 平均 NRMSE={mean_nrmse:.3f}，右减左波形相关均值={mean_difference_corr:.3f}，尚未显示良好的实测波形复现。",
+        f"当前固定 9 维特征的留一记录宏平均平衡准确率为 {summary['macro_balanced_accuracy']:.3f}、宏平均 AUC 为 {summary['macro_roc_auc']:.3f}；两者均未超过 0.5，因此本轮**没有获得稳定左右判别的留出支持**。本轮结论应限定为：**模型预测**已给出并完成源贡献核算；**实测特征**是预先限定的探索结果；**留出验证**目前不支持该固定特征具有跨记录区分能力。",
+        "因此可以报告候选机制链和候选特征，但不能将模型预测或单份记录内的差异表述成已经证实的普遍生理规律。",
+        "", "## 输出文件", "",
+        "新增 CSV：`model_population_right_minus_left.csv`、`model_source_electrode_right_minus_left.csv`、`model_candidate_feature_predictions.csv`、`measured_candidate_features_exploratory.csv`、`heldout_9d_electrode_lda_trial_scores.csv`、`heldout_9d_electrode_lda_folds.csv`、`heldout_9d_electrode_lda_summary.csv`、`model_source_contribution_summary.csv`、`source_additivity_audit.csv`。图像均为 PNG。",
+        "",
+    ])
+    report.write_text("\n".join(lines), encoding="utf-8")
+    return report
+
+
+def run(resolution=None, max_nfev=60, reuse_fit_artifacts=False):
     out = config.OUTPUT_ROOT
     out.mkdir(parents=True, exist_ok=True)
     cases, event_rows = load_cases_with_audit()
@@ -514,14 +631,30 @@ def run(resolution=None, max_nfev=60):
     _write_csv(out / "drive_scales.csv", scale_rows)
     print(f"Using resolution={resolution}, frontend stride={selected_stride:g} ms.", flush=True)
 
-    print(f"Fitting four leave-one-MAT models (max {max_nfev} objective calls/start)...", flush=True)
-    fits = fit_leave_one_record(fit_cases, resolution=resolution,
-                                feature_route="opponent", observation_rank=3,
-                                progress=True, max_nfev=max_nfev,
-                                drive_scales=drive_scales)
+    if reuse_fit_artifacts:
+        fit_details_path = out / "heldout_fit_details.json"
+        if not fit_details_path.exists():
+            raise FileNotFoundError(f"cannot reuse missing fits: {fit_details_path}")
+        raw_fits = json.loads(fit_details_path.read_text(encoding="utf-8"))
+        fits = {record: FitResult(**payload) for record, payload in raw_fits.items()}
+        if set(fits) != {case["dataset"] for case in fit_cases}:
+            raise ValueError("saved fit records do not match current eligible fitting records")
+        if any(fit.resolution != resolution for fit in fits.values()):
+            raise ValueError("saved fit resolution does not match requested resolution")
+        if any(record in fit.train_records for record, fit in fits.items()):
+            raise ValueError("saved fit includes its held-out record in the training set")
+        print(f"Reusing {len(fits)} just-computed leave-one-MAT fits from {fit_details_path}.",
+              flush=True)
+    else:
+        print(f"Fitting four leave-one-MAT models (max {max_nfev} objective calls/start)...", flush=True)
+        fits = fit_leave_one_record(fit_cases, resolution=resolution,
+                                    feature_route="opponent", observation_rank=3,
+                                    progress=True, max_nfev=max_nfev,
+                                    drive_scales=drive_scales)
     fit_rows = [_fit_row(record, fit) for record, fit in fits.items()]
     _write_csv(out / "heldout_fit_summary.csv", fit_rows)
-    _write_json(out / "heldout_fit_details.json", {record: fit.to_dict() for record, fit in fits.items()})
+    if not reuse_fit_artifacts:
+        _write_json(out / "heldout_fit_details.json", {record: fit.to_dict() for record, fit in fits.items()})
 
     grouped, predictions, metrics, differences, long_rows = _compute_predictions(
         cases, fits, resolution, drive_scales, progress=True)
@@ -535,9 +668,28 @@ def run(resolution=None, max_nfev=60):
     _write_csv(out / "fixed_feature_lda_folds.csv", folds)
     _write_csv(out / "fixed_feature_lda_trial_scores.csv", scores)
 
-    print("Running frozen-parameter mechanism controls...", flush=True)
-    controls = _controls(fits, resolution, drive_scales)
-    _write_csv(out / "mechanism_controls.csv", controls)
+    controls_path = out / "mechanism_controls.csv"
+    fit_details_path = out / "heldout_fit_details.json"
+    can_reuse_controls = (reuse_fit_artifacts and controls_path.exists()
+                          and fit_details_path.exists())
+    if can_reuse_controls:
+        with controls_path.open("r", newline="", encoding="utf-8-sig") as stream:
+            controls = list(csv.DictReader(stream))
+        for row in controls:
+            for key in ("full_left_right_difference_rms",
+                        "control_left_right_difference_rms", "retained_fraction"):
+                row[key] = float(row[key])
+        if {row["heldout_record"] for row in controls} != set(fits):
+            raise ValueError("saved mechanism controls do not match the current fitted records")
+        print("Reusing mechanism controls generated after the current fit artifacts.", flush=True)
+    else:
+        print("Running frozen-parameter mechanism controls...", flush=True)
+        controls = _controls(fits, resolution, drive_scales)
+        _write_csv(controls_path, controls)
+
+    print("Running fixed-window 9-D evidence chain and same-parameter L/R decomposition...",
+          flush=True)
+    evidence = run_evidence_chain(out, cases, fits, resolution, drive_scales)
 
     _plot_erps(grouped, predictions, out / "heldout_erp.png")
     _plot_differences(grouped, predictions, out / "heldout_difference_modes.png")
@@ -561,12 +713,14 @@ def run(resolution=None, max_nfev=60):
         for sensor, row in zip(config.CHANNELS, lead)])
     _write_json(out / "leadfield_geometry.json", geometry_manifest())
     _write_readme(out, resolution, selected_stride, drive_scales, fits, metrics,
-                  differences, classifier_summary, controls, max_nfev)
+                  differences, classifier_summary, controls, max_nfev, evidence)
+    report_path = _write_evidence_report(out, metrics, differences, fit_rows, evidence, event_rows)
 
     source_files = [Path(__file__), Path(__file__).with_name("config.py"),
                     Path(__file__).with_name("frontend.py"), Path(__file__).with_name("model.py"),
                     Path(__file__).with_name("fit.py"), Path(__file__).with_name("real_data.py"),
-                    Path(__file__).with_name("observation.py"), Path(__file__).with_name("head_model.py")]
+                    Path(__file__).with_name("observation.py"), Path(__file__).with_name("head_model.py"),
+                    Path(__file__).with_name("evaluate.py"), Path(__file__).with_name("evidence_chain.py")]
     manifest = {"revision": "revision_v3",
                 "source_mapping_schema": config.SOURCE_MAPPING_SCHEMA,
                 "python": platform.python_version(),
@@ -583,7 +737,8 @@ def run(resolution=None, max_nfev=60):
                     "midline_opponent_source": "explicit modeling hypothesis, not anatomical localization"},
                 "diagnostic_figures": ["lgn_spatiotemporal.png",
                                        "cortical_ei_responses.png",
-                                       "source_to_electrode_contributions.png"],
+                                       "source_to_electrode_contributions.png",
+                                       *evidence["figures"]],
                 "diagnostic_figure_parameters": "generated from this run's fitted-parameter median; source contributions are checked to sum to electrode prediction",
                 "fitting": "leave-one-MAT-out; fixed frontend calibration; fit Stage1 left/right only; one signed shared gain",
                 "observation_operator": "0.2-24 Hz 4th-order Butterworth zero-phase; 256-to-128 Hz Fourier resample; per-channel prestimulus baseline; full [-1,3)s epoch",
@@ -593,6 +748,8 @@ def run(resolution=None, max_nfev=60):
                                 "absolute source/electrode gain not calibrated to microvolts",
                                 "target event after 2.2 s not generated in cue-only fit; filter comparison uses common cue-only observation operator",
                                 "model ERP fit and real-only LDA answer different questions"],
+                "evidence_chain": evidence,
+                "evidence_report": str(report_path),
                 "sha256": {path.name: _sha256(path) for path in source_files if path.exists()}}
     _write_json(out / "manifest.json", manifest)
 
@@ -602,12 +759,17 @@ def run(resolution=None, max_nfev=60):
           f"{np.nanmean([r['left_right_difference_correlation'] for r in differences]):.4f}", flush=True)
     print(f"6-feature LO-MAT LDA BA/AUC: {classifier_summary[0]['balanced_accuracy_mean']:.4f} / "
           f"{classifier_summary[0]['roc_auc_mean']:.4f}", flush=True)
+    candidate = evidence["classification_summary"]
+    print(f"9-feature fixed-window LO-MAT LDA BA/AUC: "
+          f"{candidate['macro_balanced_accuracy']:.4f} / {candidate['macro_roc_auc']:.4f}", flush=True)
     for row in fit_rows:
         print(f"{row['heldout_record']}: status={row['fit_status']}, loss={row['training_loss']:.5g}, "
               f"tau_s={row['tau_s_ms']:.2f}, g_i={row['g_i']:.3f}, tau_a={row['tau_a_ms']:.1f}", flush=True)
     print(f"Saved results: {out}", flush=True)
+    print(f"Saved evidence report: {report_path}", flush=True)
     return {"fits": fit_rows, "metrics": metrics, "differences": differences,
-            "classifier": classifier_summary, "controls": controls, "output": out}
+            "classifier": classifier_summary, "evidence_chain": evidence,
+            "controls": controls, "output": out}
 
 
 if __name__ == "__main__":

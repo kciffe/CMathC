@@ -23,7 +23,11 @@
   "diagnostic_figures": [
     "lgn_spatiotemporal.png",
     "cortical_ei_responses.png",
-    "source_to_electrode_contributions.png"
+    "source_to_electrode_contributions.png",
+    "model_population_right_minus_left.png",
+    "model_source_electrode_right_minus_left.png",
+    "measured_vs_model_candidate_features.png",
+    "heldout_9d_electrode_lda.png"
   ],
   "diagnostic_figure_parameters": "generated from this run's fitted-parameter median; source contributions are checked to sum to electrode prediction",
   "fitting": "leave-one-MAT-out; fixed frontend calibration; fit Stage1 left/right only; one signed shared gain",
@@ -164,14 +168,258 @@
     "target event after 2.2 s not generated in cue-only fit; filter comparison uses common cue-only observation operator",
     "model ERP fit and real-only LDA answer different questions"
   ],
+  "evidence_chain": {
+    "classification_summary": {
+      "status": "complete",
+      "validation": "leave-one-MAT-record-out; all preprocessing and features fixed in advance",
+      "feature_count": 9,
+      "feature_names": "W1_100_250_F3;W1_100_250_Fz;W1_100_250_F4;W2_250_500_F3;W2_250_500_Fz;W2_250_500_F4;W3_500_800_F3;W3_500_800_Fz;W3_500_800_F4",
+      "window_definition_ms": "[100,250);[250,500);[500,800)",
+      "classifier": "fixed-shrinkage LDA; standardization fit on training records only",
+      "shrinkage": 0.1,
+      "heldout_record_count": 4,
+      "trial_count": 297,
+      "macro_balanced_accuracy": 0.4655195841754314,
+      "macro_roc_auc": 0.45092078677874836,
+      "record_level_balanced_accuracy_sd": 0.07966224379414412,
+      "caveat": "four MAT files are recordings, not verified independent participants"
+    },
+    "classification_folds": [
+      {
+        "heldout_record": "VisualCogA_Task-1",
+        "training_records": "VisualCogA_Task-2;VisualCogB_Task-1;VisualCogB_Task-2",
+        "status": "complete",
+        "n_test_trials": 54,
+        "n_left": 29,
+        "n_right": 25,
+        "feature_count": 9,
+        "classifier": "fixed-shrinkage LDA; train-only scaling",
+        "shrinkage": 0.1,
+        "balanced_accuracy": 0.3468965517241379,
+        "recall_left": 0.41379310344827586,
+        "recall_right": 0.28,
+        "roc_auc": 0.30896551724137933,
+        "confusion_matrix_left_right": "[[12, 17], [18, 7]]"
+      },
+      {
+        "heldout_record": "VisualCogA_Task-2",
+        "training_records": "VisualCogA_Task-1;VisualCogB_Task-1;VisualCogB_Task-2",
+        "status": "complete",
+        "n_test_trials": 80,
+        "n_left": 45,
+        "n_right": 35,
+        "feature_count": 9,
+        "classifier": "fixed-shrinkage LDA; train-only scaling",
+        "shrinkage": 0.1,
+        "balanced_accuracy": 0.4936507936507937,
+        "recall_left": 0.24444444444444444,
+        "recall_right": 0.7428571428571429,
+        "roc_auc": 0.4876190476190476,
+        "confusion_matrix_left_right": "[[11, 34], [9, 26]]"
+      },
+      {
+        "heldout_record": "VisualCogB_Task-1",
+        "training_records": "VisualCogA_Task-1;VisualCogA_Task-2;VisualCogB_Task-2",
+        "status": "complete",
+        "n_test_trials": 83,
+        "n_left": 41,
+        "n_right": 42,
+        "feature_count": 9,
+        "classifier": "fixed-shrinkage LDA; train-only scaling",
+        "shrinkage": 0.1,
+        "balanced_accuracy": 0.5171312427409989,
+        "recall_left": 0.43902439024390244,
+        "recall_right": 0.5952380952380952,
+        "roc_auc": 0.5168408826945412,
+        "confusion_matrix_left_right": "[[18, 23], [17, 25]]"
+      },
+      {
+        "heldout_record": "VisualCogB_Task-2",
+        "training_records": "VisualCogA_Task-1;VisualCogA_Task-2;VisualCogB_Task-1",
+        "status": "complete",
+        "n_test_trials": 80,
+        "n_left": 37,
+        "n_right": 43,
+        "feature_count": 9,
+        "classifier": "fixed-shrinkage LDA; train-only scaling",
+        "shrinkage": 0.1,
+        "balanced_accuracy": 0.5043997485857951,
+        "recall_left": 0.7297297297297297,
+        "recall_right": 0.27906976744186046,
+        "roc_auc": 0.49025769956002513,
+        "confusion_matrix_left_right": "[[27, 10], [31, 12]]"
+      }
+    ],
+    "population_rows": 38448,
+    "source_rows": 7416,
+    "feature_rows": 36,
+    "source_sum_identity": "verified after Q1 observation processing; residual compared with float32 EEG storage roundoff",
+    "source_sum_max_relative_rms_error": 2.567252228426561e-06,
+    "source_contribution_summary": [
+      {
+        "sensor": "F3",
+        "source": "early_left_hemisphere_from_right_visual_field",
+        "mean_record_rms": 1.0550316438977583,
+        "mean_record_rms_ratio_to_total": 0.49403741480162167,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F3",
+        "source": "early_right_hemisphere_from_left_visual_field",
+        "mean_record_rms": 1.5349703808091533,
+        "mean_record_rms_ratio_to_total": 0.7187772681980149,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F3",
+        "source": "configuration_left_hemisphere_from_right_visual_field",
+        "mean_record_rms": 5.224824330829593,
+        "mean_record_rms_ratio_to_total": 2.4514109622022753,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F3",
+        "source": "configuration_right_hemisphere_from_left_visual_field",
+        "mean_record_rms": 8.485704429824892,
+        "mean_record_rms_ratio_to_total": 3.9813680789289574,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F3",
+        "source": "bilateral_shape_preference_opponent_midline",
+        "mean_record_rms": 3.3832000841542222,
+        "mean_record_rms_ratio_to_total": 1.5874025312256106,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F3",
+        "source": "TOTAL",
+        "mean_record_rms": 2.127011131938981,
+        "mean_record_rms_ratio_to_total": 1.0,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "Fz",
+        "source": "early_left_hemisphere_from_right_visual_field",
+        "mean_record_rms": 1.7581223971970956,
+        "mean_record_rms_ratio_to_total": 0.34955710962611347,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "Fz",
+        "source": "early_right_hemisphere_from_left_visual_field",
+        "mean_record_rms": 1.7581226906794043,
+        "mean_record_rms_ratio_to_total": 0.3495571429971309,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "Fz",
+        "source": "configuration_left_hemisphere_from_right_visual_field",
+        "mean_record_rms": 8.35689977250971,
+        "mean_record_rms_ratio_to_total": 1.6670124587379949,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "Fz",
+        "source": "configuration_right_hemisphere_from_left_visual_field",
+        "mean_record_rms": 8.356903529196261,
+        "mean_record_rms_ratio_to_total": 1.6670129869364279,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "Fz",
+        "source": "bilateral_shape_preference_opponent_midline",
+        "mean_record_rms": 5.017267563008896,
+        "mean_record_rms_ratio_to_total": 1.0000004190796985,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "Fz",
+        "source": "TOTAL",
+        "mean_record_rms": 5.017264934579379,
+        "mean_record_rms_ratio_to_total": 1.0,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F4",
+        "source": "early_left_hemisphere_from_right_visual_field",
+        "mean_record_rms": 1.5349710195608717,
+        "mean_record_rms_ratio_to_total": 0.25249358009043726,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F4",
+        "source": "early_right_hemisphere_from_left_visual_field",
+        "mean_record_rms": 1.055031373013586,
+        "mean_record_rms_ratio_to_total": 0.17354632907595754,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F4",
+        "source": "configuration_left_hemisphere_from_right_visual_field",
+        "mean_record_rms": 8.485720493959658,
+        "mean_record_rms_ratio_to_total": 1.3988107270114936,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F4",
+        "source": "configuration_right_hemisphere_from_left_visual_field",
+        "mean_record_rms": 5.22482902766105,
+        "mean_record_rms_ratio_to_total": 0.8612757906646346,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F4",
+        "source": "bilateral_shape_preference_opponent_midline",
+        "mean_record_rms": 3.3832000841542222,
+        "mean_record_rms_ratio_to_total": 0.5577400591249967,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      },
+      {
+        "sensor": "F4",
+        "source": "TOTAL",
+        "mean_record_rms": 6.074351783545042,
+        "mean_record_rms_ratio_to_total": 1.0,
+        "n_heldout_records": 4,
+        "interpretation": "RMS ratio is descriptive; signed sources can cancel, so ratios are not additive shares"
+      }
+    ],
+    "parameter_identity": "left/right paired simulations share parameters, gain, input scaling and observation operator",
+    "figures": [
+      "model_population_right_minus_left.png",
+      "model_source_electrode_right_minus_left.png",
+      "measured_vs_model_candidate_features.png",
+      "heldout_9d_electrode_lda.png"
+    ]
+  },
+  "evidence_report": "D:\\8\\Desktop\\CMathc\\src\\C\\q2\\output\\修改3.md",
   "sha256": {
-    "run_v3.py": "48aed0f9de7798cf26a683652e1e91462aae0fa283cadb00b3f760a94574a867",
-    "config.py": "f0bb3418ba3922689db8481f223854f35805cd135bdae22bb28421e93a7a00d8",
+    "run_v3.py": "daddeae30f95b8b21ba0298e1e175a0b5c1b4e94250e21d21980cd038b5fd2a8",
+    "config.py": "6e67827f20bc0e2bb2642d4f18ec9c5421c728bc19bd32bd938c60cd485773d7",
     "frontend.py": "06f641dff5fdda3f26731c27c9709a5d8b75ac6191885640c485a6fb034f2279",
     "model.py": "eaeedad4a0fafe0a57cb1373f871d94a327d57a628de3fd2d4a881463c07cc49",
     "fit.py": "62a4b6bee86e787b0d1b4c0b4287539fdd8a840cfc74e4c0e839392c1ca5784f",
     "real_data.py": "201c4d1c4bdfba25ac5d8ef1bedfe4ccf90ec5820804f0086dbc181cee8b01c1",
     "observation.py": "68fc22b0c96a889d1daaaa0a926463d7ef4cd9398b4a286a8ca08ddbbe28f9c5",
-    "head_model.py": "c52439da88a5e136a33fbd3fe96f96ddaa290c0bb34166d3365ff0e9e8b4a0ae"
+    "head_model.py": "c52439da88a5e136a33fbd3fe96f96ddaa290c0bb34166d3365ff0e9e8b4a0ae",
+    "evaluate.py": "4c5d05cc03a94633dd063f02bd9f3b370b8f6a0e05c467e09fb1b4963a1d05dd",
+    "evidence_chain.py": "7ee01db04b2aba4235816bac3131aa6d512cc553363e715b85648056c386815d"
   }
 }

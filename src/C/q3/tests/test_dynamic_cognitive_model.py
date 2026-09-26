@@ -101,3 +101,21 @@ def test_target_time_and_preprocessing_are_configurable_and_finite():
         assert np.isfinite(processed).all()
         baseline = (processed_time >= -0.2) & (processed_time < 0.0)
         np.testing.assert_allclose(processed[:, baseline].mean(axis=1), 0.0, atol=1e-12)
+
+
+def test_candidate_scenario_grid_keeps_target_and_match_assumptions_explicit():
+    model = _model_module()
+    scenarios = model.build_sensitivity_scenarios(
+        cue_side="right",
+        target_types=("dots", "inward"),
+        target_onsets_s=(2.0, 2.4),
+        target_duration_s=0.3,
+        match_evidence_values=(1.0, -1.0),
+    )
+
+    assert len(scenarios) == 8
+    assert {scenario.cue_side for scenario in scenarios} == {"right"}
+    assert {scenario.target_stimulus for scenario in scenarios} == {"dots", "inward"}
+    assert {scenario.target_onset_s for scenario in scenarios} == {2.0, 2.4}
+    assert {scenario.target_duration_s for scenario in scenarios} == {0.3}
+    assert {scenario.match_evidence for scenario in scenarios} == {-1.0, 1.0}

@@ -83,6 +83,44 @@ class DynamicScenario:
     match_evidence: float
 
 
+def build_sensitivity_scenarios(
+    cue_side: str = "left",
+    target_types: tuple[str, ...] = TARGET_TYPES,
+    target_onsets_s: tuple[float | None, ...] = TARGET_ONSETS_S,
+    target_duration_s: float | None = 0.2,
+    match_evidence_values: tuple[float, ...] = MATCH_EVIDENCE_VALUES,
+) -> tuple[DynamicScenario, ...]:
+    """Build an explicit Cartesian grid of candidate, not observed, scenarios."""
+
+    target_types = tuple(target_types)
+    target_onsets_s = tuple(target_onsets_s)
+    match_evidence_values = tuple(float(x) for x in match_evidence_values)
+    if cue_side not in {"left", "right"}:
+        raise ValueError("cue_side must be left or right")
+    if not target_types or not set(target_types).issubset({"dots", "inward", "outward"}):
+        raise ValueError("target_types must be a nonempty subset of dots/inward/outward")
+    if not target_onsets_s:
+        raise ValueError("target_onsets_s must contain at least one candidate")
+    if any(value is not None and (not np.isfinite(value) or value < 0.0)
+           for value in target_onsets_s):
+        raise ValueError("target onset candidates must be nonnegative finite values or None")
+    if not match_evidence_values or any(
+        not np.isfinite(value) or not -1.0 <= value <= 1.0
+        for value in match_evidence_values
+    ):
+        raise ValueError("match evidence candidates must lie in [-1, 1]")
+    if target_duration_s is not None and (
+        not np.isfinite(target_duration_s) or target_duration_s <= 0.0
+    ):
+        raise ValueError("target_duration_s must be positive, finite, or None")
+    return tuple(
+        DynamicScenario(cue_side, target_type, onset, target_duration_s, evidence)
+        for target_type in target_types
+        for onset in target_onsets_s
+        for evidence in match_evidence_values
+    )
+
+
 def _validate_gate(name: str, gate: np.ndarray, size: int) -> np.ndarray:
     value = np.asarray(gate, dtype=float).reshape(-1)
     if value.size != size or not np.isfinite(value).all():
@@ -545,7 +583,7 @@ def _write_report(rows: pd.DataFrame, report_path: Path, figure_path: Path) -> N
     matched = rows.loc[rows["match_evidence_scenario"] == 1.0]
     mismatch_peak = float(mismatch["control_peak"].mean())
     match_peak = float(matched["control_peak"].mean())
-    report = f"""# Q3 最小动态认知模型：机制接口与数值检查
+    report = """# Q3 最小动态认知模型：机制接口与数值检查
 
 ## 目的与范围
 
@@ -584,17 +622,17 @@ $$
 ## 可配置情景与预处理
 
 - cue侧：left/right；当前敏感性演示用 left cue。
-- 候选target类型：{types}。
-- 候选target相对cue时刻（秒）：{onsets}；它们是时序敏感性分支，不是已确认目标呈现时刻。
+- 候选target类型：@@types@@。
+- 候选target相对cue时刻（秒）：@@onsets@@；它们是时序敏感性分支，不是已确认目标呈现时刻。
 - 本次数值演示假设 target 持续200 ms；代码接口可改持续时间或设为持续至模拟终点。MAT未提供可验证的逐试次target offset。
 - `match_evidence`分别运行匹配/不匹配情景；不与真实正确/错误标签连接。
 - 共同观测处理提供 `none`、单向因果滤波、双向零相位滤波三个配置；均可配置频带、阶数、目标采样率、基线窗。因果滤波保留时间因果性但有频率相关相位延迟；零相位滤波便于离线形态对照，但不能独立证明精细的阶段先后。
 
 ## 数值检查结果
 
-- 情景数：{total}（3种target × 3个候选时刻 × 匹配/不匹配）。有限值通过：{finite_count}/{total}。
-- `max |y_Q2−Gq_Q2|`：{projection_max:.3e}（验证问题二前向投影接口）。
-- 匹配情景平均控制峰值：{match_peak:.6g}；不匹配情景平均控制峰值：{mismatch_peak:.6g}。这只验证设定方程的冲突分支方向，不是行为效应证据。
+- 情景数：@@total@@（3种target × 3个候选时刻 × 匹配/不匹配）。有限值通过：@@finite_count@@/@@total@@。
+- `max |y_Q2−Gq_Q2|`：@@projection_max@@（验证问题二前向投影接口）。
+- 匹配情景平均控制峰值：@@match_peak@@；不匹配情景平均控制峰值：@@mismatch_peak@@。这只验证设定方程的冲突分支方向，不是行为效应证据。
 - 数值检查通过的状态与传感器范围逐情景保存在 `dynamic_model_checks.csv`。
 
 ## 图片
@@ -611,6 +649,17 @@ $$
 
 重现命令：`python src/C/q3/dynamic_cognitive_model.py`。
 """
+    replacements = {
+        "@@types@@": types,
+        "@@onsets@@": onsets,
+        "@@total@@": str(total),
+        "@@finite_count@@": str(finite_count),
+        "@@projection_max@@": f"{projection_max:.3e}",
+        "@@match_peak@@": f"{match_peak:.6g}",
+        "@@mismatch_peak@@": f"{mismatch_peak:.6g}",
+    }
+    for token, value in replacements.items():
+        report = report.replace(token, value)
     report_path.write_text(report, encoding="utf-8")
 
 

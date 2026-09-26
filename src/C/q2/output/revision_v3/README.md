@@ -35,7 +35,7 @@
 
 1. 本模型给出从输入到传感器代理的显式正向计算链，可用于解释模型内部的差异来源；三电极与四份记录不足以识别真实脑内源分布。
 2. Stage1 的左右模板响应是形状方向编码的模型假设。必须同时报告实测右减左波形和留出结果；分类或拟合指标差不能单独证明生理机制。
-3. The cue-only model is simulated naturally through 0-3000 ms before applying the full-epoch filter. No target event at 2.2 s is added; the event context remains unverified.
+3. The cue-only model is simulated naturally through the complete 0-3000 ms epoch; no target response at 2.2 s is inserted. The measured context may contain a target-related component that leaks backward through zero-phase filtering, so absolute ERP fit remains conditional on the unverified event context.
 4. 真实 EEG 使用第一问已清洗数据，模型在 ERP 前执行逐试次基线均值校正；这不等于线性基线回归，也不重新裁定第一问数据清洗的有效性。
 5. 原始的 v1/v2 代码和结果均未覆盖或删除；25 次预算结果另存于 `output/revision_v3_max25/`。
 
@@ -51,3 +51,10 @@
 - `cortical_ei_responses.png`：三组 E/I 群体逐通道响应；模板偏好通道与视觉视野通道分开标注。
 - `source_to_electrode_contributions.png`：五个源代理对 F3/Fz/F4 的逐源贡献；图中校验各贡献之和等于电极预测。
 - `heldout_metrics.csv`、`left_right_difference.csv`、`fixed_feature_lda.csv`、`mechanism_controls.csv`。
+
+## Fixed nine-dimensional electrode ERP feature validation
+
+The predeclared feature consists of F3, Fz, and F4 means in [100,250), [250,500), and [500,800) ms. Leave-one-MAT-out shrinkage-LDA balanced accuracy is **0.466**, macro AUC is **0.451** over 4 held-out records. The windows and channels were fixed before examining these fold results; scaling was estimated from training records only.
+Four MAT files are recordings, not verified independent participants. This result is evidence about this fixed feature under record holdout, not evidence that the forward mechanism is correct.
+The associated model population/source differences use the same fitted parameters, drive scales, gain, and observation operator for the left/right pair in each held-out fold. Five-source additivity is checked after filtering, resampling, and baseline correction.
+New outputs: `model_population_right_minus_left.png`, `model_source_electrode_right_minus_left.png`, `measured_vs_model_candidate_features.png`, `heldout_9d_electrode_lda.png`, `heldout_9d_electrode_lda_folds.csv`, `measured_candidate_features_exploratory.csv`, and `model_source_contribution_summary.csv`.

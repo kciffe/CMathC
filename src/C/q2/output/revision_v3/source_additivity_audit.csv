@@ -1,0 +1,5 @@
+﻿heldout_record,left_source_sum_relative_rms_error,right_source_sum_relative_rms_error,max_relative_rms_error,tolerance,status
+VisualCogA_Task-1,1.833510666689076e-06,9.295398623232462e-07,1.833510666689076e-06,1e-05,pass_with_float32_roundoff
+VisualCogA_Task-2,9.855136621557975e-07,1.119838720608907e-06,1.119838720608907e-06,1e-05,pass_with_float32_roundoff
+VisualCogB_Task-1,1.6695721731490537e-06,2.567252228426561e-06,2.567252228426561e-06,1e-05,pass_with_float32_roundoff
+VisualCogB_Task-2,1.7406096663575707e-06,1.6393457555718912e-06,1.7406096663575707e-06,1e-05,pass_with_float32_roundoff

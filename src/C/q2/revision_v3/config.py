@@ -72,6 +72,11 @@ FRONTEND_ROUTE = "opponent"
 OBSERVATION_RANK = 3
 
 FEATURE_WINDOWS_MS = ((80.0, 200.0), (250.0, 450.0), (450.0, 700.0))
+# Fixed candidate EEG features for the final evidence-chain analysis.
+# Intervals are half-open and the within-window mean is computed separately
+# for F3, Fz, and F4, yielding nine features without data-driven selection.
+CANDIDATE_ERP_WINDOWS_MS = ((100.0, 250.0), (250.0, 500.0), (500.0, 800.0))
+FEATURE_WINDOW_LABELS = ("W1_100_250", "W2_250_500", "W3_500_800")
 LDA_SHRINKAGE = 0.1
 SPLIT_HALF_SEED = 20260925
 SPLIT_HALF_REPEATS = 500

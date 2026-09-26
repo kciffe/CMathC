@@ -1,0 +1,5 @@
+﻿heldout_record,training_records,status,n_test_trials,n_left,n_right,feature_count,classifier,shrinkage,balanced_accuracy,recall_left,recall_right,roc_auc,confusion_matrix_left_right
+VisualCogA_Task-1,VisualCogA_Task-2;VisualCogB_Task-1;VisualCogB_Task-2,complete,54,29,25,9,fixed-shrinkage LDA; train-only scaling,0.1,0.3468965517241379,0.41379310344827586,0.28,0.30896551724137933,"[[12, 17], [18, 7]]"
+VisualCogA_Task-2,VisualCogA_Task-1;VisualCogB_Task-1;VisualCogB_Task-2,complete,80,45,35,9,fixed-shrinkage LDA; train-only scaling,0.1,0.4936507936507937,0.24444444444444444,0.7428571428571429,0.4876190476190476,"[[11, 34], [9, 26]]"
+VisualCogB_Task-1,VisualCogA_Task-1;VisualCogA_Task-2;VisualCogB_Task-2,complete,83,41,42,9,fixed-shrinkage LDA; train-only scaling,0.1,0.5171312427409989,0.43902439024390244,0.5952380952380952,0.5168408826945412,"[[18, 23], [17, 25]]"
+VisualCogB_Task-2,VisualCogA_Task-1;VisualCogA_Task-2;VisualCogB_Task-1,complete,80,37,43,9,fixed-shrinkage LDA; train-only scaling,0.1,0.5043997485857951,0.7297297297297297,0.27906976744186046,0.49025769956002513,"[[27, 10], [31, 12]]"

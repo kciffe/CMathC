@@ -1,6 +1,6 @@
 # Q3 EEG cognitive model
 
-This pipeline follows the latest Q3 solution with a separate raw-EEG analysis path. It uses F3/Fz/F4 for EEG features, VisCue for cue-side labels, and channel 9/TimeStamp for response-event metadata. Channel 9 is never included in EEG feature arrays or V/H/P state predictors. Q3 does not import the Q2 simulation chain.
+This pipeline follows the latest Q3 solution with a separate raw-EEG analysis path. It uses F3/Fz/F4 for EEG features, VisCue for cue-side labels, and channel 9/TimeStamp only for response-event metadata. Channel 9 is never included in EEG feature arrays, dynamic-state predictors, or EEG validation labels. The original feature/classification scripts remain independent of Q2; the new dynamic cognitive model explicitly calls Q2's visual forward simulation and leadfield projection for candidate cue/target scenes, without inverting the five source proxies.
 
 ## Run order
 
@@ -16,9 +16,12 @@ python src/C/q3/05_behavior_model.py
 python src/C/q3/06_validate.py
 python src/C/q3/07_ablation.py
 python src/C/q3/09_event_time_semantics.py
+python src/C/q3/dynamic_validation.py
 ```
 
 After `02_extract_trials.py`, optionally run `python src/C/q3/08_behavior_event_audit.py` to audit target truth, target onset, response deadlines, and record mapping. Missing external labels stay blank and are reported as unknown. Run `09_event_time_semantics.py` to regenerate the independent raw event-time, candidate task-mapping, and Q2 leadfield identifiability audit in `output/continuation_audit/`; its report is [`event_timing_semantics_report.md`](output/continuation_audit/event_timing_semantics_report.md).
+
+Run `python src/C/q3/dynamic_validation.py` after the event audit to generate candidate-scene Q2 forward trajectories, V/H/P macro states, and leave-one-record-out EEG comparisons. The target onset, stimulus type, target duration, match-evidence branch, and preprocessing modes are command-line configurable; defaults include a no-target scenario plus 2.0/2.2/2.4 s target candidates and `none`/`causal`/`zero_phase` processing. Candidate conditions are sensitivity scenarios, not verified trial truth. The script writes the detailed formulas, step-by-step methods, fold metrics, and PNG-only intermediate figures to `问题三实现流程与模型说明.md` and `output/dynamic_heldout_validation/`.
 
 The scripts write tables, summaries, and figures to `src/C/q3/output/`. Run `python -m pytest src/C/q3/tests src/C/q3/experiments -q` for the Q3 unit and experiment tests.
 
