@@ -344,8 +344,8 @@ def _plot_cortical_difference(time_ms, cortical, counts, n_total):
     right_i = _weighted_cortical(cortical, counts, "right", "inhibitory")
     diff_e, diff_i = right_e - left_e, right_i - left_i
     fig, axes = plt.subplots(3, 1, figsize=(10.8, 7.2), sharex=True)
-    fig.suptitle("皮层群体条件差异：右指三角减左指三角", fontsize=13, y=0.99)
-    fig.text(0.5, 0.955,
+    fig.suptitle("皮层群体条件差异：右指三角减左指三角", fontsize=13, y=0.978)
+    fig.text(0.5, 0.925,
              f"前两组为图像左/右半区；第三组为左/右模板偏好；同一记录拟合参数，按入选试次加权，n={n_total}",
              ha="center", va="center", fontsize=9.2)
     handles = [
@@ -354,8 +354,8 @@ def _plot_cortical_difference(time_ms, cortical, counts, n_total):
         Line2D([0], [0], color="#D17A35", linestyle="-", label="抑制性 · 通道1"),
         Line2D([0], [0], color="#D17A35", linestyle="--", label="抑制性 · 通道2"),
     ]
-    _boxed_legend(fig, handles, y=0.91, ncol=4)
-    fig.subplots_adjust(left=0.105, right=0.98, bottom=0.10, top=0.82, hspace=0.28)
+    _boxed_legend(fig, handles, y=0.87, ncol=4)
+    fig.subplots_adjust(left=0.105, right=0.98, bottom=0.10, top=0.77, hspace=0.28)
     mask = (time_ms >= 0) & (time_ms <= 800)
     for group, ax in enumerate(axes):
         ax.plot(time_ms[mask], diff_e[group, 0, mask], color="#3265A8", lw=1.35)

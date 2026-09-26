@@ -21,7 +21,7 @@ try:
     from . import config
     from .fit import _cached_left_frontend
     from .frontend import load_stimulus, mirror_stage1_frontend
-    from .model import calibrate_drive_scales
+    from .model import ModelParams, calibrate_drive_scales
     from .run_grand_average_spline_fit import (
         COLORS, CONDITIONS, CONDITION_CN, _curve_metrics, _fit_channel,
         _fit_old_shared_baseline, _interpolate_channels, _load_macro_targets,
@@ -31,7 +31,7 @@ except ImportError:
     import config
     from fit import _cached_left_frontend
     from frontend import load_stimulus, mirror_stage1_frontend
-    from model import calibrate_drive_scales
+    from model import ModelParams, calibrate_drive_scales
     from run_grand_average_spline_fit import (
         COLORS, CONDITIONS, CONDITION_CN, _curve_metrics, _fit_channel,
         _fit_old_shared_baseline, _interpolate_channels, _load_macro_targets,
@@ -125,6 +125,45 @@ def _plot_task_differences(time_ms, task_spline, task_predictions, path):
     plt.close(fig)
 
 
+def _plot_recordwise_comparison(time_ms, spline_by_record, task_predictions, path):
+    """Show how each task-average fit compares with its two component records."""
+    _setup_plotting()
+    records = [(task, record) for task, task_records in TASKS.items()
+               for record in task_records]
+    record_labels = {record: f"{TASK_CN[task]} · 记录{j + 1}"
+                     for task, task_records in TASKS.items()
+                     for j, record in enumerate(task_records)}
+    fig, axes = plt.subplots(len(records), 3, figsize=(15, 10), sharex=True,
+                             squeeze=False)
+    for row, (task, record) in enumerate(records):
+        for col, channel in enumerate(config.CHANNELS):
+            ax = axes[row, col]
+            for condition, color, label in (("left", "#3569A8", "左提示"),
+                                            ("right", "#D77932", "右提示")):
+                target = spline_by_record[(record, condition, channel)]
+                prediction = task_predictions[task][condition][col]
+                ax.plot(time_ms, target, color=color, lw=1.35, alpha=.9,
+                        label=f"{label}·第一问曲线")
+                ax.plot(time_ms, prediction, color=color, lw=1.35, ls="--",
+                        label=f"{label}·任务模型")
+            ax.axvline(0, color="0.4", lw=.7)
+            ax.axhline(0, color="0.6", lw=.65)
+            ax.set_title(f"{record_labels[record]} · {channel}")
+            ax.grid(alpha=.2)
+            if col == 0:
+                ax.set_ylabel("电位（原始数据单位）")
+            if row == len(records) - 1:
+                ax.set_xlabel("提示出现后时间（ms）")
+    handles, labels = axes[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc="upper center", ncol=4, frameon=True,
+               bbox_to_anchor=(.5, 1.005))
+    fig.suptitle("任务均值模型与所属单记录 ERP 曲线对照", y=1.04,
+                 fontsize=14, fontweight="bold")
+    fig.tight_layout(rect=(0, 0, 1, .98), h_pad=.75)
+    fig.savefig(path, dpi=220, bbox_inches="tight")
+    plt.close(fig)
+
+
 def _write_csv(path, rows):
     rows = list(rows)
     if not rows:
@@ -136,7 +175,42 @@ def _write_csv(path, rows):
         writer.writerows(rows)
 
 
-def run(max_nfev=38):
+def _evaluate_global_channelwise_reference(time_ms, task_spline, fronts, drive_scales):
+    """Evaluate the previous single-parameter-set-per-channel fit on task means."""
+    parameter_path = (config.Q2_ROOT / "output" / "revision_v3_grand_average_fit"
+                      / "分电极拟合参数.csv")
+    if not parameter_path.exists():
+        return None
+    import pandas as pd
+    parameters = pd.read_csv(parameter_path, encoding="utf-8-sig")
+    targets, predictions, task_rows = [], [], []
+    for task in TASKS:
+        task_targets, task_predictions = [], []
+        for _, row in parameters.iterrows():
+            channel = str(row["电极"])
+            channel_index = config.CHANNELS.index(channel)
+            params = ModelParams(tau_s=float(row["tau_s_ms"]),
+                                 g_i=float(row["g_i"]),
+                                 tau_a=float(row["tau_a_ms"]))
+            model = _make_reflected_predictions(fronts, params,
+                                                float(row["左右共享增益"]), drive_scales)
+            for condition in CONDITIONS:
+                curve, model_time = model[condition]
+                predicted = _interpolate_channels(curve, model_time, time_ms)[channel_index]
+                target = task_spline[task][(condition, channel)]
+                targets.append(target)
+                predictions.append(predicted)
+                task_targets.append(target)
+                task_predictions.append(predicted)
+        task_metric = _curve_metrics(np.concatenate(task_targets),
+                                     np.concatenate(task_predictions))
+        task_rows.append({"模型": f"全任务共享参数 · {TASK_CN[task]}",
+                          "NRMSE": task_metric["nrmse_by_target_rms"],
+                          "相关": task_metric["correlation"]})
+    return (_curve_metrics(np.concatenate(targets), np.concatenate(predictions)), task_rows)
+
+
+def run(max_nfev=38, reuse_fit=False):
     config.require_current_source_mapping_manifest()
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     time_ms, _, _, spline_by_record, observed_by_record, trial_counts = _load_macro_targets()
@@ -157,6 +231,13 @@ def run(max_nfev=38):
           flush=True)
     task_fits, task_predictions, task_metrics = {}, {}, {}
     parameter_rows, task_metric_rows, record_metric_rows, difference_rows = [], [], [], []
+    saved_parameters = None
+    parameter_path = OUT_DIR / "分任务分电极拟合参数.csv"
+    if reuse_fit:
+        if not parameter_path.exists():
+            raise FileNotFoundError(f"Cannot reuse missing fit parameters: {parameter_path}")
+        import pandas as pd
+        saved_parameters = pd.read_csv(parameter_path, encoding="utf-8-sig")
     for task, records in TASKS.items():
         print(f"开始拟合{TASK_CN[task]}：{', '.join(records)}", flush=True)
         task_fits[task] = {}
@@ -164,8 +245,30 @@ def run(max_nfev=38):
                                   for condition in CONDITIONS}
         task_metrics[task] = {}
         for channel_index, channel in enumerate(config.CHANNELS):
-            fit = _fit_channel(channel, channel_index, task_spline[task], time_ms,
-                               fronts, drive_scales, tau_a=tau_a, max_nfev=max_nfev)
+            if reuse_fit:
+                saved = saved_parameters[(saved_parameters["任务"] == TASK_CN[task])
+                                         & (saved_parameters["电极"] == channel)]
+                if len(saved) != 1:
+                    raise ValueError(f"Expected one saved fit for {TASK_CN[task]}/{channel}")
+                saved = saved.iloc[0]
+                params = ModelParams(tau_s=float(saved["tau_s_ms"]),
+                                     g_i=float(saved["g_i"]),
+                                     tau_a=float(saved["tau_a_ms"]))
+                model_curves = _make_reflected_predictions(
+                    fronts, params, float(saved["左右共享增益"]), drive_scales)
+                pred = {condition: _interpolate_channels(curve, model_time, time_ms)
+                        for condition, (curve, model_time) in model_curves.items()}
+                fit = {"channel": channel,
+                       "parameters": {"tau_s_ms": params.tau_s, "g_i": params.g_i,
+                                      "tau_a_ms": params.tau_a},
+                       "gain": float(saved["左右共享增益"]),
+                       "success": bool(saved["优化收敛"]),
+                       "evaluations": int(saved["函数评估次数"]),
+                       "n_unique_simulations": int(saved["唯一参数点数"]),
+                       "predictions": pred}
+            else:
+                fit = _fit_channel(channel, channel_index, task_spline[task], time_ms,
+                                   fronts, drive_scales, tau_a=tau_a, max_nfev=max_nfev)
             task_fits[task][channel] = fit
             for condition in CONDITIONS:
                 task_predictions[task][condition][channel_index] = fit["predictions"][condition][channel_index]
@@ -223,6 +326,8 @@ def run(max_nfev=38):
                       task_metrics, OUT_DIR / "分任务总体曲线拟合.png")
     _plot_task_differences(time_ms, task_spline, task_predictions,
                            OUT_DIR / "分任务左右差异波拟合.png")
+    _plot_recordwise_comparison(time_ms, spline_by_record, task_predictions,
+                                OUT_DIR / "所属记录逐条对照.png")
     _write_csv(OUT_DIR / "分任务分电极拟合参数.csv", parameter_rows)
     _write_csv(OUT_DIR / "任务均值拟合指标.csv", task_metric_rows)
     _write_csv(OUT_DIR / "逐记录总体对照指标.csv", record_metric_rows)
@@ -255,6 +360,7 @@ def run(max_nfev=38):
                     record_targets.append(spline_by_record[(record, condition, channel)])
                     record_predictions.append(task_predictions[task][condition][channel_index])
     record_metric = _curve_metrics(np.concatenate(record_targets), np.concatenate(record_predictions))
+    converged_count = sum(int(row["优化收敛"]) for row in parameter_rows)
     old_baseline = _fit_old_shared_baseline(time_ms,
                                             {key: value for key, value in
                                              _make_task_means(spline_by_record).get("Task1", {}).items()},
@@ -270,6 +376,18 @@ def run(max_nfev=38):
                                           for t in TASKS for c in CONDITIONS
                                           for i, ch in enumerate(config.CHANNELS)])
         old_baseline_by_task = _curve_metrics(old_targets, old_predictions)
+    global_channelwise = _evaluate_global_channelwise_reference(
+        time_ms, task_spline, fronts, drive_scales)
+    comparison_rows = [{"模型": "按任务分别拟合", "NRMSE": overall_metric["nrmse_by_target_rms"],
+                        "相关": overall_metric["correlation"], "参数组数": 6}]
+    if global_channelwise is not None:
+        comparison_rows.append({"模型": "全任务共享参数_分电极", "NRMSE": global_channelwise[0]["nrmse_by_target_rms"],
+                               "相关": global_channelwise[0]["correlation"], "参数组数": 3})
+        comparison_rows.extend({**row, "参数组数": 3} for row in global_channelwise[1])
+    if old_baseline_by_task:
+        comparison_rows.append({"模型": "旧版全任务共享参数", "NRMSE": old_baseline_by_task["nrmse_by_target_rms"],
+                               "相关": old_baseline_by_task["correlation"], "参数组数": 1})
+    _write_csv(OUT_DIR / "总体拟合基线比较.csv", comparison_rows)
 
     lines = [
         "# 按任务分开的第一问 ERP 总体曲线拟合",
@@ -287,10 +405,13 @@ def run(max_nfev=38):
         "",
         f"- 两个任务的 12 条任务均值曲线合并：NRMSE **{overall_metric['nrmse_by_target_rms']:.3f}**，相关 **{overall_metric['correlation']:.3f}**。",
         f"- 将任务级模型分别与所属的四份记录曲线对照：NRMSE **{record_metric['nrmse_by_target_rms']:.3f}**，相关 **{record_metric['correlation']:.3f}**。",
+        f"- 参数优化状态：{converged_count}/6 组标记为收敛；其余参数为当前搜索预算下的最佳候选点。",
         "- 逐任务、逐电极、逐记录指标见对应 CSV；参数及优化状态见 `分任务分电极拟合参数.csv`。",
     ]
     if old_baseline_by_task:
         lines += [f"- 既有全数据共享参数模型在相同任务均值目标上的参考 NRMSE：**{old_baseline_by_task['nrmse_by_target_rms']:.3f}**，相关：**{old_baseline_by_task['correlation']:.3f}**。"]
+    if global_channelwise is not None:
+        lines += [f"- 将此前‘全任务共用、但每个电极单独拟合’的参数重新用于相同任务均值目标，NRMSE **{global_channelwise[0]['nrmse_by_target_rms']:.3f}**，相关 **{global_channelwise[0]['correlation']:.3f}**；按任务分开后的 NRMSE 变化为 **{overall_metric['nrmse_by_target_rms'] - global_channelwise[0]['nrmse_by_target_rms']:+.3f}**。前者 3 组电极参数，后者 6 组任务×电极参数。"]
     lines += [
         "",
         "## 左右差异波",
@@ -301,7 +422,7 @@ def run(max_nfev=38):
         "",
         "按任务分开能避免把任务一与任务二的总体波形差异压进同一平均曲线。由于每个任务只有两份记录，而且两份都参与了任务曲线与参数估计，记录级对照不是未见数据上的预测。当前每个任务也各有三套电极参数，这是一种分电极拟合诊断；不能把它表述为一套完全共享的神经动力学生理参数。参数优化若未收敛，表中仍是预算内最佳候选点，不能称为最优收敛解。",
         "",
-        "图中灰线为任务内等权实测 ERP 均值，彩色实线为第一问样条均值，红色虚线为任务模型曲线。",
+        "`分任务总体曲线拟合.png` 中灰线为任务内等权实测 ERP 均值，彩色实线为第一问样条均值，红色虚线为任务模型曲线。`所属记录逐条对照.png` 将任务模型分别与两份组成记录的 ERP 样条曲线比较；这仍是参与任务均值构造的数据内对照。",
         "",
     ]
     (OUT_DIR / "结果说明.md").write_text("\n".join(lines), encoding="utf-8")
@@ -321,5 +442,7 @@ def run(max_nfev=38):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--max-nfev", type=int, default=38)
+    parser.add_argument("--reuse-fit", action="store_true",
+                        help="regenerate reports and figures from saved task/channel parameters")
     args = parser.parse_args()
-    run(max_nfev=args.max_nfev)
+    run(max_nfev=args.max_nfev, reuse_fit=args.reuse_fit)
