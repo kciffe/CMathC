@@ -1,0 +1,417 @@
+\clearpage
+\section{问题一：稳健黎曼伪迹筛选}
+\begin{lstlisting}[style=appendixPython]
+# 第一问核心算法：黎曼几何质量指数计算与试次筛查
+# 以下函数摘自第八步正式源程序，省略公共导入和参数定义，保留算法逻辑
+
+# 对称正定矩阵进行谱分解，用于计算矩阵对数、平方根等矩阵函数
+def matrix_function(matrix, function, positive=False):
+    values, vectors = eigh((matrix + matrix.T) / 2)
+    if positive:
+        values = np.maximum(values, 1e-12)
+    return (vectors * function(values)) @ vectors.T
+
+
+# 计算单个试次的通道协方差矩阵，并加入微小正则项
+def covariance_matrix(signals):
+    centered = signals - signals.mean(axis=1, keepdims=True)
+    covariance = centered @ centered.T / (centered.shape[1] - 1)
+    return covariance + 1e-6 * np.eye(centered.shape[0])
+
+
+# 计算两个协方差矩阵之间的黎曼距离
+def riemann_distance(first, second):
+    inverse_root = matrix_function(first, lambda x: 1 / np.sqrt(x), positive=True)
+    relative = inverse_root @ second @ inverse_root
+    eigenvalues = eigh((relative + relative.T) / 2, eigvals_only=True)
+    return np.linalg.norm(np.log(np.maximum(eigenvalues, 1e-12)))
+
+
+# 迭代计算协方差矩阵组的黎曼均值
+def riemann_mean(covariances):
+    log_mean = np.mean(
+        [matrix_function(cov, np.log, positive=True) for cov in covariances], axis=0
+    )
+    center = matrix_function(log_mean, np.exp)
+    for _ in range(30):
+        root = matrix_function(center, np.sqrt, positive=True)
+        inverse_root = matrix_function(center, lambda x: 1 / np.sqrt(x), positive=True)
+        delta = np.mean(
+            [matrix_function(inverse_root @ cov @ inverse_root, np.log, positive=True)
+             for cov in covariances],
+            axis=0,
+        )
+        if np.linalg.norm(delta, "fro") < 1e-8:
+            break
+        center = root @ matrix_function(delta, np.exp) @ root
+        center = (center + center.T) / 2
+    return center
+
+
+# 依据黎曼距离和稳健标准分，迭代识别协方差矩阵内点
+def robust_riemann_center(covariances):
+    keep = np.ones(len(covariances), dtype=bool)
+    for _ in range(4):
+        center = riemann_mean(covariances[keep])
+        distances = np.array([riemann_distance(cov, center) for cov in covariances])
+        reference = distances[keep]
+        median = np.median(reference)
+        mad = np.median(np.abs(reference - median))
+        z_score = (distances - median) / (1.4826 * mad + 1e-12)
+        updated = z_score <= 3
+        if np.array_equal(updated, keep):
+            break
+        keep = updated
+    return riemann_mean(covariances[keep]), keep
+
+
+# 对指定频带进行四阶零相位带通滤波
+def bandpass(data, sample_rate, low_hz, high_hz):
+    sos = butter(4, [low_hz, high_hz], btype="bandpass", fs=sample_rate, output="sos")
+    return sosfiltfilt(sos, data, axis=-1)
+
+
+# 以稳健内点为参照，将异常特征转换为非负稳健标准分
+def positive_robust_z(feature, inliers):
+    reference = feature[inliers]
+    median = np.median(reference)
+    mad = np.median(np.abs(reference - median))
+    z_score = (feature - median) / (1.4826 * mad + 1e-12)
+    return np.maximum(0, np.clip(z_score, -3, 6))
+
+
+# 在质量指数排序曲线的前 40% 范围内，以最大相邻跳变确定拐点
+def sqi_knee_threshold(sqi):
+    ordered = np.sort(sqi)
+    if len(ordered) < 2:
+        raise ValueError("At least two non-clipped trials are required to estimate SQI threshold")
+    search_end = min(len(ordered) - 1, max(3, int(len(ordered) * 0.4)))
+    return ordered[np.argmax(np.diff(ordered[:search_end + 1])) + 1]
+
+
+# 按组别配置当前项目实际使用的频带、通道和异常度量
+def feature_specs(is_group_a):
+    if is_group_a:
+        return [
+            ("RP1_F3F4_1_7_Frobenius", "low", (1, 2), "frobenius"),
+            ("RP2_Fz_1_7_Variance", "low", (0,), "variance"),
+            ("RP3_All_16_24_Trace", "high", (0, 1, 2), "trace"),
+            ("RP4_All_1_24_Riemann", "full", (0, 1, 2), "riemann"),
+        ]
+    return [
+        ("RP1_All_1_7_Riemann", "low", (0, 1, 2), "riemann"),
+        ("RP2_F3F4_16_24_Trace", "high", (1, 2), "trace"),
+        ("RP3_All_1_24_Riemann", "full", (0, 1, 2), "riemann"),
+    ]
+
+
+# 计算各试次的频带异常特征、质量指数和组别阈值
+def calculate_sqi(data, sample_rate, time, valid_indices, is_group_a):
+    epoch = (time >= EPOCH_START) & (time <= EPOCH_END)
+    if not epoch.any():
+        raise ValueError(f"No samples in the analysis window {EPOCH_START}–{EPOCH_END} s")
+
+    bands = {
+        "low": bandpass(data, sample_rate, 1, 7),
+        "high": bandpass(data, sample_rate, 16, 24),
+        "full": data,
+    }
+    feature_names, feature_values, normalized = [], [], []
+
+    for feature_name, band, channels, metric in feature_specs(is_group_a):
+        channel_indices = np.asarray(channels)
+        covariances = np.stack([
+            covariance_matrix(bands[band][trial, channel_indices][:, epoch])
+            for trial in valid_indices
+        ])
+        center, inliers = robust_riemann_center(covariances)
+
+        if metric == "frobenius":
+            values = np.linalg.norm(covariances, axis=(1, 2))
+        elif metric == "variance":
+            values = covariances[:, 0, 0]
+        elif metric == "trace":
+            values = np.trace(covariances, axis1=1, axis2=2)
+        else:
+            values = np.array([riemann_distance(cov, center) for cov in covariances])
+
+        feature_names.append(feature_name)
+        feature_values.append(values)
+        normalized.append(positive_robust_z(values, inliers))
+
+    features = np.column_stack(feature_values)
+    anomaly_score = np.mean(normalized, axis=0)
+    sqi_valid = np.exp(-anomaly_score)
+    knee = sqi_knee_threshold(sqi_valid)
+    threshold = knee if is_group_a else max(0.05, 0.6 * knee)
+    return feature_names, features, sqi_valid, threshold
+
+
+# 削顶试次不参与质量指数计算；两类异常标记取并集作为最终剔除结果
+valid_indices = np.flatnonzero(~drop_values.astype(bool))
+feature_names, features, sqi_valid, threshold = calculate_sqi(
+    eeg, sample_rate, time, valid_indices, dataset_name.startswith("VisualCogA")
+)
+riemann_drop = np.zeros(len(trials), dtype=bool)
+riemann_drop[valid_indices] = sqi_valid < threshold
+final_drop = drop_values.astype(bool) | riemann_drop
+
+\end{lstlisting}
+\clearpage
+\section{问题二：视觉刺激正向脑电模型}
+\begin{lstlisting}[style=appendixPython]
+# 问题二核心算法：视觉前端提供 B、shape、dir_left、dir_right 特征。
+# 以下保留皮层群体动力学、功能源映射和头皮电极正向投影。
+
+W = {"w_ee": 1.4, "w_ei": 1.1, "w_ie": 1.0, "w_ii": 0.8,
+     "g_p": 2.2, "g_q": 1.2, "tau_e": 18.0, "tau_i": 10.0,
+     "tau_i_ratio": 0.55, "delay_early": 8.0, "delay_shape": 33.0,
+     "feed_e": 0.9, "feed_i": 0.45}
+SIGMA, RADIUS = 0.33, 0.09
+ELECTRODES = np.array([[-35, 55, 62], [0, 66, 61], [35, 55, 62]], float)
+REFERENCES = np.array([[-70, -50, 5], [70, -50, 5]], float)
+SOURCES = np.array([[-10, -58, 45], [10, -58, 45], [-36, -25, 50],
+                    [36, -25, 50], [0, -34, 56]], float)
+
+
+def activation(x, beta, threshold):
+    z = np.clip(beta * (np.asarray(x) - threshold), -60, 60)
+    f0 = 1 / (1 + np.exp(beta * threshold))
+    return np.clip((1 / (1 + np.exp(-z)) - f0) / (1 - f0), 0, 1)
+
+
+def project_features(frontend, scales=None):
+    # 空间图按左右视野平均；两个模板偏好通道保持分离。
+    def halves(x):
+        mid = x.shape[1] // 2
+        return np.stack([x[:, :mid].mean((0, 1)), x[:, mid:].mean((0, 1))]) / np.sqrt(2)
+    drives = np.stack([halves(frontend["B"]), halves(frontend["shape"]),
+                       [frontend["dir_left"], frontend["dir_right"]]]).astype(np.float32)
+    return drives if scales is None else drives / np.asarray(scales)[:, :, None]
+
+
+def delay_signal(x, time_ms, delay_ms):
+    target = time_ms - delay_ms
+    rows = np.asarray(x).reshape(-1, len(time_ms))
+    return np.stack([np.interp(target, time_ms, row, left=0, right=0)
+                     for row in rows]).reshape(x.shape)
+
+
+def history_at(x, step, delay_samples):
+    # 只从已计算状态取样，并对分数延迟作线性插值。
+    whole = int(np.floor(delay_samples))
+    frac, index = delay_samples - whole, step - whole
+    if index < 0 or (index == 0 and frac > 1e-12):
+        return np.zeros(x.shape[:-1], dtype=x.dtype)
+    current = x[..., index]
+    previous = x[..., index - 1] if index else np.zeros_like(current)
+    return (1 - frac) * current + frac * previous
+
+
+def wilson_cowan(drives, time_ms, tau_s=40.0, g_i=1.0):
+    # 三群体分别表示早期对比、空间构型和三角模板偏好。
+    dt = np.median(np.diff(time_ms))
+    drive = np.empty_like(drives, dtype=np.float32)
+    drive[0] = delay_signal(drives[0], time_ms, W["delay_early"])
+    drive[1:] = delay_signal(drives[1:], time_ms, W["delay_shape"])
+    e, inh = np.zeros_like(drive), np.zeros_like(drive)
+    tau_e = np.array([W["tau_e"], tau_s, tau_s])[:, None]
+    tau_i = tau_e * np.array([W["tau_i"] / W["tau_e"], W["tau_i_ratio"], W["tau_i_ratio"]])[:, None]
+    for t in range(len(time_ms) - 1):
+        e_in = W["w_ee"] * e[:, :, t] - g_i * W["w_ei"] * inh[:, :, t] + W["g_p"] * drive[:, :, t]
+        i_in = W["w_ie"] * e[:, :, t] - W["w_ii"] * inh[:, :, t] + W["g_q"] * drive[:, :, t]
+        ef, inf = history_at(e[0], t, W["delay_shape"] / dt), history_at(inh[0], t, W["delay_shape"] / dt)
+        e_in[1] += W["feed_e"] * ef
+        e_in[2] += W["feed_e"] * ef.mean()
+        i_in[1] += W["feed_i"] * inf
+        i_in[2] += W["feed_i"] * inf.mean()
+        fe, fi = activation(e_in, 5, 0.35), activation(i_in, 5, 0.35)
+        e[:, :, t + 1] = e[:, :, t] + dt * (-e[:, :, t] + (1 - e[:, :, t]) * fe) / tau_e
+        inh[:, :, t + 1] = inh[:, :, t] + dt * (-inh[:, :, t] + (1 - inh[:, :, t]) * fi) / tau_i
+    return e, inh
+
+
+def source_currents(e, inh, time_ms):
+    # 兴奋和抑制活动经突触核滤波，再映射为四个半球源和一个中线对手源。
+    dt = np.median(np.diff(time_ms))
+    def kernel(tau):
+        t = np.arange(len(time_ms)) * dt
+        h = t * np.exp(-t / tau) / tau**2
+        return h / (h.sum() * dt)
+    pe = fftconvolve(e, kernel(10)[None, None, :], mode="full", axes=-1)[..., :len(time_ms)] * dt
+    pi = fftconvolve(inh, kernel(20)[None, None, :], mode="full", axes=-1)[..., :len(time_ms)] * dt
+    early, shape, preference = pe - pi
+    return np.stack([early[1], early[0], shape[1], shape[0],
+                     preference[0] - preference[1]])
+
+
+def leadfield():
+    # 点偶极均匀导体近似，电极位于头表并使用双侧乳突参考。
+    surface = lambda p: RADIUS * p / np.linalg.norm(p, axis=1, keepdims=True)
+    electrodes, references, sources = surface(ELECTRODES) , surface(REFERENCES), SOURCES / 1000
+    normals = sources / np.linalg.norm(sources, axis=1, keepdims=True)
+    def potential(points):
+        delta = points[:, None] - sources[None]
+        distance = np.linalg.norm(delta, axis=-1)
+        return np.einsum("sc,esc->es", normals, delta) / (4 * np.pi * SIGMA * distance**3)
+    return potential(electrodes) - potential(references).mean(axis=0, keepdims=True)
+
+
+def simulate_q2(frontend, time_ms, tau_s=40.0, g_i=1.0, scales=None):
+    e, inh = wilson_cowan(project_features(frontend, scales), time_ms, tau_s, g_i)
+    sources = source_currents(e, inh, time_ms)
+    return leadfield() @ sources
+
+\end{lstlisting}
+\clearpage
+\section{问题三：认知状态与留记录验证}
+\begin{lstlisting}[style=appendixPython]
+
+
+# Q3 动态认知状态模型的名义参数
+PARAMS = {
+    "tau_visual": 0.060,
+    "tau_memory": 1.0,
+    "tau_control": 0.250,
+    "cue_storage_gain": 0.8,
+    "target_memory_gain": 0.8,
+    "memory_to_control_gain": 0.25,
+    "conflict_gain": 0.8,
+    "topdown_control_gain": 0.10,
+}
+
+def make_event_gates(time_s, cue_onset_s=0.0, cue_duration_s=0.203125,
+                     target_onset_s=2.2, target_duration_s=0.2):
+    """根据事件时刻生成提示与目标的阶跃门控信号。"""
+    time_s = np.asarray(time_s, dtype=float).reshape(-1)
+    cue = ((time_s >= cue_onset_s) &
+           (time_s < cue_onset_s + cue_duration_s)).astype(float)
+    target = np.zeros_like(cue)
+    if target_onset_s is not None:
+        if target_duration_s is None:
+            target = (time_s >= target_onset_s).astype(float)
+        else:
+            target = ((time_s >= target_onset_s) &
+                      (time_s < target_onset_s + target_duration_s)).astype(float)
+    return cue, target
+
+def integrate_macro_states(visual_drive, cue_gate, target_gate, match_evidence,
+                           dt_s, params=PARAMS):
+    """用指数欧拉递推计算视觉、记忆和控制状态。"""
+    drive = np.asarray(visual_drive, dtype=float).reshape(-1)
+    cue = np.asarray(cue_gate, dtype=float).reshape(-1)
+    target = np.asarray(target_gate, dtype=float).reshape(-1)
+    rho_v, rho_h, rho_p = [
+        np.exp(-dt_s / params[key])
+        for key in ("tau_visual", "tau_memory", "tau_control")
+    ]
+    visual = np.zeros_like(drive)
+    memory = np.zeros_like(drive)
+    control = np.zeros_like(drive)
+    visual[0] = drive[0]
+    for k in range(1, drive.size):
+        visual[k] = rho_v * visual[k - 1] + (1 - rho_v) * drive[k]
+        memory_input = (
+            params["cue_storage_gain"] * visual[k] * cue[k]
+            + params["target_memory_gain"] * visual[k] * target[k]
+            * match_evidence
+        )
+        memory[k] = rho_h * memory[k - 1] + (1 - rho_h) * memory_input
+        conflict = target[k] * (1 - match_evidence) / 2
+        control_input = (
+            params["memory_to_control_gain"] * abs(memory[k - 1]) * target[k]
+            + params["conflict_gain"] * conflict
+        )
+        control[k] = rho_p * control[k - 1] + (1 - rho_p) * control_input
+    return {"visual": visual, "memory": memory, "control": control}
+
+def observe_macro_model(q2_sensor, memory, control,
+                        memory_loading, control_loading, params=PARAMS):
+    """将 Q2 视觉响应及记忆、控制状态映射到 F3、Fz、F4。"""
+    q2 = np.asarray(q2_sensor, dtype=float)
+    h = np.asarray(memory, dtype=float).reshape(-1)
+    p = np.asarray(control, dtype=float).reshape(-1)
+    l_h = np.asarray(memory_loading, dtype=float).reshape(-1)
+    l_p = np.asarray(control_loading, dtype=float).reshape(-1)
+    return (q2 * (1 + params["topdown_control_gain"] * p)[None, :]
+            + l_h[:, None] * h[None, :]
+            + l_p[:, None] * p[None, :])
+
+def _features_for_channel(q2_channel, memory, control, interaction):
+    """按通道构造视觉、记忆、控制及视觉反馈特征。"""
+    return np.column_stack((
+        q2_channel.reshape(-1),
+        memory.reshape(-1),
+        control.reshape(-1),
+        interaction.reshape(-1),
+    ))
+
+def fit_sensor_mapping(observed, q2_sensor, memory, control,
+                       q2_control_interaction, ridge_alpha=1.0):
+    """仅用训练记录拟合各 EEG 通道的岭回归观测映射。"""
+    y = np.asarray(observed, dtype=float)
+    q2 = np.asarray(q2_sensor, dtype=float)
+    h = np.asarray(memory, dtype=float)
+    p = np.asarray(control, dtype=float)
+    interaction = np.asarray(q2_control_interaction, dtype=float)
+    fits = []
+    for channel in range(3):
+        x = _features_for_channel(
+            q2[:, channel], h, p, interaction[:, channel]
+        )
+        target = y[:, channel].reshape(-1)
+        mean_x = x.mean(axis=0)
+        scale_x = x.std(axis=0)
+        scale_x[scale_x < 1e-12] = 1.0
+        z = (x - mean_x) / scale_x
+        mean_y = target.mean()
+        beta = np.linalg.solve(
+            z.T @ z + ridge_alpha * np.eye(z.shape[1]),
+            z.T @ (target - mean_y),
+        )
+        fits.append((mean_x, scale_x, mean_y, beta))
+    return fits
+
+def predict_sensor_mapping(fits, q2_sensor, memory, control,
+                           q2_control_interaction):
+    """将训练阶段估计的映射应用于留出记录。"""
+    q2 = np.asarray(q2_sensor, dtype=float)
+    h = np.asarray(memory, dtype=float)
+    p = np.asarray(control, dtype=float)
+    interaction = np.asarray(q2_control_interaction, dtype=float)
+    prediction = np.empty_like(q2)
+    for channel, (mean_x, scale_x, mean_y, beta) in enumerate(fits):
+        x = _features_for_channel(
+            q2[:, channel], h, p, interaction[:, channel]
+        )
+        prediction[:, channel] = (
+            mean_y + ((x - mean_x) / scale_x) @ beta
+        ).reshape(q2.shape[0], q2.shape[2])
+    return prediction
+
+def score_prediction(observed, predicted, time_s, window):
+    """计算指定时间窗内的 RMSE、标准化 RMSE 与相关系数。"""
+    mask = (time_s >= window[0]) & (time_s < window[1])
+    actual = np.asarray(observed)[..., mask].reshape(-1)
+    estimate = np.asarray(predicted)[..., mask].reshape(-1)
+    rmse = np.sqrt(np.mean((actual - estimate) ** 2))
+    scale = np.std(actual)
+    nrmse = rmse / scale if scale > 1e-12 else np.nan
+    corr = (np.corrcoef(actual, estimate)[0, 1]
+            if np.std(actual) > 1e-12 and np.std(estimate) > 1e-12
+            else np.nan)
+    return {"RMSE": rmse, "NRMSE": nrmse, "相关系数": corr}
+
+def main():
+    """依次执行事件审计、Q2场景模拟、Q3留记录验证与结果汇总。"""
+    root = str(Path(__file__).resolve().parents[3])
+    if root not in sys.path: sys.path.insert(0, root)
+    event_audit = importlib.import_module("src.C.q3.09_event_time_semantics")
+    validation = importlib.import_module("src.C.q3.dynamic_validation")
+    event_audit.main()
+    return validation.run_validation()
+
+if __name__ == "__main__":
+    main()
+
+\end{lstlisting}

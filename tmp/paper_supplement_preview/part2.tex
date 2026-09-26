@@ -1,0 +1,96 @@
+
+
+\section{模型假设与符号说明}
+
+\subsection{模型假设}
+
+\begin{enumerate}
+  \item \textbf{头皮观测采用线性叠加近似。}在给定电极与参考方式下，脑电可近似表示为多个源分量的线性组合与噪声之和。问题二据此构造固定的源到电极映射；其源位置与方向属于模型设定，三电极观测不用于唯一反演五个源的活动。
+
+  \item \textbf{同一记录中的非异常试次具有可比较的协方差结构。}假设明显伪迹会使局部频带能量或通道协方差偏离主要试次群体，因而可用稳健黎曼重心及中位数绝对偏差建立筛选参照。真实认知响应也可能偏离该中心，筛选阈值的影响需结合波形和敏感性分析判断。
+
+  \item \textbf{提示前短时段可作为局部基线。}假设所用基线窗内没有与当前提示同步的系统性响应，以其均值校正试次偏置。条件平均时，假设目标响应与提示保持一定时间一致性，非锁时干扰可经叠加平均部分抵消；窗口内检出的正向峰仅作为 ERP 候选峰。
+
+  \item \textbf{视觉提示由亮度差及空间构型描述。}左右提示采用相同呈现时长，模型输入保留边缘方向、顶点位置与三条边的相对排列。提示出现和消失共同驱动 ON/OFF 分支，提示消失后的活动按状态方程衰减。问题二主模型仅模拟提示事件。
+
+  \item \textbf{群体状态采用低维动力学近似。}以简化 LGN 反馈回路及三组 Wilson--Cowan 型兴奋--抑制方程描述视觉加工，忽略单神经元的个体差异。同一拟合组、同一电极的左右条件共享动力学参数与幅度因子，使条件差异由输入及其后续计算产生。
+
+  \item \textbf{认知代理描述试次内的统计关联。}用三通道 ERP 均值、\(\theta\) 与 \(\beta\) 频带对数功率分别构造 \(V/H/P\) 代理，采用线性关系近似其在当前数据范围内的关联。代理名称表示建模时赋予的功能含义，不表示已分离出 LGN、海马或前额叶的真实源活动，也不赋予回归路径因果含义。
+
+  \item \textbf{目标时刻采用候选对齐约定。}在缺少独立目标触发标记时，以提示后 \(2.2\,\mathrm{s}\) 为候选目标时刻，并通过 \(2.0\)--\(2.4\,\mathrm{s}\) 的偏移分析检查结果变化。应答前窗口终点取候选应答标记前 \(100\,\mathrm{ms}\)，用于减轻动作相关干扰，但不假定该处理能够完全消除干扰。
+
+  \item \textbf{记录是泛化评价的基本单位。}将整份 MAT 文件作为留出单元，标准化等需要数据估计的处理仅在训练记录上拟合。由于受试者身份未经核实，验证结果限于跨记录表现；问题三从原始脑电独立提取特征，其样本数及质量筛选口径与前两问分别统计。
+\end{enumerate}
+
+\subsection{符号说明}
+
+下表列出贯穿模型建立与结果评价的主要符号。各频带功率及原始 ERP 幅值沿用数据自身的量纲；未经校准的幅值不另标为微伏。问题二的时间常数以毫秒计，试次对齐时间通常以秒计。
+
+\begingroup
+\small
+\renewcommand{\arraystretch}{1.16}
+\begin{longtable}{@{}>{\raggedright\arraybackslash}p{0.28\textwidth}>{\raggedright\arraybackslash}p{0.67\textwidth}@{}}
+\caption{主要符号及含义}\label{tab:supplement_main_symbols}\\
+\toprule
+符号 & 含义 \\
+\midrule
+\endfirsthead
+\multicolumn{2}{c}{表~\ref{tab:supplement_main_symbols}（续）}\\
+\toprule
+符号 & 含义 \\
+\midrule
+\endhead
+\midrule
+\multicolumn{2}{r}{续下页}\\
+\endfoot
+\bottomrule
+\endlastfoot
+\multicolumn{2}{l}{\textbf{试次质量筛选与 ERP 提取}}\\
+\(i,C,T\) & 试次索引、通道数及所用时间窗的采样点数；本文 \(C=3\) \\
+\(\mathbf X_i\) & 第 \(i\) 个试次的脑电矩阵，维度为 \(C\times T\) \\
+\(\mathbf X_i^{\mathrm{SQI}},\mathbf X_i^{\mathrm{ERP}}\) & SQI 窗口信号与清洗后完成基线校正的 ERP 试次信号 \\
+\(\boldsymbol\Sigma_i,\overline{\boldsymbol\Sigma}\) & 试次协方差矩阵与稳健黎曼重心 \\
+\(\delta_R(\cdot,\cdot),d_i\) & 仿射不变黎曼距离及试次到参考重心的距离 \\
+\(\mathcal S^{(k)}\) & 第 \(k\) 轮稳健重心更新所用的参考试次集合 \\
+\(\mathrm{MAD}\) & 中位数绝对偏差，用于稳健标准化 \\
+\(f_i^{(j)},u_i^{(j)},w_j\) & 第 \(j\) 个检测器的特征、正异常分数与组合权重 \\
+\(D_i,\mathrm{SQI}_i\) & 综合异常分数与信号质量指数，\(\mathrm{SQI}_i=\exp(-D_i)\) \\
+\(\tau^{\mathrm{gap}},\tau\) & SQI 最大间隔阈值与最终筛选阈值 \\
+\(\alpha\)（问题一） & B 组 SQI 阈值缩放系数，正式方案取 \(0.6\) \\
+\(\mathrm{ERP}_{c,n}(t)\) & 提示条件 \(c\)、电极 \(n\) 的条件平均 ERP \\
+\(\hat A_{c,n},\hat\mu_{c,n}\) & 候选窗口内的峰值及其相对提示起点的时间 \\
+\(B_{j,3}(t),c_j,\lambda\) & 三次 B 样条基函数、拟合系数及二阶差分惩罚参数 \\
+\midrule
+\multicolumn{2}{l}{\textbf{视觉刺激正向计算}}\\
+\(X_s(x,y)\) & 提示图像相对共同背景的归一化亮度差，\(s\in\{L,R\}\) \\
+\(D_t,A_t,T_t\) & 中心--周围响应、适应状态及适应后的瞬态响应 \\
+\(U_{\mathrm{ON}},U_{\mathrm{OFF}}\) & ON、OFF 两分支的中继输入 \\
+\(R,N,Q\) & TCR、IN、TRN 三类神经群的相对活动 \\
+\(\Phi_{\beta,\theta}\) & 输出限制在 \([0,1]\) 内的截断逻辑激活函数 \\
+\(V_\theta,B,H_L,H_R\) & Gabor 方向能量、合成方向能量及左右三角构型响应图 \\
+\(d_L,d_R\) & 左、右三角模板偏好驱动 \\
+\(E_{p,c},I_{p,c}\) & 第 \(p\) 组、第 \(c\) 通道的兴奋与抑制状态 \\
+\(\tau_s,g_i,\tau_a\) & 皮层时间常数、抑制增益及 LGN 适应时间常数 \\
+\(h_\tau,P_{p,c}\) & 因果突触响应核及滤波后的群体源代理分量 \\
+\(\mathbf q(t)\) & 五维功能源代理向量 \\
+\(\mathbf G,\mathbf R,\mathbf G_{\mathrm{eff}}\) & 基础映射、固定观测模式变换及有效输出映射，\(\mathbf G_{\mathrm{eff}}=\mathbf R\mathbf G\) \\
+\(\alpha\)（问题二） & 按拟合组与电极估计、左右条件共用的有符号幅度因子 \\
+\(\mathbf z\) & 三电极在三个固定时窗内的均值组成的九维特征向量 \\
+\midrule
+\multicolumn{2}{l}{\textbf{认知功能代理与评价指标}}\\
+\(t_{\mathrm{cue}},t_{\mathrm{target}},t_{\mathrm{act}}\) & 提示时刻、候选目标时刻及候选应答时刻 \\
+\(E_{i,c},L_{i,c,b}\) & 试次 \(i\)、通道 \(c\) 的 ERP 均值与频带 \(b\) 的对数功率 \\
+\(A_{i,\alpha}\) & 额区 \(\alpha\) 频带功率不对称指标，等于 F4 与 F3 对数功率之差 \\
+\(\mathbf f_i\) & 用于提示方向解码的十三维脑电特征向量 \\
+\(V_i,H_i,P_i\) & 视觉前馈、记忆匹配、认知控制类功能代理 \\
+\(u_i,T_i^*\) & 左右提示编码及中心化任务变量 \\
+\(\alpha_V,\alpha_H,\alpha_P\) & 三个代理关联方程的截距 \\
+\(\beta_V,\beta_{HV},\beta_{HT}\) & 提示到 \(V\)、\(V\) 到 \(H\)、任务到 \(H\) 的回归系数 \\
+\(\beta_{PH},\beta_{PV},\beta_{PT}\) & \(H\)、\(V\) 及任务变量到 \(P\) 的回归系数 \\
+\(R^2,\mathrm{RMSE},\mathrm{NRMSE}\) & 拟合优度、均方根误差及按目标曲线均方根归一化的误差 \\
+\(\mathrm{BA},\mathrm{AUC}\) & 平衡准确率与 ROC 曲线下面积 \\
+\end{longtable}
+\endgroup
+
+不同章节的同形符号按所在模型区分：问题一与问题二的 \(\alpha\) 分别为阈值系数和幅度因子，频带下标 \(\alpha\) 表示阿尔法频带；\(T\) 为采样点数，\(T_t\) 为瞬态响应，\(T_i^*\) 为任务变量；\(H_L,H_R\) 为图像构型响应，\(H_i\) 为试次级功能代理。\(E_{p,c}\) 表示群体状态，\(E_{i,c}\) 表示 ERP 均值。未加粗的 \(R\) 为 LGN 中继群活动，\(\mathbf R\) 为观测模式变换矩阵。
+
