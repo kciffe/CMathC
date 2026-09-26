@@ -64,4 +64,4 @@
 
 通道9首次零到非零边沿作为操作性 (t_{act})，但是否等于实际动作启动时刻仍需外部同步资料核实。通道9只定义评分窗口，不作为 EEG 特征、模型状态输入或观测回归预测变量。固定晚期窗口是统一 cue 锁定窗；候选目标时刻 2.2 s 和 2.4 s 晚于总体中位数应答前端点约 2.115 s，因此这些候选场景下应答前窗不含候选目标后的加工。结果支持模型流程已运行并接受留出检验，不能单独证明模型较好解释脑电。
 
-详细条件行、事件审计及 PNG 中间图分别保存在 `dynamic_cv_metrics.csv`、`observed_trial_audit.csv` 与 `figures/`。
+详细条件行、应答前窗口指标、逐试次审计和分析图分别保存在 `dynamic_cv_metrics.csv`、`t_act_endpoint_cv_metrics.csv`、`observed_trial_audit.csv` 与 `figures/`。

@@ -1,7 +1,0 @@
-﻿input_channel,source_1,source_2,source_3,source_4,source_5
-early.left_visual_field,0.0,1.0,0.0,0.0,0.0
-early.right_visual_field,1.0,0.0,0.0,0.0,0.0
-configuration.left_visual_field,0.0,0.0,0.0,1.0,0.0
-configuration.right_visual_field,0.0,0.0,1.0,0.0,0.0
-shape_preference.left_triangle_template,0.0,0.0,0.0,0.0,1.0
-shape_preference.right_triangle_template,0.0,0.0,0.0,0.0,-1.0

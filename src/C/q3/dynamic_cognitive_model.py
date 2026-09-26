@@ -47,6 +47,12 @@ TARGET_TYPES = ("dots", "inward", "outward")  # Candidate stimuli; record/task m
 MATCH_EVIDENCE_VALUES = (1.0, -1.0)  # Synthetic match/mismatch branches, never behavioral labels.
 FILTER_MODES = ("none", "causal", "zero_phase")
 
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Microsoft YaHei", "SimHei", "DengXian", "Arial"],
+    "axes.unicode_minus": False,
+})
+
 
 @dataclass(frozen=True)
 class MacroParameters:
@@ -503,8 +509,11 @@ def _run_sensitivity_scenarios() -> tuple[list[dict[str, Any]], pd.DataFrame]:
 
 
 def _plot_scenarios(trajectories: list[dict[str, Any]], output_path: Path) -> None:
-    fig, axes = plt.subplots(2, 3, figsize=(12.5, 7.0), constrained_layout=True)
+    from matplotlib.lines import Line2D
+
+    fig, axes = plt.subplots(2, 3, figsize=(12.5, 7.6), sharex="col")
     colors = {2.0: "#3D7193", 2.2: "#D18737", 2.4: "#4D8B70"}
+    scenario_handles = []
     for onset in TARGET_ONSETS_S:
         for evidence, style in ((1.0, "-"), (-1.0, "--")):
             matches = [
@@ -518,20 +527,21 @@ def _plot_scenarios(trajectories: list[dict[str, Any]], output_path: Path) -> No
             row = matches[0]
             time = row["time_s"]
             states = row["states"]
-            label = f"target {onset:.1f} s / {'match' if evidence > 0 else 'mismatch'}"
+            label = f"目标时刻 {onset:.1f} 秒，{'匹配' if evidence > 0 else '不匹配'}"
+            scenario_handles.append(
+                Line2D([0], [0], color=colors[onset], linestyle=style,
+                       linewidth=1.25, label=label)
+            )
             for axis, key, title in zip(
                 axes[0], ("visual", "memory", "control"),
-                ("Q2-driven visual state V", "Memory-related state H", "Control state P"),
+                ("问题二视觉驱动状态 V", "记忆相关状态 H", "控制状态 P"),
             ):
                 axis.plot(time, states[key], color=colors[onset], linestyle=style,
-                          linewidth=1.15, label=label)
+                          linewidth=1.15)
                 axis.set_title(title)
+                axis.set_ylabel("相对状态量")
                 axis.grid(color="#e4e4e4", linewidth=0.55)
                 axis.set_xlim(SIMULATION_START_S, SIMULATION_STOP_S)
-                axis.set_xlabel("Time from measured cue onset (s)")
-        
-    for axis in axes[0]:
-        axis.legend(fontsize=6.4, frameon=False, ncol=1)
 
     representative = next(
         row for row in trajectories
@@ -545,6 +555,11 @@ def _plot_scenarios(trajectories: list[dict[str, Any]], output_path: Path) -> No
         PreprocessingConfig(mode="zero_phase"),
     )
     styles = {"none": ":", "causal": "-", "zero_phase": "--"}
+    preprocessing_labels = {
+        "none": "不滤波",
+        "causal": "因果滤波",
+        "zero_phase": "零相位滤波",
+    }
     processed_curves = {}
     for cfg in configs:
         processed, time = apply_preprocessing(
@@ -555,20 +570,43 @@ def _plot_scenarios(trajectories: list[dict[str, Any]], output_path: Path) -> No
         for cfg in configs:
             values, time = processed_curves[cfg.mode]
             axis.plot(time, values[channel_index], linestyle=styles[cfg.mode],
-                      linewidth=1.05, label=cfg.mode.replace("_", " "))
-        axis.axvline(2.2, color="#9b4438", linestyle=(0, (3, 3)), linewidth=0.9,
-                     label="candidate target onset")
-        axis.set_title(f"{channel}: observation operator sensitivity")
-        axis.set_xlabel("Time from cue onset (s)")
+                      linewidth=1.05)
+        axis.axvline(2.2, color="#9b4438", linestyle=(0, (3, 3)), linewidth=0.9)
+        axis.set_title(f"电极 {channel}：观测处理敏感性")
+        axis.set_ylabel("脑电幅值（模型单位）")
         axis.set_xlim(SIMULATION_START_S, SIMULATION_STOP_S)
         axis.grid(color="#e4e4e4", linewidth=0.55)
-        axis.legend(fontsize=7.0, frameon=False)
+    for axis in axes[1]:
+        axis.set_xlabel("相对视觉提示的时间（秒）")
 
     fig.suptitle(
-        "Candidate cognitive-state trajectories and preprocessing sensitivity\n"
-        "Q2-forward synthetic scenarios only; not fit to or validated against measured EEG",
-        fontsize=11,
+        "候选认知状态轨迹与预处理敏感性\n"
+        "问题二前向模型生成的候选情景；未拟合或验证实测脑电",
+        fontsize=11, y=0.985,
     )
+    preprocessing_handles = [
+        Line2D([0], [0], color="#555555", linestyle=styles[mode], linewidth=1.25,
+               label=preprocessing_labels[mode])
+        for mode in ("none", "causal", "zero_phase")
+    ]
+    preprocessing_handles.append(
+        Line2D([0], [0], color="#9b4438", linestyle=(0, (3, 3)), linewidth=1.0,
+               label="候选目标时刻 2.2 秒")
+    )
+
+    def add_framed_legend(handles, y: float, ncol: int) -> None:
+        legend = fig.legend(
+            handles=handles, loc="upper center", bbox_to_anchor=(0.5, y),
+            ncol=ncol, fontsize=7.2, frameon=True, fancybox=True,
+            framealpha=1.0, facecolor="white", edgecolor="#c8c8c8",
+            borderpad=0.55, labelspacing=0.45, handletextpad=0.7,
+            columnspacing=1.4, handlelength=1.8,
+        )
+        legend.get_frame().set_linewidth(0.8)
+
+    add_framed_legend(scenario_handles + preprocessing_handles, 0.91, 3)
+    fig.subplots_adjust(left=0.075, right=0.99, top=0.76, bottom=0.09,
+                        wspace=0.25, hspace=0.34)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 

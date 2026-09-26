@@ -1,9 +1,0 @@
-﻿task,record,observed_condition,n_trials,distance_to_left_model_curve,distance_to_right_model_curve,nearest_model_condition,correct_nearest_condition
-Task1,VisualCogA_Task-1,left,29,40.87070403466514,40.8891294585739,left,1
-Task1,VisualCogA_Task-1,right,25,28.451508362366674,28.870636906343698,left,0
-Task1,VisualCogA_Task-2,left,45,37.28771644153935,38.005197018648026,left,1
-Task1,VisualCogA_Task-2,right,35,41.95708645803871,41.95708300635257,right,1
-Task2,VisualCogB_Task-1,left,41,12.237197765011304,13.995447390743836,left,1
-Task2,VisualCogB_Task-1,right,42,19.26208133769879,19.26720631286575,left,0
-Task2,VisualCogB_Task-2,left,37,25.450868213082277,25.586259701049766,left,1
-Task2,VisualCogB_Task-2,right,43,25.51713868229905,27.61225916747393,left,0

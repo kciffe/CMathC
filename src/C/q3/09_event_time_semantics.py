@@ -17,6 +17,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 from matplotlib import pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 import pandas as pd
 
@@ -37,6 +38,40 @@ Q2_LEADFIELD_PATH = OUTPUT_DIR.parent.parent / "q2" / "output" / "revision_v3" /
 SCHEDULE_WAIT_AFTER_CUE_OFFSET_S = 2.0
 ALTERNATE_CUE_ONSET_REFERENCE_S = 2.0
 NOMINAL_CUE_ONSET_PLUS_SCHEDULE_S = 2.2
+
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Microsoft YaHei", "SimHei", "DengXian", "Arial"],
+    "axes.unicode_minus": False,
+})
+
+
+def _add_framed_figure_legend(fig, handles, *, y: float, ncol: int) -> None:
+    legend = fig.legend(
+        handles=handles,
+        loc="upper center",
+        bbox_to_anchor=(0.5, y),
+        ncol=ncol,
+        fontsize=7.5,
+        frameon=True,
+        fancybox=True,
+        framealpha=1.0,
+        facecolor="white",
+        edgecolor="#c8c8c8",
+        borderpad=0.65,
+        labelspacing=0.55,
+        handletextpad=0.75,
+        columnspacing=1.5,
+        handlelength=1.9,
+    )
+    legend.get_frame().set_linewidth(0.8)
+
+
+def _record_label(record: str) -> str:
+    try:
+        return f"记录{list(RECORDS).index(record) + 1}"
+    except ValueError:
+        return "其他记录"
 
 
 def _active_runs(signal: np.ndarray, timestamps: np.ndarray) -> list[tuple[int, int, float, float]]:
@@ -242,8 +277,9 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
 
 def _save_timing_figure(frame: pd.DataFrame, out: Path) -> None:
     records = list(RECORDS)
+    record_labels = [_record_label(record) for record in records]
     colors = ["#356b8c", "#4f8f75", "#b77c33", "#8b6e9e"]
-    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.2), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(10.8, 4.7))
     ax = axes[0]
     rng = np.random.default_rng(37)
     for yi, (record, color) in enumerate(zip(records, colors)):
@@ -254,15 +290,15 @@ def _save_timing_figure(frame: pd.DataFrame, out: Path) -> None:
             s=10, alpha=0.57, color=color, edgecolors="none",
         )
     ax.axvline(2.0, color="#7a7a7a", linestyle=(0, (4, 3)), linewidth=1.1,
-               label="cue onset + 2.0 s (sensitivity only)")
+               label="提示开始后 2.0 秒（敏感性参照）")
     ax.axvline(2.2, color="#ad4b3b", linestyle=(0, (4, 3)), linewidth=1.1,
-               label="cue onset + 2.2 s (approx. schedule)")
-    ax.set_yticks(range(len(records)), records)
+               label="提示开始后 2.2 秒（候选时间表）")
+    ax.set_yticks(range(len(records)), record_labels)
     ax.set_ylim(-0.38, len(records) - 0.62)
     ax.set_xlim(1.99, 2.35)
-    ax.set_xlabel("Channel-9 edge minus cue onset (s)")
-    ax.set_ylabel("MAT record")
-    ax.set_title("Observed event intervals")
+    ax.set_xlabel("应答标记 − 视觉提示时刻（秒）")
+    ax.set_ylabel("数据记录")
+    ax.set_title("应答标记相对提示时刻")
     ax.grid(axis="x", color="#d8d8d8", linewidth=0.6)
 
     ax = axes[1]
@@ -278,24 +314,30 @@ def _save_timing_figure(frame: pd.DataFrame, out: Path) -> None:
         med = float(np.median(values_ms))
         ax.plot([med, med], [yi - 0.22, yi + 0.22], color="#202020", linewidth=1.4)
     ax.axvline(0, color="#ad4b3b", linestyle=(0, (4, 3)), linewidth=1.1)
-    ax.set_yticks(range(len(records)), records)
+    ax.set_yticks(range(len(records)), record_labels)
     ax.set_ylim(-0.38, len(records) - 0.62)
     ax.set_xlim(-5, 40)
-    ax.set_xlabel("Marker − (measured cue offset + ~2 s), ms")
-    ax.set_ylabel("MAT record")
-    ax.set_title("Deviation from approximate schedule")
+    ax.set_xlabel("应答标记 − 候选时间表（毫秒）")
+    ax.set_ylabel("数据记录")
+    ax.set_title("应答标记与候选时间表的偏差")
     ax.grid(axis="x", color="#d8d8d8", linewidth=0.6)
     outside = frame.loc[frame["marker_minus_schedule_proxy_s"] * 1000.0 > 40.0]
     if len(outside):
-        detail = ", ".join(
-            f"{row.record.replace('VisualCog', '')} trial {int(row.original_trial_index)}: "
+        detail = "；".join(
+            f"{_record_label(row.record)}第{int(row.original_trial_index)}试次："
             f"{row.marker_minus_schedule_proxy_s * 1000.0:.1f} ms"
             for row in outside.itertuples(index=False)
         )
-        ax.text(0.98, 0.49, f"Off scale (>40 ms; point not shown): {detail}",
+        ax.text(0.98, 0.49, f"超出横轴范围（>40 毫秒，未显示）：{detail}",
                 transform=ax.transAxes, ha="right", va="center",
                 fontsize=7.0, color="#555555")
-    fig.suptitle("Timing audit: schedule differences are not measured reaction times", fontsize=11)
+    fig.suptitle(
+        "事件时刻核查：候选时间表偏差不能替代实测反应时",
+        fontsize=11, y=0.98,
+    )
+    handles, _ = axes[0].get_legend_handles_labels()
+    _add_framed_figure_legend(fig, handles, y=0.90, ncol=2)
+    fig.subplots_adjust(left=0.09, right=0.99, top=0.79, bottom=0.15, wspace=0.30)
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
 
@@ -313,31 +355,37 @@ def _save_example_trace(example: dict[str, Any], out: Path) -> None:
     response = np.asarray(example["response_signal"], dtype=float)[selected]
     x = time_rel[selected]
 
-    fig, axes = plt.subplots(3, 1, figsize=(8.6, 5.4), constrained_layout=True,
+    fig, axes = plt.subplots(3, 1, figsize=(8.6, 6.0), sharex=True,
                              gridspec_kw={"height_ratios": [1, 1, 0.8]})
     axes[0].step(x, cue, where="post", color="#356b8c", linewidth=1.1)
-    axes[0].set_ylabel("VisCue code")
-    axes[0].set_title(f"{example['record']} trial {row['original_trial_index']}: raw event channels")
+    axes[0].set_ylabel("通道8提示码")
+    axes[0].set_title(f"{_record_label(example['record'])}第{row['original_trial_index']}试次：原始事件通道")
     axes[0].grid(axis="x", color="#dddddd", linewidth=0.6)
     axes[1].step(x, response, where="post", color="#b77c33", linewidth=1.1)
-    axes[1].set_ylabel("Raw channel-9 code")
+    axes[1].set_ylabel("通道9原始应答码")
     axes[1].grid(axis="x", color="#dddddd", linewidth=0.6)
     zoom = (x >= (schedule_time - cue_time - 0.05)) & (x <= (response_time - cue_time + 0.05))
     axes[2].step(x[zoom], response[zoom], where="post", color="#b77c33", linewidth=1.4)
     axes[2].set_xlim(schedule_time - cue_time - 0.05, response_time - cue_time + 0.05)
-    axes[2].set_ylabel("Zoom")
-    axes[2].set_xlabel("Time from VisCue onset (s)")
+    axes[2].set_ylabel("应答局部放大")
+    axes[2].set_xlabel("相对视觉提示开始的时间（秒）")
     axes[2].grid(axis="x", color="#dddddd", linewidth=0.6)
     for ax in axes:
+        ax.axvline(0.0, color="#7a7a7a", linewidth=0.85)
         ax.axvline(schedule_time - cue_time, color="#ad4b3b", linestyle=(0, (4, 3)), linewidth=1.2)
         ax.axvline(response_time - cue_time, color="#202020", linestyle="-", linewidth=1.0)
-    axes[0].text(0.99, 0.90, "red dashed: cue offset + approx. 2 s schedule", transform=axes[0].transAxes,
-                 ha="right", va="top", fontsize=7.3, color="#ad4b3b")
-    axes[1].text(0.99, 0.90, "black: first channel-9 nonzero edge", transform=axes[1].transAxes,
-                 ha="right", va="top", fontsize=7.3, color="#202020")
-    axes[2].text(0.99, 0.90,
-                 f"marker minus schedule proxy = {(response_time - schedule_time) * 1000.0:.1f} ms",
-                 transform=axes[2].transAxes, ha="right", va="top", fontsize=7.3, color="#555555")
+    fig.suptitle(
+        f"{_record_label(example['record'])}第{row['original_trial_index']}试次的事件码与候选时间表",
+        fontsize=10.5, y=0.98,
+    )
+    handles = [
+        Line2D([0], [0], color="#7a7a7a", linewidth=0.9, label="视觉提示开始"),
+        Line2D([0], [0], color="#ad4b3b", linestyle=(0, (4, 3)), linewidth=1.1,
+               label="候选时间表：提示结束后约 2 秒"),
+        Line2D([0], [0], color="#202020", linewidth=1.0, label="通道9首次非零跳变"),
+    ]
+    _add_framed_figure_legend(fig, handles, y=0.91, ncol=3)
+    fig.subplots_adjust(left=0.12, right=0.98, top=0.82, bottom=0.12, hspace=0.24)
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
 
@@ -376,18 +424,19 @@ def _build_mapping_summary(frame: pd.DataFrame) -> pd.DataFrame:
 def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
     summary = _build_mapping_summary(frame)
 
-    fig, axes = plt.subplots(1, 2, figsize=(9.2, 4.0), constrained_layout=True)
+    fig, axes = plt.subplots(1, 2, figsize=(10.0, 5.0))
     record_order = list(RECORDS)
     record_stats = summary.loc[summary["grouping_scheme"] == "record"].set_index("group")
     record_colors = ["#356b8c", "#4f8f75", "#b77c33", "#8b6e9e"]
     y = np.arange(len(record_order))
     vals = [record_stats.loc[name, "cue_response_same_side_fraction"] for name in record_order]
     axes[0].barh(y, vals, color=record_colors, height=0.62)
-    axes[0].set_yticks(y, record_order)
+    axes[0].set_yticks(y, [_record_label(name) for name in record_order])
     axes[0].invert_yaxis()
     axes[0].set_xlim(0, 1.08)
-    axes[0].set_xlabel("Fraction of responses matching channel-8 cue direction")
-    axes[0].set_title("Cue-response direction consistency by MAT record")
+    axes[0].set_xlabel("应答方向与提示方向一致的比例")
+    axes[0].set_title("各记录中提示与应答方向的一致比例")
+    axes[0].set_ylabel("数据记录")
     axes[0].grid(axis="x", color="#dddddd", linewidth=0.6)
     for yi, name in enumerate(record_order):
         count = int(record_stats.loc[name, "cue_response_same_side_count"])
@@ -395,10 +444,10 @@ def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
         axes[0].text(vals[yi] + 0.02, yi, f"{count}/{n}", va="center", fontsize=8)
 
     grouped = [
-        ("Task-1 suffix", "suffix: Task-1/Task-2", "Task-1"),
-        ("Task-2 suffix", "suffix: Task-1/Task-2", "Task-2"),
-        ("VisualCogA prefix", "prefix: VisualCogA/VisualCogB", "VisualCogA"),
-        ("VisualCogB prefix", "prefix: VisualCogA/VisualCogB", "VisualCogB"),
+        ("任务1后缀", "suffix: Task-1/Task-2", "Task-1"),
+        ("任务2后缀", "suffix: Task-1/Task-2", "Task-2"),
+        ("数据组A前缀", "prefix: VisualCogA/VisualCogB", "VisualCogA"),
+        ("数据组B前缀", "prefix: VisualCogA/VisualCogB", "VisualCogB"),
     ]
     labels = []
     rates = []
@@ -416,12 +465,35 @@ def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
     axes[1].set_yticks(yy, labels)
     axes[1].invert_yaxis()
     axes[1].set_xlim(0, 1.12)
-    axes[1].set_xlabel("Fraction of responses matching channel-8 cue direction")
-    axes[1].set_title("Candidate grouping comparison")
+    axes[1].set_xlabel("应答方向与提示方向一致的比例")
+    axes[1].set_title("候选任务分组口径比较")
+    axes[1].set_ylabel("候选分组")
     axes[1].grid(axis="x", color="#dddddd", linewidth=0.6)
     for yi, (rate, count, n) in enumerate(zip(rates, counts, ns)):
         axes[1].text(rate + 0.02, yi, f"{count}/{n}", va="center", fontsize=8)
-    fig.suptitle("Cue-response direction consistency: channel 8 vs channel 9", fontsize=10.5)
+    fig.suptitle(
+        "提示方向与应答方向的一致性核查",
+        fontsize=12,
+        y=0.985,
+    )
+    fig.text(
+        0.5, 0.947,
+        "同向按正确、异向按错误编码；分组仅作候选解释",
+        ha="center", va="top", fontsize=9.2, color="#444444",
+    )
+    handles = [
+        Line2D([0], [0], marker="s", color="none", markerfacecolor=color,
+               markeredgecolor="none", markersize=7, label=_record_label(record))
+        for record, color in zip(record_order, record_colors)
+    ]
+    handles.extend([
+        Line2D([0], [0], marker="s", color="none", markerfacecolor="#356b8c",
+               markeredgecolor="none", markersize=7, label="任务后缀候选分组"),
+        Line2D([0], [0], marker="s", color="none", markerfacecolor="#b77c33",
+               markeredgecolor="none", markersize=7, label="数据组前缀候选分组"),
+    ])
+    _add_framed_figure_legend(fig, handles, y=0.885, ncol=3)
+    fig.subplots_adjust(left=0.16, right=0.98, top=0.68, bottom=0.12, wspace=0.34)
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
     return summary
@@ -455,27 +527,28 @@ def _save_q2_leadfield_figure(audit: dict[str, Any], out: Path) -> None:
     source_columns = [column for column in table.columns if column.startswith("source_")]
     matrix = table[source_columns].to_numpy(dtype=float)
     source_labels = [
-        "early visual\nLH from right field",
-        "early visual\nRH from left field",
-        "configuration\nLH from right field",
-        "configuration\nRH from left field",
-        "bilateral shape\nopponent",
+        "早期视觉源\n右视野",
+        "早期视觉源\n左视野",
+        "构型加工源\n右视野",
+        "构型加工源\n左视野",
+        "双侧形状\n对抗源",
     ]
-    fig, ax = plt.subplots(figsize=(8.5, 3.5), constrained_layout=True)
+    fig, ax = plt.subplots(figsize=(8.5, 4.0))
     vmax = float(np.max(np.abs(matrix)))
     image = ax.imshow(matrix, cmap="coolwarm", vmin=-vmax, vmax=vmax, aspect="auto")
     ax.set_xticks(range(len(source_labels)), source_labels)
     ax.set_yticks(range(len(table)), table["sensor"])
-    ax.set_xlabel("Q2 canonical source proxies")
-    ax.set_ylabel("Scalp sensor")
-    ax.set_title("Q2 forward matrix has rank 3 for 5 source proxies")
+    ax.set_xlabel("问题二源代理")
+    ax.set_ylabel("头皮观测电极")
+    ax.set_title("三通道对应五源代理：导联矩阵秩为3")
     for i in range(matrix.shape[0]):
         for j in range(matrix.shape[1]):
             ax.text(j, i, f"{matrix[i, j]:.2f}", ha="center", va="center", fontsize=7.5,
                     color="#202020")
-    fig.colorbar(image, ax=ax, shrink=0.82, label="Leadfield coefficient (saved units)")
-    fig.text(0.5, -0.025, "Source nullity = 5 − rank(3×5 matrix) = 2; not uniquely invertible.",
+    fig.colorbar(image, ax=ax, shrink=0.82, label="导联系数（保存单位）")
+    fig.text(0.5, 0.025, "零空间维数为 2；仅凭三通道无法唯一反演五个源代理。",
              ha="center", fontsize=8.5, color="#444444")
+    fig.subplots_adjust(left=0.10, right=0.94, top=0.84, bottom=0.26)
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
 

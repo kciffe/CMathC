@@ -1,2 +1,0 @@
-Task2 Stage1 与 Task1 Stage1 使用相同的视觉提示。
-前端数值数组和结果图统一保存在 ../../Task1/Stage1。

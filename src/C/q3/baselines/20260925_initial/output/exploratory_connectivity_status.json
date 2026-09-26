@@ -1,8 +1,0 @@
-{
-  "status": "not_computed",
-  "features": [
-    "PLV",
-    "theta-gamma PAC"
-  ],
-  "reason": "Short 0.5-0.8 s event windows and three frontal electrodes do not support reliable connectivity estimates without validated surrogate tests; no values were fabricated."
-}

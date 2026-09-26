@@ -1,9 +1,0 @@
-﻿heldout_record,control,parameters_refit,shared_gain_refit,full_left_right_difference_rms,control_left_right_difference_rms,retained_fraction
-VisualCogA_Task-1,no_spatial_position,False,False,5.9578707867434355,2.2992088181087743e-05,3.8591115860126245e-06
-VisualCogA_Task-1,cue_onset_only,False,False,5.9578707867434355,8.086992462152665,1.357362848510685
-VisualCogA_Task-2,no_spatial_position,False,False,2.229714525322211,4.8602748618454855e-06,2.179774498774967e-06
-VisualCogA_Task-2,cue_onset_only,False,False,2.229714525322211,2.891889509672217,1.2969774726001375
-VisualCogB_Task-1,no_spatial_position,False,False,4.002407048023611,3.071603474811785e-05,7.674390530389815e-06
-VisualCogB_Task-1,cue_onset_only,False,False,4.002407048023611,5.886284519758586,1.4706861269058664
-VisualCogB_Task-2,no_spatial_position,False,False,3.191868078258864,1.3250082038415183e-05,4.1511997719037895e-06
-VisualCogB_Task-2,cue_onset_only,False,False,3.191868078258864,4.694226913328985,1.4706832482530559

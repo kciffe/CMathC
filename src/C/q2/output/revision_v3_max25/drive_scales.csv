@@ -1,7 +1,0 @@
-﻿population,channel,reference_rms_scale,calibration
-early,early_left,0.0007242407882586122,fixed mirrored canonical cue; 0-200 ms; equal-condition RMS
-early,early_right,0.0007242406718432903,fixed mirrored canonical cue; 0-200 ms; equal-condition RMS
-shape,shape_left,0.0005714017897844315,fixed mirrored canonical cue; 0-200 ms; equal-condition RMS
-shape,shape_right,0.0005714014987461269,fixed mirrored canonical cue; 0-200 ms; equal-condition RMS
-orientation,orientation_left,0.023274902254343033,fixed mirrored canonical cue; 0-200 ms; equal-condition RMS
-orientation,orientation_right,0.023274902254343033,fixed mirrored canonical cue; 0-200 ms; equal-condition RMS

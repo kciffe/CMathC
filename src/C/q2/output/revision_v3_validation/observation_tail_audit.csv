@@ -1,9 +1,0 @@
-﻿record,condition,tau_a_ms,tau_s_ms,n_grid_samples_0_800,full_tail_rms,tail_vs_zero_pad_rmse_0_800,tail_vs_zero_pad_relative_rmse_0_800,full_vs_truncated_correlation_0_800,interpretation
-VisualCogA_Task-1,left,100.0,78.87207866278297,103,0.5774113146507144,0.06721704489424346,0.11641102830640608,0.9956714353363201,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogA_Task-1,right,100.0,78.87207866278297,103,0.5919098071501301,0.06703524384420012,0.11325246352473008,0.9951791674973609,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogA_Task-2,left,120.0,76.29528037919381,103,0.43983374597933284,0.13855203389747547,0.31501001267871304,0.991818885914978,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogA_Task-2,right,120.0,76.29528037919381,103,0.4531055759556923,0.13851798082194958,0.30570795896692915,0.991280177576149,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogB_Task-1,left,120.0,76.6710915100895,103,0.5144748128271643,0.054939372710187395,0.10678729325597529,0.9954762858293307,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogB_Task-1,right,120.0,76.6710915100895,103,0.532754349703182,0.054640932898738774,0.10256309109288614,0.9949643937484963,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogB_Task-2,left,160.0,75.13774693425378,103,0.40437077939230326,0.046605269347932354,0.11525380102383193,0.9948089949066778,isolates model-tail truncation; does not add the target at 2.2 s
-VisualCogB_Task-2,right,160.0,75.13774693425378,103,0.42776668153958863,0.04613551738147832,0.10785205901364388,0.9942685631538905,isolates model-tail truncation; does not add the target at 2.2 s

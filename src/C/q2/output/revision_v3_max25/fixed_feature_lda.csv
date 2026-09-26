@@ -1,2 +1,0 @@
-﻿feature_set,balanced_accuracy_mean,roc_auc_mean,recall_left_mean,recall_right_mean,heldout_record_count,interpretation
-6 fixed common/lateral temporal means,0.45296899982922045,0.4205851130113262,0.4687896054170234,0.43714839424141755,4,real-only leave-one-MAT-out; four MAT records are not four independent participants

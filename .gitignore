@@ -16,4 +16,19 @@ src/test/q1/output/
 *.rar
 *.zip
 
+# Q3 regenerated scratch outputs
+src/C/q3/.modeling/
+src/C/q3/manifests/
+src/C/q3/output/continuation_audit/*
+!src/C/q3/output/continuation_audit/event_timing_by_trial.csv
+src/C/q3/output/dynamic_cognitive_model/
+src/C/q3/reports/*
+!src/C/q3/reports/build_q3_dynamic_paper.py
+tmp/q3_implementation_guide/
+tmp/q3_latest_solution/
+tmp/q3_paper_run/
+tmp/pdfs/q3_dynamic_paper_current/
+tmp/pdfs/q3_latest/
+tmp/pdfs/q3_revision1_review/
+
 math-model-agent

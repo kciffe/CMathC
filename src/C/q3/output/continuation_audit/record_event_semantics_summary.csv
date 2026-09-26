@@ -1,5 +1,0 @@
-﻿record,raw_sample_rate_hz,cue_event_count,response_event_count,scheduled_rt_proxy_median_s,scheduled_rt_proxy_under_100ms_count,response_trial_count,cue_intervals_without_action_marker_count,target_time_source,task_type,direction_consistent_trials,direction_inconsistent_trials,cue_intervals_with_action_marker_count,trials_with_declared_code_in_analysis_window_count
-VisualCogA_Task-1,256.0,100,100,0.0148437500000113,99,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,100,0,100,100
-VisualCogA_Task-2,256.0,100,100,0.0148437500000113,100,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,47,53,100,100
-VisualCogB_Task-1,256.0,100,100,0.0148437500000113,100,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,98,2,100,100
-VisualCogB_Task-2,256.0,100,100,0.0187499999999545,100,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,48,52,100,100

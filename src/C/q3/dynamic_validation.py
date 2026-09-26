@@ -1078,7 +1078,7 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
     endpoint_q05 = float(np.quantile(marker_relative, 0.05) - 0.100)
     endpoint_q95 = float(np.quantile(marker_relative, 0.95) - 0.100)
     axes[0].axvline(median_marker, color="#383838", linewidth=1.2,
-                    label=f"t_act 中位数 {median_marker:.3f} 秒")
+                    label=f"应答标记中位数 {median_marker:.3f} 秒")
     axes[0].set_xlim(1.7, 2.6)
     axes[0].set_xlabel("相对视觉提示的时间（秒）")
     axes[0].set_ylabel("试次数")
@@ -1119,10 +1119,12 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
     ax.set_ylim(0.0, 3.8)
     ax.set_yticks([])
     ax.set_xlabel("相对视觉提示的时间（秒）")
-    ax.set_title("\u7d2f\u8ba1\u7a97 [0, t_act - 0.1 s) \u548c\u7ec8\u672b500 ms\uff1b\u8bc4\u5206\u6309\u9010\u8bd5\u6b21\u7ec8\u70b9")
+    ax.set_title("提示至应答前100毫秒的累计窗与末尾500毫秒窗；评分按逐试次终点")
     ax.grid(axis="x", color="#e5e5e5", linewidth=0.55)
     fig.suptitle(
-        f"\u603b\u4f53\u4e2d\u4f4d t_act = {median_marker:.3f} s\uff1b\u7ec8\u70b9 5\u201395% \u8303\u56f4 = {endpoint_q05:.3f}\u2013{endpoint_q95:.3f} s\uff1b\u8bc4\u5206\u4f7f\u7528\u6bcf\u8bd5\u6b21\u81ea\u8eab\u7ec8\u70b9",
+        f"\u5e94\u7b54\u6807\u8bb0\u76f8\u5bf9\u63d0\u793a\u7684\u4e2d\u4f4d\u65f6\u523b = {median_marker:.3f} \u79d2\uff1b"
+        f"\u8bc4\u5206\u7ec8\u70b9\u7684 5\u201395% \u8303\u56f4 = {endpoint_q05:.3f}\u2013{endpoint_q95:.3f} \u79d2\uff1b"
+        "\u5404\u8bd5\u6b21\u6309\u81ea\u8eab\u7ec8\u70b9\u8bc4\u5206",
         fontsize=10, y=0.99,
     )
     handles, labels = axes[0].get_legend_handles_labels()
@@ -1130,7 +1132,7 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
         fig, handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.92),
         ncol=4, fontsize=7.5,
     )
-    fig.subplots_adjust(left=0.11, right=0.98, top=0.83, bottom=0.12, hspace=0.42)
+    fig.subplots_adjust(left=0.11, right=0.98, top=0.79, bottom=0.12, hspace=0.42)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     return {
@@ -1647,11 +1649,11 @@ python src/C/q3/09_event_time_semantics.py
 python src/C/q3/dynamic_validation.py
 ```
 
-特征分类、功率分析和静态路径分析脚本保留为辅助分析，不是下表动态状态的输入，也不参与留出评分。`dynamic_cognitive_model.py` 是被主入口调用的机制模块，不需要单独运行才能得到本报告结果。
+`dynamic_cognitive_model.py` 是被主入口调用的机制模块，不需要单独运行即可生成本报告结果。
 
 | 模块/执行位置 | 输入 | 如何执行、目的与意义 | 主要输出 |
 |---|---|---|---|
-| 事件语义审计：`09_event_time_semantics.py` | VisCue、TimeStamp、第9通道边沿及 Q2 导联信息 | 按事件边沿汇总每试次时间，比较标记与候选目标时刻；检查事件映射和三电极对五源的可辨识性。用来确定可证事实与未知量，不把候选时刻强行定为真值 | `continuation_audit/event_timing_by_trial.csv` 及审计摘要 |
+| 事件语义审计：`09_event_time_semantics.py` | VisCue、TimeStamp、第9通道边沿及 Q2 导联信息 | 按事件边沿汇总每试次时间，比较标记与候选目标时刻；检查事件映射和三电极对五源的可辨识性。用来确定可证事实与未知量，不把候选时刻强行定为真值 | `continuation_audit/event_timing_by_trial.csv` |
 | 试次切片与质量控制：`dynamic_validation.py::_load_observed_epochs` | 原始连续 F3/Fz/F4、提示事件、时间戳 | 从连续记录提取提示起点，插值到共同时间网格；检查边界、重叠、非有限值、平直通道和幅值阈值。用途是确保各预处理分支使用同一批有效试次 | `observed_trial_audit.csv`、记录×提示方向均值 |
 | 统一预处理：`dynamic_validation.py::_preprocess_*` | 连续实测脑电、Q2电极轨迹、状态轨迹与交互项 | 先对整条连续实测记录滤波，再切片；比较不滤波、单向因果滤波和离线零相位滤波；统一重采样到 128 赫兹并作提示前基线修正。用途是隔离预处理选择对结论的影响 | 三种预处理下可直接比较的 EEG 与模型基函数 |
 | 问题二前向接口：`dynamic_cognitive_model.py::simulate_q2_scenario` | 提示方向、候选刺激形状/时刻、问题二参数和导联矩阵 G | 调用问题二视觉特征、LGN 与 Wilson–Cowan 皮层前向计算，形成五个源代理并经 G 正向投影至 F3/Fz/F4；不反演五源。用途是把问题二脑电形成机制接入问题三的视觉驱动与观测端 | 候选情景的视觉驱动、Q2电极轨迹、五源正向代理 |
@@ -1780,7 +1782,7 @@ NRMSE 是每条留出组内按实测标准差归一化后计算，再跨留出�
 - 改善是否在 none/causal/zero-phase 三种预处理中大体同向；
 - `Q2_plus_memory_control` 的额外收益是否跨留出记录存在，而不是只靠某个记录/电极。
 
-如果这些条件不成立，结论就是现有样本不能支持新增状态提升晚期 EEG 预测；动态状态仍是已明确方程和可复核结果的机制假设，分类、ERP/功率和静态路径分析仅作辅助证据。通道8/9方向一致性与 cue-locked V/H/P 的留出预测在 `05_behavior_model.py` 单独报告；Task-2映射尚未核实，不能将方向一致性解释为任务正确性。动态场景验证不把行为结果并入 EEG 特征矩阵。
+如果这些条件不成立，结论就是现有样本不能支持新增状态提升晚期 EEG 预测；动态状态仍是已明确方程和可复核结果的机制假设。Task-2 映射尚未核实，不能将通道8/9方向一致性解释为任务正确性；动态场景验证不把行为结果并入 EEG 特征矩阵。
 
 ## 9. 中间产物、命令与复现
 

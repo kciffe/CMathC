@@ -1,5 +1,0 @@
-﻿record,n_trials,n_external_truth_labels,n_channel8_cue_direction_labels,n_target_onsets,n_schedule_target_anchors,n_deadlines,n_response_markers,n_decoded_response_sides,n_direction_consistency_labels,n_direction_consistent,n_direction_inconsistent,n_rule_derived_task_correctness_labels,n_task_correct,n_task_incorrect,n_timely_by_cue_plus_3s,n_late_or_no_response_by_cue_plus_3s,n_external_formal_deadline_labels,n_response_duration_labeled,n_cue_intervals_with_action_marker,n_cue_intervals_without_action_marker,n_verified_omissions,task_accuracy_by_same_direction_rule
-VisualCogA_Task-1,100,0,100,0,100,0,100,100,100,100,0,100,100,0,100,0,0,100,100,0,0,1.0
-VisualCogA_Task-2,100,0,100,0,100,0,100,100,100,47,53,100,47,53,100,0,0,100,100,0,0,0.47
-VisualCogB_Task-1,100,0,100,0,100,0,100,100,100,98,2,100,98,2,100,0,0,100,100,0,0,0.98
-VisualCogB_Task-2,100,0,100,0,100,0,100,100,100,48,52,100,48,52,100,0,0,100,100,0,0,0.48
