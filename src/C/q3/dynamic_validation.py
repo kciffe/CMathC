@@ -8,7 +8,6 @@ correctness label, EEG feature, or model input.
 from __future__ import annotations
 
 import argparse
-import hashlib
 import json
 import sys
 from dataclasses import asdict
@@ -55,6 +54,73 @@ WINDOWS = {
     "cue_stage": (0.0, 0.8),
     "late_stage": (0.8, 2.8),
 }
+
+plt.rcParams.update({
+    "font.family": "sans-serif",
+    "font.sans-serif": ["Microsoft YaHei", "SimHei", "DengXian", "Arial"],
+    "axes.unicode_minus": False,
+})
+
+PREPROCESSING_LABELS = {
+    "none": "不滤波",
+    "causal": "因果滤波",
+    "zero_phase": "零相位滤波",
+}
+TARGET_TYPE_LABELS = {
+    "dots": "点阵刺激",
+    "inward": "向内运动刺激",
+    "outward": "向外运动刺激",
+}
+MODEL_LABELS = {
+    "Training_mean_template": "训练集均值模板",
+    "Q2_visual_only": "问题二视觉模型",
+    "Q2_plus_memory": "问题二视觉＋记忆模型",
+    "Q2_plus_memory_control": "问题二视觉＋记忆＋控制模型",
+    "Measured held-out EEG": "留出实测脑电",
+}
+
+
+def _preprocessing_label(mode: str) -> str:
+    return PREPROCESSING_LABELS.get(mode, mode)
+
+
+def _target_type_label(target_type: str) -> str:
+    return TARGET_TYPE_LABELS.get(target_type, target_type)
+
+
+def _model_label(model: str) -> str:
+    return MODEL_LABELS.get(model, model)
+
+
+def _record_label(record: str) -> str:
+    try:
+        index = list(RECORDS).index(record) + 1
+    except ValueError:
+        return "留出记录"
+    return f"记录{index}"
+
+
+def _format_onset_cn(value: float | None) -> str:
+    return "无目标输入" if value is None else f"{value:.1f} 秒"
+
+
+def _add_framed_figure_legend(fig, *args, **kwargs):
+    style = {
+        "frameon": True,
+        "fancybox": True,
+        "framealpha": 1.0,
+        "facecolor": "white",
+        "edgecolor": "#c8c8c8",
+        "borderpad": 0.7,
+        "labelspacing": 0.6,
+        "handletextpad": 0.8,
+        "columnspacing": 1.8,
+        "handlelength": 2.0,
+    }
+    style.update(kwargs)
+    legend = fig.legend(*args, **style)
+    legend.get_frame().set_linewidth(0.8)
+    return legend
 
 
 def extract_fixed_epoch(
@@ -447,70 +513,13 @@ def _scenario_grid(
     return tuple(scenarios)
 
 
-def _q2_cache_key(
-    cue_side: str,
-    target_type: str,
-    onset_s: float | None,
-    target_duration_s: float | None,
-    resolution: int,
-    simulation_stop_s: float,
-) -> str:
-    source_paths = {
-        Path(macro.__file__),
-        Path(macro.q2_config.__file__),
-        Path(macro.simulate_frontend.__code__.co_filename),
-        Path(macro.simulate_forward.__code__.co_filename),
-    }
-    source_hashes = {
-        path.name: hashlib.sha256(path.read_bytes()).hexdigest()
-        for path in sorted(source_paths, key=lambda item: item.name)
-    }
-    values = {
-        "cue_side": cue_side,
-        "target_type": target_type,
-        "onset_s": onset_s,
-        "target_duration_s": target_duration_s,
-        "resolution": resolution,
-        "simulation_stop_s": simulation_stop_s,
-        "source_hashes": source_hashes,
-    }
-    encoded = json.dumps(values, sort_keys=True).encode("utf-8")
-    return hashlib.sha256(encoded).hexdigest()[:20]
-
-
-def _get_q2_base(
+def _simulate_q2_base(
     scenario: macro.DynamicScenario,
-    cache_dir: Path,
     resolution: int,
     simulation_stop_s: float,
 ) -> dict[str, Any]:
-    """Load a checked per-candidate Q2 forward simulation cache or generate it."""
+    """Run the Q2 forward chain once and keep its arrays in memory for this run."""
 
-    cache_dir.mkdir(parents=True, exist_ok=True)
-    cache_key = _q2_cache_key(
-        scenario.cue_side, scenario.target_stimulus, scenario.target_onset_s,
-        scenario.target_duration_s, resolution, simulation_stop_s,
-    )
-    path = cache_dir / f"q2_forward_{cache_key}.npz"
-    metadata = {
-        "cache_key": cache_key,
-        "cue_side": scenario.cue_side,
-        "target_type": scenario.target_stimulus,
-        "target_onset_s": scenario.target_onset_s,
-        "target_duration_s": scenario.target_duration_s,
-        "resolution": resolution,
-        "simulation_stop_s": simulation_stop_s,
-    }
-    if path.exists():
-        with np.load(path, allow_pickle=False) as stored:
-            if json.loads(str(stored["metadata"].item())) == metadata:
-                return {
-                    key: stored[key].copy()
-                    for key in ("time_s", "cue_gate", "target_gate", "visual_drive", "q2_sensor", "q2_source_proxy")
-                } | {
-                    "projection_max_abs_error": float(stored["projection_max_abs_error"]),
-                    "metadata": metadata,
-                }
     dynamic_scenario = macro.DynamicScenario(
         scenario.cue_side, scenario.target_stimulus, scenario.target_onset_s,
         scenario.target_duration_s, 1.0,
@@ -523,14 +532,25 @@ def _get_q2_base(
         key: np.asarray(simulated[key])
         for key in ("time_s", "cue_gate", "target_gate", "visual_drive", "q2_sensor", "q2_source_proxy")
     }
-    np.savez_compressed(
-        path, **compact,
-        projection_max_abs_error=np.asarray(simulated["projection_max_abs_error"]),
-        metadata=np.asarray(json.dumps(metadata, sort_keys=True)),
-    )
     compact["projection_max_abs_error"] = float(simulated["projection_max_abs_error"])
-    compact["metadata"] = metadata
     return compact
+
+
+def _remove_stale_q2_caches(output_dir: Path) -> int:
+    """Remove only this script's obsolete Q2 NPZ caches; leave other files alone."""
+
+    cache_dir = output_dir / "q2_cache"
+    if not cache_dir.is_dir():
+        return 0
+    removed = 0
+    for path in cache_dir.glob("q2_forward_*.npz"):
+        path.unlink()
+        removed += 1
+    try:
+        cache_dir.rmdir()
+    except OSError:
+        pass
+    return removed
 
 
 def _make_processed_basis(
@@ -783,26 +803,25 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
         events["response_marker_time_s"].astype(float)
         - events["cue_onset_time_s"].astype(float)
     ).dropna().to_numpy()
-    fig, axes = plt.subplots(2, 1, figsize=(9.2, 5.2), constrained_layout=True)
+    fig, axes = plt.subplots(2, 1, figsize=(9.2, 5.6))
     axes[0].hist(marker_relative, bins=np.arange(1.7, 2.61, 0.025), color="#547D9A", alpha=0.86)
     for candidate, color in ((2.0, "#4C8C6B"), (2.2, "#D1843D"), (2.4, "#9B5C71")):
         axes[0].axvline(candidate, color=color, linestyle="--", linewidth=1.15,
-                        label=f"candidate target onset {candidate:.1f} s")
+                        label=f"候选目标时刻 {candidate:.1f} 秒")
     median_marker = float(np.median(marker_relative))
     axes[0].axvline(median_marker, color="#383838", linewidth=1.2,
-                    label=f"channel-9 marker median {median_marker:.3f} s")
+                    label=f"第9通道标记中位数 {median_marker:.3f} 秒")
     axes[0].set_xlim(1.7, 2.6)
-    axes[0].set_xlabel("Time from VisCue onset (s)")
-    axes[0].set_ylabel("Trial count")
-    axes[0].set_title("Observed event markers and candidate target timings")
-    axes[0].legend(ncol=2, fontsize=7.5, frameon=False)
+    axes[0].set_xlabel("相对视觉提示的时间（秒）")
+    axes[0].set_ylabel("试次数")
+    axes[0].set_title("实测事件标记与候选目标时刻")
     axes[0].grid(axis="y", color="#e5e5e5", linewidth=0.55)
 
     segments = (
-        ("Baseline", -0.2, 0.0, "#B7C7D0"),
-        ("Cue stage", 0.0, 0.8, "#79A4BF"),
-        ("Late stage", 0.8, 2.8, "#A7C79B"),
-        ("Full analyzed epoch", -0.2, 3.0, None),
+        ("基线", -0.2, 0.0, "#B7C7D0"),
+        ("提示阶段", 0.0, 0.8, "#79A4BF"),
+        ("晚期阶段", 0.8, 2.8, "#A7C79B"),
+        ("完整分析时段", -0.2, 3.0, None),
     )
     ax = axes[1]
     y_positions = [3.2, 2.3, 1.4, 0.5]
@@ -813,7 +832,13 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
             ax.plot([start, stop], [y, y], color="#333333", linewidth=1.25)
             ax.plot([start, start], [y - 0.14, y + 0.14], color="#333333", linewidth=1.0)
             ax.plot([stop, stop], [y - 0.14, y + 0.14], color="#333333", linewidth=1.0)
-        ax.text(start - 0.05, y, label, ha="right", va="center", fontsize=8)
+        if color is None:
+            ax.text(
+                start + 0.04, y + 0.20, label, ha="left", va="bottom", fontsize=8,
+                bbox={"facecolor": "white", "edgecolor": "none", "alpha": 0.92, "pad": 1.0},
+            )
+        else:
+            ax.text(start - 0.05, y, label, ha="right", va="center", fontsize=8)
     for candidate, color in ((2.0, "#4C8C6B"), (2.2, "#D1843D"), (2.4, "#9B5C71")):
         ax.axvline(candidate, color=color, linestyle="--", linewidth=1.0)
         ax.axvspan(candidate, min(candidate + 0.6, 3.0), color=color, alpha=0.08)
@@ -821,14 +846,20 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
     ax.set_xlim(-0.45, 3.1)
     ax.set_ylim(0.0, 3.8)
     ax.set_yticks([])
-    ax.set_xlabel("Time from VisCue onset (s)")
-    ax.set_title("Analysis windows; target-centered bands are candidate-only")
+    ax.set_xlabel("相对视觉提示的时间（秒）")
+    ax.set_title("分析时间窗；目标周边窗口仅代表候选情景")
     ax.grid(axis="x", color="#e5e5e5", linewidth=0.55)
     fig.suptitle(
-        f"{len(events)} audited trials; cue-to-marker median {median_marker:.3f} s. "
-        "Channel-9 marker is not treated as verified target onset or reaction time.",
-        fontsize=10,
+        f"审计 {len(events)} 个试次；提示至标记的中位间隔为 {median_marker:.3f} 秒。\n"
+        "第9通道标记尚不能确认为目标出现时刻或真实反应时。",
+        fontsize=10, y=0.99,
     )
+    handles, labels = axes[0].get_legend_handles_labels()
+    _add_framed_figure_legend(
+        fig, handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.92),
+        ncol=4, fontsize=7.5,
+    )
+    fig.subplots_adjust(left=0.11, right=0.98, top=0.83, bottom=0.12, hspace=0.42)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
     return {
@@ -845,7 +876,7 @@ def _plot_observed_waveforms(
     preprocessing: str,
     output_path: Path,
 ) -> None:
-    fig, axes = plt.subplots(3, 1, figsize=(9.2, 7.4), sharex=True, constrained_layout=True)
+    fig, axes = plt.subplots(3, 1, figsize=(9.2, 7.8), sharex=True)
     group_values = np.stack(list(observed_groups.values()), axis=0)
     means = group_values.mean(axis=0)
     spread = group_values.std(axis=0, ddof=1) if group_values.shape[0] > 1 else np.zeros_like(means)
@@ -854,13 +885,13 @@ def _plot_observed_waveforms(
         for values in group_values[:, channel_index, :]:
             axis.plot(OUTPUT_TIME_S, values, color="#9A9A9A", linewidth=0.45, alpha=0.32)
         axis.plot(OUTPUT_TIME_S, means[channel_index], color=color, linewidth=1.45,
-                  label=f"mean across {group_values.shape[0]} record × cue-side groups")
+                  label=f"{group_values.shape[0]} 个记录×提示方向组的均值")
         axis.fill_between(
             OUTPUT_TIME_S,
             means[channel_index] - spread[channel_index],
             means[channel_index] + spread[channel_index],
             color=color, alpha=0.15, linewidth=0,
-            label="±1 SD across group means",
+            label="组间均值 ±1 个标准差",
         )
         axis.axhline(0.0, color="#777777", linewidth=0.55)
         axis.axvline(0.0, color="#333333", linewidth=0.8)
@@ -868,16 +899,28 @@ def _plot_observed_waveforms(
         axis.axvspan(0.8, 2.8, color="#A7C79B", alpha=0.05)
         for onset in (2.0, 2.2, 2.4):
             axis.axvline(onset, color="#A36849", linestyle=(0, (3, 3)), linewidth=0.65, alpha=0.75)
-        axis.set_ylabel(f"{channel}\n(raw units)")
+        axis.set_ylabel(f"{channel}\n脑电幅值（原始单位）")
         axis.grid(color="#e5e5e5", linewidth=0.5)
-        axis.legend(loc="upper right", fontsize=7.0, frameon=False)
-    axes[-1].set_xlabel("Time from VisCue onset (s)")
+    axes[-1].set_xlabel("相对视觉提示的时间（秒）")
     axes[-1].set_xlim(TIME_START_S, TIME_STOP_S)
     fig.suptitle(
-        "Cue-aligned measured EEG after shared preprocessing "
-        f"({preprocessing}; 0.5–30 Hz; 128 Hz output; cue-baseline corrected)",
-        fontsize=10,
+        "视觉提示对齐的三通道实测脑电波形\n"
+        f"预处理：{_preprocessing_label(preprocessing)}；"
+        f"带宽：{'未滤波' if preprocessing == 'none' else '0.5–30 赫兹'}；采样率 128 赫兹；"
+        "基线窗：提示前 [-0.2, 0) 秒",
+        fontsize=9.5, y=0.99,
     )
+    from matplotlib.lines import Line2D
+    from matplotlib.patches import Patch
+    handles = [
+        Line2D([0], [0], color=colors[0], linewidth=1.5, label=f"{group_values.shape[0]} 个记录×提示方向组的均值"),
+        Patch(facecolor=colors[0], alpha=0.15, edgecolor="none", label="组间均值 ±1 个标准差"),
+    ]
+    _add_framed_figure_legend(
+        fig, handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.91),
+        ncol=2, fontsize=7.5,
+    )
+    fig.subplots_adjust(left=0.11, right=0.98, top=0.83, bottom=0.10, hspace=0.08)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -889,14 +932,14 @@ def _plot_states_and_contributions(exemplar: dict[str, Any], output_path: Path) 
         fit, exemplar["q2"], exemplar["memory"], exemplar["control"],
         q2_control_interaction=exemplar["interaction"],
     )
-    fig, axes = plt.subplots(2, 3, figsize=(12.2, 6.8), sharex="col", constrained_layout=True)
-    state_names = (("visual_state", "Visual state V", "#3D7193"),
-                   ("memory_state", "Memory-related state H", "#C0843D"),
-                   ("control_state", "Control state P", "#6B9270"))
+    fig, axes = plt.subplots(2, 3, figsize=(12.2, 7.2), sharex="col")
+    state_names = (("visual_state", "视觉状态 V", "#3D7193"),
+                   ("memory_state", "记忆相关状态 H", "#C0843D"),
+                   ("control_state", "控制状态 P", "#6B9270"))
     for axis, (key, title, color) in zip(axes[0], state_names):
         axis.plot(OUTPUT_TIME_S, basis[key], color=color, linewidth=1.35)
         axis.set_title(title)
-        axis.set_ylabel("Relative state")
+        axis.set_ylabel("相对状态量")
         axis.grid(color="#e5e5e5", linewidth=0.5)
         axis.axvline(0.0, color="#333333", linewidth=0.7)
         if exemplar["scenario"][1] is not None:
@@ -904,28 +947,39 @@ def _plot_states_and_contributions(exemplar: dict[str, Any], output_path: Path) 
     channel_colors = ("#39769C", "#4F906C", "#B66B49")
     for channel_index, (axis, channel, color) in enumerate(zip(axes[1], macro.CHANNELS, channel_colors)):
         axis.plot(OUTPUT_TIME_S, contributions["q2_visual"][0, channel_index],
-                  color="#39769C", linewidth=1.0, label="Q2 visual")
+                  color="#39769C", linewidth=1.0, label="问题二视觉输入")
         axis.plot(OUTPUT_TIME_S, contributions["memory"][0, channel_index],
-                  color="#C0843D", linewidth=1.0, label="memory state")
+                  color="#C0843D", linewidth=1.0, label="记忆状态成分")
         control_total = contributions["control_direct"][0, channel_index] + contributions["control_feedback"][0, channel_index]
-        axis.plot(OUTPUT_TIME_S, control_total, color="#6B9270", linewidth=1.0, label="control + Q2 interaction")
+        axis.plot(OUTPUT_TIME_S, control_total, color="#6B9270", linewidth=1.0, label="控制及交互成分")
         axis.plot(OUTPUT_TIME_S, exemplar["observed"][0, channel_index],
-                  color="#333333", linewidth=0.8, alpha=0.7, label="held-out measured")
-        axis.set_title(f"{channel}: train-fitted sensor contributions")
-        axis.set_xlabel("Time from cue onset (s)")
-        axis.set_ylabel("Processed EEG units")
+                  color="#333333", linewidth=0.8, alpha=0.7, label="留出实测脑电")
+        axis.set_title(f"电极 {channel}：训练折估计的观测成分")
+        axis.set_xlabel("相对视觉提示的时间（秒）")
+        axis.set_ylabel("处理后脑电幅值")
         axis.grid(color="#e5e5e5", linewidth=0.5)
         axis.axvline(0.0, color="#333333", linewidth=0.7)
-        axis.legend(fontsize=6.5, frameon=False)
     target_type, onset_s, evidence = exemplar["scenario"]
-    target_text = "no target" if onset_s is None else f"{onset_s:.1f} s candidate target"
-    evidence_text = "no match branch" if onset_s is None else ("mismatch" if evidence < 0 else "match")
+    target_text = "无目标输入" if onset_s is None else f"候选目标时刻 {onset_s:.1f} 秒"
+    evidence_text = "不设匹配分支" if onset_s is None else ("不匹配情景" if evidence < 0 else "匹配情景")
     fig.suptitle(
-        "Candidate dynamic states and fitted sensor-space components\n"
-        f"held-out {exemplar['record']} / {exemplar['cue_side']} cue; "
-        f"{target_type}, {target_text}, {evidence_text}; state/topography are not anatomical claims",
-        fontsize=10,
+        "候选动态状态及其电极空间观测贡献\n"
+        f"留出{_record_label(exemplar['record'])}／{('左侧' if exemplar['cue_side'] == 'left' else '右侧')}提示；"
+        f"{_target_type_label(target_type)}，{target_text}，{evidence_text}；状态不代表解剖定位",
+        fontsize=10, y=0.99,
     )
+    from matplotlib.lines import Line2D
+    handles = [
+        Line2D([0], [0], color="#39769C", linewidth=1.1, label="问题二视觉输入"),
+        Line2D([0], [0], color="#C0843D", linewidth=1.1, label="记忆状态成分"),
+        Line2D([0], [0], color="#6B9270", linewidth=1.1, label="控制及交互成分"),
+        Line2D([0], [0], color="#333333", linewidth=0.9, label="留出实测脑电"),
+    ]
+    _add_framed_figure_legend(
+        fig, handles=handles, loc="upper center", bbox_to_anchor=(0.5, 0.92),
+        ncol=4, fontsize=7.5,
+    )
+    fig.subplots_adjust(left=0.07, right=0.99, top=0.80, bottom=0.13, wspace=0.52, hspace=0.30)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -986,7 +1040,7 @@ def _plot_heldout_predictions(
             "Q2_plus_memory": np.mean(predictions_by_model["Q2_plus_memory"], axis=0),
         }
 
-    fig, axes = plt.subplots(3, 1, figsize=(10.0, 7.5), sharex=True)
+    fig, axes = plt.subplots(3, 1, figsize=(10.0, 7.8), sharex=True)
     for channel_index, (axis, channel) in enumerate(zip(axes, macro.CHANNELS)):
         for record in records:
             if record not in curves:
@@ -1005,32 +1059,30 @@ def _plot_heldout_predictions(
         axis.axvspan(0.8, 2.8, color="#A7C79B", alpha=0.05)
         if nominal_onset_s is not None:
             axis.axvline(nominal_onset_s, color="#A36849", linestyle="--", linewidth=0.85)
-        axis.set_ylabel(f"{channel}\nEEG units")
+        axis.set_ylabel(f"{channel}\n脑电幅值")
         axis.grid(color="#e5e5e5", linewidth=0.5)
-    axes[-1].set_xlabel("Time from VisCue onset (s)")
+    axes[-1].set_xlabel("相对视觉提示的时间（秒）")
     axes[-1].set_xlim(TIME_START_S, TIME_STOP_S)
     record_handles = [
-        Line2D([0], [0], color=record_colors[record], linewidth=1.6, label=record)
+        Line2D([0], [0], color=record_colors[record], linewidth=1.6, label=_record_label(record))
         for record in records if record in curves
     ]
     model_handles = [
-        Line2D([0], [0], color="#333333", linewidth=1.3, linestyle=linestyle, label=model_name)
+        Line2D([0], [0], color="#333333", linewidth=1.3, linestyle=linestyle, label=_model_label(model_name))
         for model_name, linestyle in model_styles.items()
     ]
-    fig.legend(
-        handles=record_handles + model_handles,
-        loc="lower center",
-        ncol=4,
-        fontsize=7.0,
-        frameon=False,
+    _add_framed_figure_legend(
+        fig, handles=record_handles + model_handles,
+        loc="upper center", bbox_to_anchor=(0.5, 0.91),
+        ncol=4, fontsize=7.5,
     )
     fig.suptitle(
-        "Leave-one-record-out predictions vs measured EEG\n"
-        f"{preprocessing}; {target_type} target candidate at {_format_onset(nominal_onset_s)}; "
-        "each color is one held-out record, cue sides and match branches averaged",
-        fontsize=10,
+        "整份记录留出：实测脑电与模型预测对照\n"
+        f"{_preprocessing_label(preprocessing)}；{_target_type_label(target_type)}候选目标时刻为{_format_onset_cn(nominal_onset_s)}； "
+        "颜色表示不同留出记录，曲线对提示方向与匹配分支取均值",
+        fontsize=10, y=0.99,
     )
-    fig.subplots_adjust(left=0.09, right=0.99, top=0.89, bottom=0.16, hspace=0.12)
+    fig.subplots_adjust(left=0.09, right=0.99, top=0.80, bottom=0.10, hspace=0.12)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -1050,7 +1102,7 @@ def _paired_memory_gains(metrics: pd.DataFrame) -> pd.DataFrame:
 
 def _plot_model_comparison(metrics: pd.DataFrame, output_path: Path) -> None:
     modes = list(dict.fromkeys(metrics["preprocessing"].tolist()))
-    fig, axes = plt.subplots(1, len(modes), figsize=(4.3 * len(modes), 4.2), sharey=True, constrained_layout=True)
+    fig, axes = plt.subplots(1, len(modes), figsize=(4.3 * len(modes), 4.8), sharey=True)
     if len(modes) == 1:
         axes = [axes]
     model_order = ("Training_mean_template", "Q2_visual_only", "Q2_plus_memory", "Q2_plus_memory_control")
@@ -1070,13 +1122,18 @@ def _plot_model_comparison(metrics: pd.DataFrame, output_path: Path) -> None:
                 for model in model_order
             ]
             axis.bar(positions + (wi - 0.5) * width, values, width=width,
-                     color=palette[window], label=window.replace("_", " "))
-        axis.set_title(mode.replace("_", " "))
-        axis.set_xticks(positions, ["Train\nmean", "Q2\nvisual", "+ memory", "+ control"], fontsize=8)
+                     color=palette[window], label={"cue_stage": "早期提示阶段", "late_stage": "晚期认知阶段"}[window])
+        axis.set_title(_preprocessing_label(mode))
+        axis.set_xticks(positions, ["训练集\n均值模板", "问题二视觉\n模型", "问题二视觉+\n记忆", "问题二视觉+记忆+\n控制"], fontsize=8)
         axis.grid(axis="y", color="#e5e5e5", linewidth=0.5)
-        axis.set_ylabel("Mean held-out NRMSE")
-        axis.legend(fontsize=7.5, frameon=False)
-    fig.suptitle("Record-held-out model comparison (candidate target scenarios pooled)")
+        axis.set_ylabel("平均留出归一化均方根误差")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.suptitle("跨记录留出误差比较\n（汇总候选目标情景）", y=0.99)
+    _add_framed_figure_legend(
+        fig, handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.91),
+        ncol=2, fontsize=7.5,
+    )
+    fig.subplots_adjust(left=0.08, right=0.99, top=0.79, bottom=0.22, wspace=0.08)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -1095,7 +1152,7 @@ def _plot_target_sensitivity(metrics: pd.DataFrame, output_path: Path) -> None:
             as_index=False,
         )["memory_improvement_nrmse"].mean()
     )
-    fig, axes = plt.subplots(1, len(modes), figsize=(4.4 * len(modes), 4.2), sharey=True, constrained_layout=True)
+    fig, axes = plt.subplots(1, len(modes), figsize=(4.4 * len(modes), 5.2), sharey=True)
     if len(modes) == 1:
         axes = [axes]
     colors = ("#39769C", "#C0843D", "#6B9270")
@@ -1108,14 +1165,19 @@ def _plot_target_sensitivity(metrics: pd.DataFrame, output_path: Path) -> None:
             ys = means.to_numpy(dtype=float)
             err = np.nan_to_num(stds.to_numpy(dtype=float), nan=0.0)
             axis.errorbar(xs, ys, yerr=err, marker="o", capsize=2.5,
-                          linewidth=1.15, color=color, label=target_type)
+                          linewidth=1.15, color=color, label=_target_type_label(target_type))
         axis.axhline(0.0, color="#444444", linestyle="--", linewidth=0.8)
-        axis.set_title(mode.replace("_", " "))
-        axis.set_xlabel("Candidate target onset from cue (s)")
+        axis.set_title(_preprocessing_label(mode))
+        axis.set_xlabel("候选目标时刻（相对提示，秒）")
         axis.grid(color="#e5e5e5", linewidth=0.5)
-        axis.legend(title="Candidate target", fontsize=7.5, frameon=False)
-    axes[0].set_ylabel("Memory benefit: NRMSE(Q2) − NRMSE(Q2 + memory)")
-    fig.suptitle("Late-stage memory-state benefit across candidate target times\npositive values indicate lower held-out error")
+    axes[0].set_ylabel("记忆状态误差改善量\n（问题二视觉模型误差 − 问题二视觉＋记忆模型误差）")
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.suptitle("不同候选目标时刻下记忆状态的晚期预测增益\n正值表示加入记忆后预测误差下降", y=0.99)
+    _add_framed_figure_legend(
+        fig, handles, labels, loc="upper center", bbox_to_anchor=(0.5, 0.91),
+        ncol=3, fontsize=7.5,
+    )
+    fig.subplots_adjust(left=0.14, right=0.99, top=0.74, bottom=0.18, wspace=0.08)
     fig.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close(fig)
 
@@ -1200,6 +1262,7 @@ def _write_detailed_report(
     figure_dir: Path,
     resolution: int,
     target_duration_s: float | None,
+    q2_projection_max_abs_error: float,
 ) -> None:
     n_trials = int(len(trial_audit))
     n_included = int(trial_audit["included"].sum())
@@ -1207,14 +1270,30 @@ def _write_detailed_report(
     onsets = sorted({scenario.target_onset_s for scenario in scenarios}, key=lambda x: (x is not None, -1.0 if x is None else x))
     target_types = sorted({scenario.target_stimulus for scenario in scenarios})
     preprocess_modes = sorted(set(metrics["preprocessing"]))
-    duration_text = "持续到仿真结束" if target_duration_s is None else f"{target_duration_s:g} s（候选假设）"
-    model_summary = summary["late_model_metrics"]
+    duration_text = "持续到仿真结束" if target_duration_s is None else f"{target_duration_s:g} 秒（候选假设）"
+    model_summary = summary["late_model_metrics"].copy()
+    model_summary["preprocessing"] = model_summary["preprocessing"].map(_preprocessing_label)
+    model_summary["model"] = model_summary["model"].map(_model_label)
+    model_summary = model_summary.rename(columns={
+        "preprocessing": "预处理方式",
+        "model": "模型",
+        "mean": "平均晚期误差",
+        "std": "记录间标准差",
+        "count": "留出记录数",
+    })
     model_table = model_summary.to_markdown(index=False, floatfmt=".4f")
-    onset_table = summary["memory_gain_by_preprocessing_and_onset"].to_markdown(index=False, floatfmt=".4f")
+    onset_summary = summary["memory_gain_by_preprocessing_and_onset"].copy()
+    onset_summary["preprocessing"] = onset_summary["preprocessing"].map(_preprocessing_label)
+    onset_summary = onset_summary.rename(columns={
+        "preprocessing": "预处理方式",
+        "target_onset_candidate_s": "候选目标时刻（秒）",
+        "memory_improvement_nrmse": "误差改善量",
+    })
+    onset_table = onset_summary.to_markdown(index=False, floatfmt=".4f")
     memory_lines = []
     for mode, result in summary["memory_delta_by_preprocessing"].items():
         memory_lines.append(
-            f"| {mode} | {result['q2_only_late_nrmse']:.4f} | "
+            f"| {_preprocessing_label(mode)} | {result['q2_only_late_nrmse']:.4f} | "
             f"{result['q2_plus_memory_late_nrmse']:.4f} | "
             f"{result['memory_improvement_nrmse']:+.4f} | "
             f"{result['memory_improvement_percent']:+.2f}% |"
@@ -1224,11 +1303,11 @@ def _write_detailed_report(
         "tau_visual_s": ("s", "视觉驱动平滑时标；快速过程的结构性初值，未用实测 EEG 校准。"),
         "tau_memory_s": ("s", "记忆保持时标；表示 cue 到候选 target 的持续状态假设，未拟合。"),
         "tau_control_s": ("s", "控制态响应/衰减时标；结构性初值，未拟合。"),
-        "cue_storage_gain": ("relative", "cue 阶段写入 H 的非负增益，初值 0.8。"),
-        "target_memory_gain": ("relative", "候选 target 匹配证据更新 H 的增益，初值 0.8。"),
-        "memory_to_control_gain": ("relative", "H 驱动 P 的耦合增益，初值 0.25。"),
-        "conflict_gain": ("relative", "不匹配情景驱动 P 的增益，初值 0.8。"),
-        "topdown_control_gain": ("relative", "P 对 Q2 视觉传感器响应的调制增益，初值 0.10。"),
+        "cue_storage_gain": ("相对量", "提示阶段写入 H 的非负增益，初值 0.8。"),
+        "target_memory_gain": ("相对量", "候选目标匹配证据更新 H 的增益，初值 0.8。"),
+        "memory_to_control_gain": ("相对量", "H 驱动 P 的耦合增益，初值 0.25。"),
+        "conflict_gain": ("相对量", "不匹配情景驱动 P 的增益，初值 0.8。"),
+        "topdown_control_gain": ("相对量", "P 对 Q2 视觉传感器响应的调制增益，初值 0.10。"),
     }
     macro_parameter_table = pd.DataFrame([
         {
@@ -1252,7 +1331,7 @@ def _write_detailed_report(
             "结果支持继续检验该记忆机制；仍需在独立记录/受试者及核实事件后复验。"
         )
     else:
-        mode_text = ", ".join(beneficial_modes) if beneficial_modes else "无"
+        mode_text = ", ".join(_preprocessing_label(mode) for mode in beneficial_modes) if beneficial_modes else "无"
         memory_assessment = (
             f"**本次判断：现有结果不支持记忆态稳定改善晚期 EEG 预测。** "
             f"只有 {summary['positive_preprocessing_onset_cells']}/"
@@ -1260,32 +1339,24 @@ def _write_detailed_report(
             f"整体改善只见于 {mode_text} 预处理，其他预处理下不改善或变差。"
             "状态方程已构建并完成留出检验，但当前样本与固定机制参数不足以支持稳定记忆态增益。"
         )
-    figure_names = {
-        "event": "事件与分析时间窗：analysis_event_windows.png",
-        "waveform": "认知阶段三通道实测波形：observed_three_channel_stages.png",
-        "states": "模型状态与电极贡献：dynamic_states_sensor_contributions.png",
-        "prediction": "留出预测与实测对照：heldout_predictions_vs_measured.png",
-        "comparison": "模型留出误差比较：heldout_model_comparison.png",
-        "sensitivity": "目标时刻敏感性：memory_target_time_sensitivity.png",
-    }
     document = r'''# 问题三实现流程与模型说明
 
 ## 1. 本轮结论与证据范围
 
-本轮把问题三从静态特征分类推进到一个**可检验的动态认知宏观模型**：问题二的视觉处理与脑电正向形成链提供视觉驱动和三通道观测接口；问题三增加独立的记忆相关状态和控制状态，并以整条记录留出的 EEG 预测误差检验这些状态是否有增益。
+本轮针对题目要求的“借助问题二所建立的脑电信号形成机制，建立认知宏观模型并用给定脑电信号验证”，构建了一个**可检验的动态认知宏观模型**：问题二的视觉处理与脑电正向形成链提供视觉驱动和三通道观测接口；问题三增加独立的记忆相关状态和控制状态，并以整条记录留出的脑电预测误差检验新增状态是否有增量信息。题目没有规定必须达到某个预测百分点；留出误差与候选时刻敏感性是本实现采用的验证证据。
 
-事件审计文件给出 {event_summary['n_audited_trials']} 个 cue 试次；通道9响应标记相对 cue 的中位时间为 {event_summary['marker_relative_median_s']:.4f} s，5%–95% 分位区间为 {event_summary['marker_relative_q05_s']:.4f}–{event_summary['marker_relative_q95_s']:.4f} s。通道9的值只用于事件时间审计图；目标呈现时间、正式反应时、正确性和漏答判定均未获独立核实，所以本轮不做行为标签拟合，也不把 marker−候选目标时刻称为真实 RT。
+事件审计文件给出 {event_summary['n_audited_trials']} 个视觉提示试次；第9通道响应标记相对视觉提示的中位时间为 {event_summary['marker_relative_median_s']:.4f} 秒，5%–95% 分位区间为 {event_summary['marker_relative_q05_s']:.4f}–{event_summary['marker_relative_q95_s']:.4f} 秒。第9通道只用于事件时间审计；目标呈现时间、正式反应时、正确性和漏答判定均未获独立核实，所以本轮不做行为标签拟合，也不把标记减去候选目标时刻称为真实反应时。
 
-原始 EEG 中审计 {n_trials} 个 cue 事件，按非有限值、原始幅度阈值与平直通道规则保留 {n_included} 个完整试次（覆盖 {n_records} 个记录文件）。主验证为 **leave-one-record-out**：每折整份记录留出，观察方程的通道系数和标准化参数只在另外三份训练记录中估计。该验证检验跨记录外推，但因记录文件未能确认独立受试者身份，不等同于严格的跨受试者验证。
+原始脑电中审计 {n_trials} 个视觉提示事件，按非有限值、原始幅度阈值与平直通道规则保留 {n_included} 个完整试次（覆盖 {n_records} 个记录文件）。主验证为**逐份记录留出**：每折留出一份完整记录，观测方程的电极系数和标准化参数只在另外三份训练记录中估计。该验证检验跨记录外推；记录文件未能确认独立受试者身份，因此不等同于严格的跨受试者验证。
 
-主指标是留出 EEG 的归一化 RMSE（NRMSE = RMSE / 留出实测值标准差），越低越好。晚期认知窗固定为 cue 后 0.8–2.8 s；它不由 response marker 或单一目标时刻反推。候选刺激类型为 {', '.join(target_types)}；候选目标相对 cue 时刻为 {', '.join(_format_onset(x) for x in onsets)}；候选目标持续时间为 {duration_text}。这些情景用于敏感性分析，不是已确认实验真值。
+主指标是留出脑电的归一化均方根误差（NRMSE，即 RMSE 除以留出实测值标准差），数值越低越好。晚期认知窗固定为视觉提示后 0.8–2.8 秒；它不由响应标记或单一目标时刻反推。候选刺激类型为 {', '.join(_target_type_label(x) for x in target_types)}；候选目标相对视觉提示时刻为 {', '.join(_format_onset_cn(x) for x in onsets)}；候选目标持续时间为 {duration_text}。这些仅用于敏感性分析，不是已确认的实验真值。
 
 | 预处理 | Q2视觉基线晚期 NRMSE | 加记忆状态晚期 NRMSE | 误差改善（正数为改善） | 相对改善 |
 |---|---:|---:|---:|---:|
 {memory_table}
 @@MEMORY_ASSESSMENT@@
 
-在全部预处理×非空目标时刻的聚合格中，记忆状态晚期误差改善为正的格数是 {summary['positive_preprocessing_onset_cells']}/{summary['total_preprocessing_onset_cells']}。每种预处理、每个目标时刻的改善见下表；目标刺激类型、匹配/不匹配分支、记录和 cue 侧在表中结果上作了聚合，完整逐条件结果保存在 `output/dynamic_heldout_validation/dynamic_cv_metrics.csv`。
+在全部预处理×非空目标时刻的聚合格中，记忆状态晚期误差改善为正的格数是 {summary['positive_preprocessing_onset_cells']}/{summary['total_preprocessing_onset_cells']}。每种预处理、每个目标时刻的改善见下表；表内已对候选刺激类型、匹配/不匹配情景、留出记录和左右提示方向取平均，完整逐条件结果保存在 `output/dynamic_heldout_validation/dynamic_cv_metrics.csv`。
 
 {onset_table}
 
@@ -1293,15 +1364,24 @@ def _write_detailed_report(
 
 ## 2. 输入、输出与模块边界
 
-| 步骤 | 输入 | 处理与目的 | 输出 |
+本轮动态模型的主运行顺序如下。先准备事件语义审计表，再运行主验证入口；Q2场景模拟、预处理、宏观状态积分、观测系数拟合、留出计分和出图都由主入口按顺序调用。
+
+```powershell
+python src/C/q3/09_event_time_semantics.py
+python src/C/q3/dynamic_validation.py
+```
+
+特征分类、功率分析和静态路径分析脚本保留为辅助分析，不是下表动态状态的输入，也不参与留出评分。`dynamic_cognitive_model.py` 是被主入口调用的机制模块，不需要单独运行才能得到本报告结果。
+
+| 模块/执行位置 | 输入 | 如何执行、目的与意义 | 主要输出 |
 |---|---|---|---|
-| 事件与时间窗审计 | VisCue、TimeStamp、既有通道9边沿审计表 | 确定 cue 锚点；呈现 response marker 与候选目标时刻的相对关系；避免把未知语义写成真实 RT | `analysis_event_windows.png`、事件摘要 |
-| 原始 EEG 切段 | 连续实测 F3/Fz/F4、VisCue、TimeStamp | 以 VisCue 起点插值到共同 [-0.2, 3.0] s、250 Hz 的相对时间网格；避免跨越下一个 cue；做一致的样本 QC | `observed_trial_audit.csv`、cue×记录组均值 |
-| 共同预处理 | 同一三通道 epoch / Q2 正向输出 | 0.5–30 Hz、四阶滤波；比较不滤波、因果滤波、零相位滤波；重采样到128 Hz并减去[-0.2,0)基线 | 三个预处理敏感性分支 |
-| 问题二视觉驱动 | cue/候选 target 图像、Q2参数和导联矩阵 G | 运行 Gabor/LGN/Wilson–Cowan 前向链，生成 `q_Q2(t)`、`Gq_Q2(t)`；只正向投影，不反演5个源 | 候选视觉输入与 EEG 传感器驱动 |
-| 宏观状态积分 | Q2早期视觉群体驱动、cue/target门控、情景匹配参数 | 用不同时间常数更新 V/H/P，刻画视觉处理、记忆保持/匹配和控制过程的时间演化 | 三条独立的潜在状态曲线 |
-| 训练折观测映射 | 训练记录实测 EEG、Q2预测和状态曲线 | 对每个电极拟合带 ridge 的传感器观测系数；训练折均值/尺度只用于训练和对应留出折 | 不反演解剖源；留出 EEG 预测 |
-| 记录留出验证 | 每折留出记录的实测 EEG 与预测 | 分别比较 Q2-only、Q2+memory、Q2+memory+control；报告 cue、晚期及候选目标窗 | `dynamic_cv_metrics.csv`、留出预测图、敏感性图 |
+| 事件语义审计：`09_event_time_semantics.py` | VisCue、TimeStamp、第9通道边沿及 Q2 导联信息 | 按事件边沿汇总每试次时间，比较标记与候选目标时刻；检查事件映射和三电极对五源的可辨识性。用来确定可证事实与未知量，不把候选时刻强行定为真值 | `continuation_audit/event_timing_by_trial.csv` 及审计摘要 |
+| 试次切片与质量控制：`dynamic_validation.py::_load_observed_epochs` | 原始连续 F3/Fz/F4、提示事件、时间戳 | 从连续记录提取提示起点，插值到共同时间网格；检查边界、重叠、非有限值、平直通道和幅值阈值。用途是确保各预处理分支使用同一批有效试次 | `observed_trial_audit.csv`、记录×提示方向均值 |
+| 统一预处理：`dynamic_validation.py::_preprocess_*` | 连续实测脑电、Q2电极轨迹、状态轨迹与交互项 | 先对整条连续实测记录滤波，再切片；比较不滤波、单向因果滤波和离线零相位滤波；统一重采样到 128 赫兹并作提示前基线修正。用途是隔离预处理选择对结论的影响 | 三种预处理下可直接比较的 EEG 与模型基函数 |
+| 问题二前向接口：`dynamic_cognitive_model.py::simulate_q2_scenario` | 提示方向、候选刺激形状/时刻、问题二参数和导联矩阵 G | 调用问题二视觉特征、LGN 与 Wilson–Cowan 皮层前向计算，形成五个源代理并经 G 正向投影至 F3/Fz/F4；不反演五源。用途是把问题二脑电形成机制接入问题三的视觉驱动与观测端 | 候选情景的视觉驱动、Q2电极轨迹、五源正向代理 |
+| V/H/P 状态积分：`dynamic_cognitive_model.py::integrate_macro_states` | Q2早期视觉驱动、提示/目标门控、假设匹配证据 | 按各自时间常数递推 V、H、P；分别表达视觉驱动、记忆相关保持/匹配、控制/冲突过程。用途是建立随时间演化的不同认知过程，而非按三个电极给状态贴标签 | V/H/P 三条状态轨迹 |
+| 电极观测与状态消融：`dynamic_validation.py::_run_record_heldout` | 训练记录的实测波形、Q2正向轨迹、V/H/P及交互项 | 每折只用训练记录估计标准化量和岭回归系数，逐步比较视觉、视觉＋记忆、视觉＋记忆＋控制，并以训练记录均值模板作简单基线。用途是检验状态是否带来跨记录预测增益 | 各电极的留出预测、拟合贡献和逐折误差 |
+| 汇总、敏感性与出图：`dynamic_validation.py::run_validation` | 全部留出折分数、候选情景及事件审计表 | 按预处理与候选目标时刻汇总晚期误差，生成六张中文图和结果表；目标类型/时刻仅按预先列出的情景并列比较，不按留出误差挑选真值 | `dynamic_cv_metrics.csv`、`validation_summary.json`、`figures/*.png` |
 
 ## 3. 事件审计与有效窗口
 
@@ -1323,9 +1403,11 @@ $$\mathbf y_i^c(\tau)=\operatorname{interp}\{\mathbf y(t_i^c+\tau)\},\qquad \Del
 
 ![事件标记与分析窗](output/dynamic_heldout_validation/figures/analysis_event_windows.png)
 
+**图的目的与判读：** 上图把第9通道起始标记与 2.0、2.2、2.4 秒三个候选目标时刻放在同一时间轴上；下图标出基线、提示阶段、晚期阶段、完整切片及候选目标周边窗口。标记集中在约 2.215 秒，靠近候选时刻，说明现有记录不能单独判定该边沿是目标时刻还是应答时刻。该图用于限定解释范围，不用于把某一个候选时刻认定为真实实验事件。
+
 ![F3/Fz/F4认知阶段实测波形](output/dynamic_heldout_validation/figures/observed_three_channel_stages.png)
 
-图中阴影是八个记录×cue 侧组均值之间的标准差，不是受试者总体的置信区间；通道单位仍是原始采集单位/处理后 EEG 单位，源文件未提供独立校准到微伏的依据。
+**图的目的与判读：** 该图展示所有保留记录×提示方向组在三个电极上的提示对齐波形、组均值及组间标准差，用于确认进入模型的实测信号在早期和晚期时间窗的尺度与差异。阴影是八个记录×提示方向组均值之间的标准差，不是受试者总体置信区间；原始采集单位未能独立校准到微伏。
 
 ## 4. Q2 前向机制接口
 
@@ -1341,6 +1423,8 @@ $$u_{Q2,k}=\operatorname{mean}_{x,y}E_{\mathrm{early}}(x,y,k).$$
 
 它是 Q2 网络中的视觉驱动量；后续状态不是将 F3/Fz/F4 分别重命名，而是独立的 V、H、P 过程。
 
+每次候选情景模拟后还检查正向投影的一致性：矩阵乘法重算的三电极轨迹与 Q2 前向函数输出逐点对照，最大绝对差为 {q2_projection_max_abs_error:.3e}。这一项只证明程序采用了同一正向观测接口，不证明五个源代理可由三电极唯一识别。
+
 ## 5. 动态认知状态模型
 
 设 $C_k\in[0,1]$ 和 $T_k\in[0,1]$ 分别为 cue 与候选 target 的时间门控，$r\in[-1,1]$ 为假设性的 match-evidence 情景量（正值表示匹配、负值表示不匹配；不是正确性标签）。使用指数稳定离散化 $\rho_j=\exp(-\Delta t/\tau_j)$：
@@ -1355,7 +1439,7 @@ $$P_{k+1}=\rho_PP_k+(1-\rho_P)\left(g_{HP}|H_k|T_k+g_\delta T_k\frac{1-r}{2}\rig
 
 ![宏观状态与留出电极贡献](output/dynamic_heldout_validation/figures/dynamic_states_sensor_contributions.png)
 
-下半图的状态贡献系数来自该折训练记录；图中按 Q2 视觉、记忆直接项、控制直接项与控制×Q2 反馈项分解，展示的是传感器空间预测贡献，不是脑区定位或海马/PFC 源证明。
+**图的目的与判读：** 上排显示同一假设情景下 V、H、P 三个不同时间状态；下排按 Q2视觉、记忆直接项、控制直接项与控制×Q2反馈项分解训练折观测方程，并叠加留出实测波形。该图说明模型如何把不同状态映射到每个电极，可检查状态时程和贡献量级。下排系数只来自该折训练记录；这不是脑区定位，也不能证明海马或前额叶皮层来源。
 
 ## 6. 观测方程与预处理
 
@@ -1365,9 +1449,9 @@ $$\hat y_{c,k}=a_c+b_{Q,c}\tilde y_{Q2,c,k}+\lambda_{H,c}\tilde H_k+\lambda_{P,c
 
 波浪号表示同一预处理算子后的量。$\lambda_H$ 与 $\lambda_P$ 是每电极的功能性传感器加载；$\kappa$ 表示控制态调制 Q2 视觉响应的交互。$a_c,b_{Q,c},\lambda_{H,c},\lambda_{P,c},\kappa_c$ 只用训练记录估计，并且按模型逐步加入：
 
-1. `Q2_visual_only`：$a_c+b_{Q,c}\tilde y_{Q2,c}$；
-2. `Q2_plus_memory`：在视觉基线上加 $\lambda_{H,c}\tilde H$；
-3. `Q2_plus_memory_control`：再加 $\lambda_{P,c}\tilde P+\kappa_c\widetilde{y_{Q2,c}P}$。
+1. `Q2_visual_only`：$a_c+b_{Q,c}\tilde y_{Q2,c}$，视觉机制基线；
+2. `Q2_plus_memory`：在视觉基线上加 $\lambda_{H,c}\tilde H$，检验记忆相关状态的增量预测信息；
+3. `Q2_plus_memory_control`：再加 $\lambda_{P,c}\tilde P+\kappa_c\widetilde{y_{Q2,c}P}$，检验控制状态及其对视觉响应的调制。
 
 所有通道独立求解小规模 ridge 回归：
 
@@ -1395,9 +1479,15 @@ $\Delta_H>0$ 表示加记忆状态降低该留出 EEG 窗的预测误差。对�
 
 ![各模型的留出误差](output/dynamic_heldout_validation/figures/heldout_model_comparison.png)
 
+**图的目的与判读：** 该图对比训练集均值模板、Q2视觉模型、加入记忆状态、再加入控制状态四种模型，并分开展示提示阶段和晚期阶段。它回答状态扩充是否降低完整留出记录上的误差；柱高是汇总均值，需结合下方候选时刻敏感性图和逐折 CSV 判断稳定性。
+
 ![不同目标时刻下的记忆态误差改善](output/dynamic_heldout_validation/figures/memory_target_time_sensitivity.png)
 
+**图的目的与判读：** 该图检查记忆增益是否依赖某一个假设的目标出现时刻或某种预处理。横轴是 2.0、2.2、2.4 秒候选时刻，颜色区分候选刺激形状，点和误差线概括四份留出记录；正负号直接表示误差下降或上升。
+
 ![留出预测与实测波形对照](output/dynamic_heldout_validation/figures/heldout_predictions_vs_measured.png)
+
+**图的目的与判读：** 每种颜色代表一份完整留出记录，实线为实测波形，不同线型区分 Q2视觉基线与加入记忆状态后的预测。该图只展示点阵刺激、约 2.2 秒候选目标和因果滤波下的代表性情景，并对左右提示与匹配分支取均值；它用于观察波形形态，不替代全部候选情景的误差统计。
 
 ## 8. 结果表与如何判读
 
@@ -1421,8 +1511,8 @@ NRMSE 是每条留出组内按实测标准差归一化后计算，再跨留出�
 - `output/dynamic_heldout_validation/observed_trial_audit.csv`：每试次纳入状态和 QC 原因；
 - `output/dynamic_heldout_validation/dynamic_cv_metrics.csv`：完整预处理×情景×模型×留出记录×cue 侧×阶段分数；
 - `output/dynamic_heldout_validation/validation_summary.json`：汇总指标及事件语义限制；
-- `output/dynamic_heldout_validation/q2_cache/`：带配置键和 Q2 源文件散列的场景级前向数值缓存；
-- `output/dynamic_heldout_validation/figures/`：仅 PNG 图。
+- `output/dynamic_heldout_validation/figures/`：六张中文 PNG 中间图；
+- Q2 前向数组只在当前运行期间保留于内存，不写出 `.npz` 缓存；下一次运行将重新计算候选场景。
 
 默认复现：
 
@@ -1455,7 +1545,10 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
         "{n_records}": str(n_records),
         "{', '.join(target_types)}": ", ".join(target_types),
         "{', '.join(_format_onset(x) for x in onsets)}": ", ".join(_format_onset(x) for x in onsets),
+        "{', '.join(_target_type_label(x) for x in target_types)}": ", ".join(_target_type_label(x) for x in target_types),
+        "{', '.join(_format_onset_cn(x) for x in onsets)}": ", ".join(_format_onset_cn(x) for x in onsets),
         "{duration_text}": duration_text,
+        "{q2_projection_max_abs_error:.3e}": f"{q2_projection_max_abs_error:.3e}",
         "{memory_table}": memory_table,
         "@@MEMORY_ASSESSMENT@@": memory_assessment,
         "{summary['positive_preprocessing_onset_cells']}": str(summary["positive_preprocessing_onset_cells"]),
@@ -1477,7 +1570,7 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
     if section_position >= 0:
         document = document[:section_position] + parameter_section + document[section_position:]
     reasons = [
-        "**机制参数仍是构造值。** $\tau_H$、写入/匹配增益及控制耦合尚未在训练记录的内层验证中估计；若真实保持时长或更新时序不同，当前 H 的时间轨迹会错位。",
+        "**机制参数仍是构造值。** $\\tau_H$、写入/匹配增益及控制耦合尚未在训练记录的内层验证中估计；若真实保持时长或更新时序不同，当前 H 的时间轨迹会错位。",
         "**事件与刺激类型不确定。** 目标出现时刻没有独立标记，Task-1/Task-2 与 Q2 项目条件的映射未确认；把全部候选情景汇总会稀释某一真实但未知的条件效应。",
         "**记录间差异明显。** 四份记录是目前可用的留出单位，但独立受试者身份未知；传感器 EEG 的尺度和慢变形态可能存在记录间偏移。当前 NRMSE 大于 1，且预测波形未能跟随全部实测缓慢起伏，说明绝对拟合仍弱。",
         f"**可用试次数有限。** 原始幅度 QC 排除了 {n_trials - n_included}/{n_trials} 个 epoch；其余约 {n_included} 个有效 trial 不能补足目标真值、正确性、漏答和正式反应时标签。",
@@ -1492,7 +1585,7 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
         "### 后续优先改进顺序\n\n"
         "1. 先取得 target-onset、刺激真值/类型与通道9事件写入说明，厘清每个文件对应的任务条件；更新事件图和候选网格。\n"
         "2. 冻结连续记录滤波、重采样、伪迹 QC 与阶段窗；对被排除的 45 个试次检查是否为真实硬件饱和或可修复的数据格式问题，不为增加样本而放宽阈值。\n"
-        "3. 事件语义确认后，在每个外层留出折的训练记录内用内层验证估计 $\tau_H$、增益和观测加载；外层留出记录仍只用于最终一次评估，禁止按外层分数挑参数。\n"
+        "3. 事件语义确认后，在每个外层留出折的训练记录内用内层验证估计 $\\tau_H$、增益和观测加载；外层留出记录仍只用于最终一次评估，禁止按外层分数挑参数。\n"
         "4. 增加经验证的 target-locked 波形/状态对照，并在标签可用时单独分析 RT、正确性或实际选择；通道9继续仅作事件/行为变量，不进入 EEG 特征。\n"
         "5. 若跨记录与事件敏感性后仍没有稳定的晚期预测增益，应保留动态模型作为可复核的机制假设，并明确写出现有数据不足以支持记忆机制。\n"
     )
@@ -1512,9 +1605,9 @@ def run_validation(
 ) -> pd.DataFrame:
     output_dir = Path(output_dir)
     figure_dir = output_dir / "figures"
-    cache_dir = output_dir / "q2_cache"
     output_dir.mkdir(parents=True, exist_ok=True)
     figure_dir.mkdir(parents=True, exist_ok=True)
+    removed_caches = _remove_stale_q2_caches(output_dir)
     if not preprocessing_modes or not set(preprocessing_modes).issubset(set(macro.FILTER_MODES)):
         raise ValueError("preprocessing_modes must be a nonempty subset of none/causal/zero_phase")
     if simulation_stop_s < TIME_STOP_S:
@@ -1569,7 +1662,7 @@ def run_validation(
             f"{cue_side}, {target_type}, target={_format_onset(onset_s)}",
             flush=True,
         )
-        base = _get_q2_base(scenario, cache_dir, resolution, simulation_stop_s)
+        base = _simulate_q2_base(scenario, resolution, simulation_stop_s)
         base_cache[(cue_side, target_type, onset_s)] = base
         for mode in preprocessing_modes:
             cfg = macro.PreprocessingConfig(
@@ -1653,12 +1746,15 @@ def run_validation(
     _write_detailed_report(
         report_path, event_summary, trial_audit, metrics, summary,
         scenarios, figure_dir, resolution, target_duration_s,
+        max(base["projection_max_abs_error"] for base in base_cache.values()),
     )
-    # Keep the new figure directory PNG-only. Numerical tables and NPZ caches
-    # remain separate, reproducible intermediate data.
+    # Keep figures PNG-only; Q2 simulation arrays are held in memory and are
+    # never written as persistent NPZ cache files.
     for stale in figure_dir.iterdir():
         if stale.is_file() and stale.suffix.lower() != ".png":
             stale.unlink()
+    if removed_caches:
+        print(f"Removed stale Q2 NPZ caches: {removed_caches}", flush=True)
     print(f"Included EEG epochs: {int(trial_audit['included'].sum())}/{len(trial_audit)}", flush=True)
     print(f"Late-stage model metrics saved: {output_dir / 'dynamic_cv_metrics.csv'}", flush=True)
     print(f"Detailed method/results note: {report_path}", flush=True)

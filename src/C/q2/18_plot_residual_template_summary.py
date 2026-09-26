@@ -13,12 +13,7 @@ from matplotlib.ticker import PercentFormatter
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(PROJECT_ROOT / "math-model-agent" / "code"))
 
-from algorithms.sci_figures import (  # noqa: E402
-    FigureContract,
-    export_publication_figure,
-    paper_figure_rc_params,
-    publication_size,
-)
+from algorithms.sci_figures import paper_figure_rc_params, publication_size  # noqa: E402
 
 Q2_ROOT = Path(__file__).resolve().parent
 RESULT_DIR = Q2_ROOT / "output" / "revision_v3" / "17_residual_template_match"
@@ -62,8 +57,7 @@ def draw() -> None:
     fig.subplots_adjust(left=0.105, right=0.985, top=0.84, bottom=0.23, wspace=0.34)
 
     y_positions = list(range(len(rows) - 1, -1, -1))
-    labels = [name.replace("VisualCog", "").replace("_Task-", " · Task-")
-              for name in RECORDS]
+    labels = ["A组·第1记录", "A组·第2记录", "B组·第1记录", "B组·第2记录"]
 
     # Panel A: where each record-specific feature window lies on the cue timeline.
     for y, row in zip(y_positions, rows):
@@ -78,7 +72,7 @@ def draw() -> None:
         )
         ax_time.text(
             810, y,
-            f"{start:.0f}–{end:.0f} ms · {channel} · {points}点",
+            f"{start:.0f}–{end:.0f} 毫秒 · {channel} · {points}点",
             ha="left", va="center", fontsize=6.2, color="#303030",
             clip_on=False,
         )
@@ -91,7 +85,7 @@ def draw() -> None:
     ax_time.set_xticks([0, 200, 400, 600, 800])
     ax_time.set_ylim(-0.52, 3.7)
     ax_time.set_yticks(y_positions, labels, fontsize=6.1)
-    ax_time.set_xlabel("相对提示出现时间（ms）")
+    ax_time.set_xlabel("相对提示出现时间（毫秒）")
     ax_time.set_title("(a) 记录特异的候选时间窗", loc="left", fontsize=8.2, pad=7)
     ax_time.grid(axis="x", alpha=0.18, lw=0.5)
     ax_time.spines[["top", "right"]].set_visible(False)
@@ -144,49 +138,10 @@ def draw() -> None:
         ha="center", va="center", fontsize=6.1, color="#555555",
     )
 
-    contract = FigureContract(
-        claim=(
-            "记录特异的局部 ERP 模板读出在四份记录合并后正确分类 "
-            f"{correct}/{n_trials} 个试次（{overall_acc:.1%}）；记录间表现不一。"
-        ),
-        evidence=(
-            "四份记录各自候选电极及时间窗",
-            "各记录留出时间块上的准确率与平衡准确率",
-            "合并试次准确率与四记录平衡准确率宏平均",
-        ),
-        source_paths=(
-            "src/C/q2/output/revision_v3/17_residual_template_match/summary.csv",
-            "src/C/q2/output/14_exploratory_local_window_decoder/局部时间窗最佳训练内结果.csv",
-        ),
-        target_venue="CMathc question 2 paper",
-        column="double",
-        figure_role="model-result",
-        model_name="record-specific local ERP template matcher",
-        scenario=(
-            "Stage1 cue EEG; each record uses its candidate channel/window; "
-            "left/right ERP templates estimated from training time blocks"
-        ),
-        parameter_source=(
-            "Candidate windows from all-trial exploratory search; "
-            "ERP templates fitted within each training fold"
-        ),
-        randomness="No random numbers; chronological five-fold test blocks.",
-        n_definition="Four MAT records; 54, 80, 83, and 80 trials; 297 trials total.",
-        statistic="Pooled accuracy and per-record accuracy/balanced accuracy.",
-        uncertainty=(
-            "No confidence intervals shown. Candidate channel/window selection "
-            "used the all-trial exploratory scan."
-        ),
-        review_risks=(
-            "The four records use different candidate channels and time windows.",
-            "The 54.2% pooled accuracy is not a cross-record generalization estimate.",
-            "Residual matching is algebraically equivalent to empirical ERP template matching.",
-        ),
-    )
-    export_publication_figure(
-        fig, FIGURE_BASE, contract, dpi=450, strict=True, close=True
-    )
-    print(f"Saved figure files with base: {FIGURE_BASE}")
+    FIGURE_BASE.parent.mkdir(parents=True, exist_ok=True)
+    fig.savefig(FIGURE_BASE.with_suffix(".png"), dpi=450, facecolor="white")
+    plt.close(fig)
+    print(f"Saved PNG figure: {FIGURE_BASE.with_suffix('.png')}")
 
 
 if __name__ == "__main__":

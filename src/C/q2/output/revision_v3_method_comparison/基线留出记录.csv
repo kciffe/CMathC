@@ -1,0 +1,5 @@
+﻿记录,试次数,平衡准确率,曲线下面积,训练记录
+A组记录1,54,0.3468965517241379,0.30896551724137933,VisualCogA_Task-2;VisualCogB_Task-1;VisualCogB_Task-2
+A组记录2,80,0.4936507936507937,0.4876190476190476,VisualCogA_Task-1;VisualCogB_Task-1;VisualCogB_Task-2
+B组记录1,83,0.5171312427409989,0.5168408826945412,VisualCogA_Task-1;VisualCogA_Task-2;VisualCogB_Task-2
+B组记录2,80,0.5043997485857951,0.49025769956002513,VisualCogA_Task-1;VisualCogA_Task-2;VisualCogB_Task-1
