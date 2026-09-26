@@ -24,7 +24,7 @@
     "reason": "the task describes an approximate schedule but the permitted channels have no per-trial target-onset marker"
   },
   {
-    "action": "do not fit RT/DDM or infer omission/correctness",
-    "reason": "target timing, deadline, and target truth are not adequately observed"
+    "action": "decode the DataLabel-declared channel-9 code within each action bout and compare it with channel-8 target side; do not fit RT/DDM",
+    "reason": "target onset/deadline are unavailable and late responses are outside scope"
   }
 ]

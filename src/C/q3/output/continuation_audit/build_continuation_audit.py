@@ -269,7 +269,19 @@ def main() -> None:
             "interpretation": "descriptive only; four record groups, no participant-level inference",
         })
 
-    per_record_summary = records[["record", "raw_sample_rate_hz", "cue_event_count", "response_event_count", "rt_median_s", "rt_under_100ms_count", "target_time_source", "task_type"]].copy()
+    per_record_summary = records[[
+        "record", "raw_sample_rate_hz", "cue_event_count", "response_event_count",
+        "scheduled_rt_proxy_median_s", "scheduled_rt_proxy_under_100ms_count",
+        "response_trial_count", "no_response_marker_count", "target_time_source", "task_type",
+    ]].copy()
+    outcome_by_record = trials.groupby("record", sort=True).agg(
+        correct_trials=("correct", lambda values: int(pd.to_numeric(values, errors="coerce").eq(1).sum())),
+        incorrect_trials=("correct", lambda values: int(pd.to_numeric(values, errors="coerce").eq(0).sum())),
+        omission_trials=("is_omission", lambda values: int(pd.to_numeric(values, errors="coerce").eq(1).sum())),
+    ).reset_index()
+    per_record_summary = per_record_summary.merge(
+        outcome_by_record, on="record", how="left", validate="one_to_one"
+    )
     per_record_summary.to_csv(OUT / "record_event_semantics_summary.csv", index=False, encoding="utf-8-sig")
 
     source_files = [
@@ -307,15 +319,21 @@ def main() -> None:
         "q1_timestamp_matched_trials": int(records["q1_timestamp_mapping_count"].sum()),
         "channel9_marker_trials": int(records["response_event_count"].sum()),
         "channel9_raw_code_mapping": response_mapping.to_dict(orient="records"),
-        "channel9_no_marker_trials": int(records["omission_marker_count"].sum()),
+        "channel9_no_marker_trials": int(records["no_response_marker_count"].sum()),
         "correctness_labels_present": int(pd.to_numeric(trials.get("correct"), errors="coerce").notna().sum()) if "correct" in trials else 0,
+        "correct_trials": int(pd.to_numeric(trials.get("correct"), errors="coerce").eq(1).sum()) if "correct" in trials else 0,
+        "incorrect_trials": int(pd.to_numeric(trials.get("correct"), errors="coerce").eq(0).sum()) if "correct" in trials else 0,
+        "omission_labels_present": int(pd.to_numeric(trials.get("is_omission"), errors="coerce").notna().sum()) if "is_omission" in trials else 0,
+        "omission_trials": int(pd.to_numeric(trials.get("is_omission"), errors="coerce").eq(1).sum()) if "is_omission" in trials else 0,
+        "correctness_rule": "channel-8 VisCue target side compared with the channel-9 DataLabel-declared L/R code within the first action bout; no-response or undecodable trials have no correctness label",
+        "omission_rule": "no channel-9 action edge in the cue-onset-to-next-cue interval; late responses are not classified separately",
         "deadline_column_present": "deadline_s" in trials and pd.to_numeric(trials["deadline_s"], errors="coerce").notna().any(),
         "target_time_per_trial_marker_present": False,
         "target_time_source": "cue duration about 0.2 s plus about 2 s after cue disappearance per official task appendix; exact onset remains unmarked",
         "assumed_2p2_rt_median_s": float(valid_rt.median()) if len(valid_rt) else None,
         "assumed_2p2_rt_under_100ms": int((valid_rt < .1).sum()),
         "assumed_2p0_rt_median_s": float(alt_rt_20.median()),
-        "missingness_note": "A missing correctness/deadline value is structural until target truth/deadline are supplied; it is not a negative outcome.",
+        "missingness_note": "Target onset and deadline remain unavailable, so reaction-time duration and late-response classification remain unknown. Correctness and interval-level no-response labels are derived from channel 8/9 semantics.",
         "data_units_note": "Raw EEG unit is not independently documented in the MAT metadata.",
     }
     cleaning = [
@@ -325,7 +343,7 @@ def main() -> None:
         {"action": "flag nonfinite, hard-clipped and flatline epochs", "reason": "quality flag retains exclusion reason; no silent interpolation"},
         {"action": "map channel-9 raw -2/-1 to -2, 0 to 0, and +1/+2 to +2 while retaining raw values", "reason": "official task appendix defines negative as left and positive as right; Action/TgtAct use different code magnitudes"},
         {"action": "keep cue+2.2 s as an explicitly assumed target anchor", "reason": "the task describes an approximate schedule but the permitted channels have no per-trial target-onset marker"},
-        {"action": "do not fit RT/DDM or infer omission/correctness", "reason": "target timing, deadline, and target truth are not adequately observed"},
+        {"action": "decode the DataLabel-declared channel-9 code within each action bout and compare it with channel-8 target side; do not fit RT/DDM", "reason": "target onset/deadline are unavailable and late responses are outside scope"},
     ]
     eda = {
         "cue_classifier": {

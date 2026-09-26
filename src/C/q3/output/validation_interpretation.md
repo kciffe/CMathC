@@ -9,10 +9,11 @@
 - On the Q1-matched 297-trial sample, the new raw-filter balanced accuracy was 0.487 for cue and 0.510 for target; changes from the old Q1-clean baseline were +0.027 and +0.003.
 - Target-offset sensitivity (2.0-2.4 s) balanced accuracy ranged from 0.483 to 0.541; this is a timing robustness range, not an offset-selection procedure.
 - Across-record feature-effect direction agrees in all four records for 2/13 cue-locked features and 3/13 target-locked features.
-- Channel 9 markers: 400; median time from the assumed cue+2.2 s target anchor is 0.015 s, with 399 under 100 ms. This is not treated as validated RT.
+- Channel 9 markers: 400; median t_act relative to cue is 2.215 s. The cue+2.2 s schedule proxy is under 100 ms before t_act for 399 trials; this proxy is not RT duration.
 - Channel 9 choice Logistic, leave-one-record-out balanced accuracy: 0.747.
 - Choice baseline comparison: cue/task-code BA 0.755; cue/task-code+EEG BA 0.747; EEG increment -0.007.
-- Cue/choice same-side fraction by filename task-code candidate: code 1: 196/198 same-side (99.0%); code 2: 87/189 same-side (46.0%). This is not correctness; task mapping is unverified.
+- Channel-8/9 correctness by filename task-code candidate: code 1: 196/198 same-side (99.0%); code 2: 87/189 same-side (46.0%). Correctness uses the supplied channel semantics; filename task grouping is descriptive only.
+- Trial outcomes: correct 293, incorrect 107, omission 0; correctness-model LO-record-out BA: cue_side_only BA 0.500; EEG_state_only BA 0.497; cue_side_plus_EEG_state BA 0.500.
 
 The main results use raw continuous EEG filtered in separate 0.5-30 Hz ERP and 1-80 Hz time-frequency branches. The Q1-clean epochs are used only for mapping and a matched-sample comparison. Leave-one-record-out is the main validation; it is not leave-one-participant-out because file-to-participant identity is unverified.
 
@@ -30,15 +31,4 @@ These are hypotheses, not established causes. PLV and theta-gamma PAC are marked
 
 ## Interpretation boundary
 
-Channel 9 supplies response direction and event time only; it is never an EEG feature or V/H/P input. Correctness and omission rate remain unverified because the response event semantics, target-side truth, and deadline are not independently established. The DDM is skipped because the assumed target-time anchor yields implausibly short RTs. V/H/P are anchored functional proxies, not localized brain sources.
-
-## V/H/P ablation check
-
-The following are grouped cross-validation summaries, not significance tests:
-
-- cue_locked: V-only balanced accuracy 0.494; V/H/P plus filename task-code candidate 0.489 (change -0.005).
-- cue_locked: leave-one-feature-out standardized reconstruction RMSE was 1.026 for V-only and 0.954 for the full candidate (change -0.071).
-- target_locked: V-only balanced accuracy 0.497; V/H/P plus filename task-code candidate 0.530 (change +0.033).
-- target_locked: leave-one-feature-out standardized reconstruction RMSE was 1.015 for V-only and 0.856 for the full candidate (change -0.159).
-
-The incremental classification effect is small and differs by event stage. The reconstruction result measures cross-record feature association under fixed proxies; it does not identify hidden brain sources. See `ablation_report.md` and `ablation_cv_metrics.csv` for all models.
+Channel 9 supplies response direction and t_act and is never an EEG feature or V/H/P input. Correctness compares channel-9 action side with the channel-8 target side. An omission is no channel-9 action edge between a cue onset and the next cue onset; late-response timing is not modeled separately. Target onset is not independently marked, so reaction-time duration and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.

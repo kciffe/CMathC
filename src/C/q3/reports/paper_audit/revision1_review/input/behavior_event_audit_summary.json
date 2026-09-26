@@ -1,0 +1,49 @@
+{
+  "status": "partial_external_information_missing",
+  "analysis_unit": "trial keyed by record and original_trial_index",
+  "trial_table": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\output\\trial_table.csv",
+  "input_files": {
+    "trial_truth": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\input\\trial_truth.csv",
+    "event_log": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\input\\event_log.csv",
+    "record_mapping": "D:\\8\\Desktop\\CMathc\\src\\C\\q3\\input\\record_mapping.csv"
+  },
+  "n_trial_rows": 400,
+  "n_records": 4,
+  "external_key_coverage": {
+    "truth_rows": 400,
+    "truth_matched_rows": 400,
+    "truth_unmatched_rows": 0,
+    "truth_base_trials_without_row": 0,
+    "event_log_rows": 400,
+    "event_log_matched_rows": 400,
+    "event_log_unmatched_rows": 0,
+    "event_log_base_trials_without_row": 0
+  },
+  "external_field_coverage": {
+    "trials_with_correct_response_side": 0,
+    "trials_with_truth_source": 0,
+    "trials_with_target_onset": 0,
+    "trials_with_response_deadline": 0,
+    "records_with_complete_identity_mapping": 0
+  },
+  "event_log_format": {
+    "format": "wide",
+    "ignored_event_types": []
+  },
+  "record_metadata_complete": 0,
+  "record_metadata_total": 4,
+  "correctness_rule": "computed only when correct_response_side is supplied and exactly one response is decoded from the MAT channel legend",
+  "omission_rule": "requires an explicit authoritative omission label, or no response marker plus a supplied deadline that the MAT recording reaches",
+  "timing_rule": "external target onset/deadline are absolute seconds on the MAT TimeStamp clock; if actual target onset is absent, the existing cue+2.2 s schedule anchor is reported separately as an assumption",
+  "coding_rule": "VisCue event sign is reported from raw samples; Action/TgtAct left/right codes are parsed from the MAT DataLabel",
+  "response_code_magnitude_discrepancy_records": [
+    "VisualCogA_Task-2",
+    "VisualCogB_Task-2"
+  ],
+  "outputs": [
+    "behavior_trial_audit.csv",
+    "behavior_record_summary.csv",
+    "record_metadata_audit.csv",
+    "behavior_event_audit_summary.json"
+  ]
+}

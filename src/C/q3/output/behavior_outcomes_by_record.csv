@@ -1,0 +1,5 @@
+﻿record,n_trials,correct_count,incorrect_count,omission_count,omission_rule
+VisualCogA_Task-1,100,100,0,0,no channel-9 action edge between this cue onset and the next cue onset
+VisualCogA_Task-2,100,47,53,0,no channel-9 action edge between this cue onset and the next cue onset
+VisualCogB_Task-1,100,98,2,0,no channel-9 action edge between this cue onset and the next cue onset
+VisualCogB_Task-2,100,48,52,0,no channel-9 action edge between this cue onset and the next cue onset

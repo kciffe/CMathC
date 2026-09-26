@@ -3,8 +3,19 @@
   "q1_timestamp_matched_count": 297,
   "q1_quality_pass_count": 297,
   "channel9_marker_count": 400,
-  "channel9_no_marker_count": 0,
+  "channel9_decoded_choice_count": 400,
+  "channel9_marker_with_unresolved_side_count": 0,
+  "channel9_no_marker_observed_count": 0,
+  "correct_count": 293,
+  "incorrect_count": 107,
+  "correctness_labeled_count": 400,
+  "omission_count": 0,
+  "omission_labeled_count": 400,
+  "external_correctness_disagreement_count": 0,
+  "external_omission_disagreement_count": 0,
   "q1_usage": "event timestamp mapping and quality labels only; no Q1 EEG samples are read or used as Q3 feature input",
-  "channel9_usage": "event direction/time metadata; never included in EEG feature values",
-  "behavior_label_caveat": "channel-9 marker absence is not declared a behavioral omission without a verified response deadline"
+  "channel9_usage": "t_act is the first zero-to-nonzero edge; response side is decoded using the channel-specific L/R code in DataLabel within that bout; never included in EEG predictor/features",
+  "correctness_rule": "correct=1 when the channel-9 side decoded from its DataLabel-declared code matches channel-8 VisCue target side; correct=0 otherwise; no-response or undecodable trials have correctness=null",
+  "omission_rule": "omission=1 when no channel-9 response edge occurs between this VisCue onset and the next VisCue onset; lateness is not separately classified",
+  "behavior_label_caveat": "labels are operationally defined from the supplied channel semantics and cue interval; response time duration from target onset remains unavailable"
 }

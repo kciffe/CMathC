@@ -309,10 +309,22 @@ def write_interpretation(
     q1_left_n = int((q1_cue["cue_side"] == -1).sum())
     q1_right_n = int((q1_cue["cue_side"] == 1).sum())
     response_n = int(trial_table["choice_side"].notna().sum())
-    response_rt = pd.to_numeric(trial_table["reaction_time_s"], errors="coerce")
-    response_rt_median = float(response_rt.median()) if response_rt.notna().any() else np.nan
-    rt_short_n = int((response_rt.notna() & (response_rt < 0.10)).sum())
+    t_act = pd.to_numeric(trial_table["t_act_s"], errors="coerce")
+    cue_time = pd.to_numeric(trial_table["cue_time_s"], errors="coerce")
+    t_act_relative = t_act - cue_time
+    t_act_relative_median = float(t_act_relative.median()) if t_act_relative.notna().any() else np.nan
+    schedule_rt_proxy = pd.to_numeric(trial_table["scheduled_rt_proxy_s"], errors="coerce")
+    proxy_under_100ms_n = int(
+        (schedule_rt_proxy.notna() & schedule_rt_proxy.ge(0) & schedule_rt_proxy.lt(0.10)).sum()
+    )
     behavior_balanced_accuracy = behavior_status.get("mean_balanced_accuracy")
+    behavior_outcomes = behavior_status.get("behavior_outcomes", {})
+    correctness_models = behavior_status.get("correctness_model", {})
+    correctness_model_text = "; ".join(
+        f"{name} BA {result['mean_balanced_accuracy']:.3f}"
+        for name, result in correctness_models.items()
+        if result.get("mean_balanced_accuracy") is not None
+    ) or "no valid mixed-class held-out folds"
     behavior_comparison = behavior_status.get("model_comparison", {})
     behavior_comparison_ba = behavior_comparison.get("mean_balanced_accuracy", {})
     cue_choice_alignment = behavior_comparison.get(
@@ -375,7 +387,7 @@ def write_interpretation(
         f"- On the Q1-matched {q1_cue.shape[0]}-trial sample, the new raw-filter balanced accuracy was {matched_delta.get('cue_locked', {}).get('new_raw_filter_q1_matched_balanced_accuracy'):.3f} for cue and {matched_delta.get('target_locked', {}).get('new_raw_filter_q1_matched_balanced_accuracy'):.3f} for target; changes from the old Q1-clean baseline were {matched_delta.get('cue_locked', {}).get('delta'):+.3f} and {matched_delta.get('target_locked', {}).get('delta'):+.3f}.",
         f"- Target-offset sensitivity (2.0-2.4 s) balanced accuracy ranged from {min(timing_values):.3f} to {max(timing_values):.3f}; this is a timing robustness range, not an offset-selection procedure." if timing_values else "- Target-offset sensitivity: no valid grouped folds.",
         f"- Across-record feature-effect direction agrees in all four records for {sign_consistency['cue_locked']} cue-locked features and {sign_consistency['target_locked']} target-locked features.",
-        f"- Channel 9 markers: {response_n}; median time from the assumed cue+2.2 s target anchor is {response_rt_median:.3f} s, with {rt_short_n} under 100 ms. This is not treated as validated RT.",
+        f"- Channel 9 markers: {response_n}; median t_act relative to cue is {t_act_relative_median:.3f} s. The cue+2.2 s schedule proxy is under 100 ms before t_act for {proxy_under_100ms_n} trials; this proxy is not RT duration.",
         f"- Channel 9 choice Logistic, leave-one-record-out balanced accuracy: {behavior_balanced_accuracy:.3f}."
         if behavior_balanced_accuracy is not None
         else f"- Behavior model: {behavior_status.get('status', 'not run')}.",
@@ -383,9 +395,10 @@ def write_interpretation(
         if behavior_comparison_ba.get("cue_plus_task_code") is not None
         and behavior_comparison_ba.get("cue_task_plus_EEG") is not None
         else "- Choice baseline comparison: not available.",
-        f"- Cue/choice same-side fraction by filename task-code candidate: {cue_choice_alignment_text}. This is not correctness; task mapping is unverified."
+        f"- Channel-8/9 correctness by filename task-code candidate: {cue_choice_alignment_text}. Correctness uses the supplied channel semantics; filename task grouping is descriptive only."
         if cue_choice_alignment_text
-        else "- Cue/choice same-side fraction: not available.",
+        else "- Channel-8/9 correctness summary: not available.",
+        f"- Trial outcomes: correct {behavior_outcomes.get('correct_count', 0)}, incorrect {behavior_outcomes.get('incorrect_count', 0)}, omission {behavior_outcomes.get('omission_count', 0)}; correctness-model LO-record-out BA: {correctness_model_text}.",
         "",
         "The main results use raw continuous EEG filtered in separate 0.5-30 Hz ERP and 1-80 Hz time-frequency branches. The Q1-clean epochs are used only for mapping and a matched-sample comparison. Leave-one-record-out is the main validation; it is not leave-one-participant-out because file-to-participant identity is unverified.",
         "",
@@ -403,7 +416,7 @@ def write_interpretation(
         "",
         "## Interpretation boundary",
         "",
-        "Channel 9 supplies response direction and event time only; it is never an EEG feature or V/H/P input. Correctness and omission rate remain unverified because the response event semantics, target-side truth, and deadline are not independently established. The DDM is skipped because the assumed target-time anchor yields implausibly short RTs. V/H/P are anchored functional proxies, not localized brain sources.",
+        "Channel 9 supplies response direction and t_act and is never an EEG feature or V/H/P input. Correctness compares channel-9 action side with the channel-8 target side. An omission is no channel-9 action edge between a cue onset and the next cue onset; late-response timing is not modeled separately. Target onset is not independently marked, so reaction-time duration and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.",
         "",
     ]
     (output_dir / "validation_interpretation.md").write_text("\n".join(lines), encoding="utf-8")
@@ -553,7 +566,7 @@ def main() -> None:
         "behavior_validation": behavior_status,
         "target_locking": "nominal event is fixed cue + 2.2 s by schedule assumption; sensitivity offsets span 2.0-2.4 s",
         "channel_9_scope": "used for event/response direction and endpoint metadata only; excluded from EEG feature arrays and predictors",
-        "interpretation_limit": "EEG classification estimates cue-side decodability; behavior logistic predicts channel-9 choice and is not a correctness or clinical diagnosis result",
+        "interpretation_limit": "EEG classification estimates cue-side decodability; choice and correctness models are separate; neither is a clinical diagnosis result",
     }
     baseline = summary["legacy_q1_baseline_reference"].get("stage_results", {})
     summary["q1_matched_delta_vs_legacy"] = {

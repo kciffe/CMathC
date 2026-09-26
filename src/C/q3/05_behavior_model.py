@@ -141,6 +141,73 @@ def grouped_choice_cv(
     return pd.DataFrame(predictions), folds, pd.DataFrame(parameter_rows)
 
 
+def grouped_binary_cv(
+    frame: pd.DataFrame,
+    target_column: str,
+    predictor_columns: list[str],
+    model_name: str,
+) -> tuple[pd.DataFrame, list[dict]]:
+    """Leave one recording out for a binary outcome without response-channel predictors."""
+    predictions: list[dict] = []
+    folds: list[dict] = []
+    data = frame.dropna(subset=[target_column, *predictor_columns]).copy()
+    data[target_column] = pd.to_numeric(data[target_column], errors="coerce")
+    data = data.loc[data[target_column].isin((0, 1))]
+
+    for held_out_record in sorted(data["record"].unique()):
+        train = data.loc[data["record"] != held_out_record]
+        test = data.loc[data["record"] == held_out_record]
+        if train[target_column].nunique() < 2:
+            folds.append({"held_out_record": held_out_record, "status": "skipped_single_class_training_data", "model": model_name, "target": target_column})
+            continue
+        if test.empty:
+            folds.append({"held_out_record": held_out_record, "status": "skipped_empty_test_fold", "model": model_name, "target": target_column})
+            continue
+
+        x_train_raw = train[predictor_columns].to_numpy(dtype=float)
+        x_test_raw = test[predictor_columns].to_numpy(dtype=float)
+        center = np.mean(x_train_raw, axis=0)
+        scale = np.std(x_train_raw, axis=0)
+        scale[~np.isfinite(scale) | (scale <= np.finfo(float).eps)] = 1.0
+        x_train = (x_train_raw - center) / scale
+        x_test = (x_test_raw - center) / scale
+        y_train = train[target_column].to_numpy(dtype=float)
+        y_test = test[target_column].to_numpy(dtype=int)
+        coefficients = fit_logistic(x_train, y_train)
+        probability = expit(np.column_stack([np.ones(len(test)), x_test]) @ coefficients)
+        predicted = (probability >= 0.5).astype(int)
+        accuracy = float(np.mean(predicted == y_test))
+        balanced_accuracy = None
+        if np.unique(y_test).size == 2:
+            sensitivity = float(np.mean(predicted[y_test == 1] == 1))
+            specificity = float(np.mean(predicted[y_test == 0] == 0))
+            balanced_accuracy = 0.5 * (sensitivity + specificity)
+        folds.append({
+            "held_out_record": held_out_record,
+            "status": "ok" if balanced_accuracy is not None else "ok_single_class_test",
+            "n_train": int(len(train)),
+            "n_test": int(len(test)),
+            "test_positive_count": int(np.sum(y_test == 1)),
+            "test_negative_count": int(np.sum(y_test == 0)),
+            "accuracy": accuracy,
+            "balanced_accuracy": balanced_accuracy,
+            "model": model_name,
+            "target": target_column,
+        })
+        for (_, row), probability_i, predicted_i in zip(test.iterrows(), probability, predicted):
+            predictions.append({
+                "record": row["record"],
+                "original_trial_index": int(row["original_trial_index"]),
+                "target": target_column,
+                "actual_label": int(row[target_column]),
+                "predicted_label": int(predicted_i),
+                "probability_label_1": float(probability_i),
+                "held_out_record": held_out_record,
+                "model": model_name,
+            })
+    return pd.DataFrame(predictions), folds
+
+
 def main() -> None:
     output_dir = ensure_output_dir()
     status_path = output_dir / "behavior_model_status.json"
@@ -182,7 +249,9 @@ def main() -> None:
     plausible_rt = rt_values.ge(MIN_DDM_RT_S) & np.isfinite(rt_values)
     rt_counts = {
         "response_trials": int(trials["choice_side"].notna().sum()),
-        "no_response_marker_trials": int(trials["is_omission"].fillna(False).sum()),
+        "no_response_marker_observed_trials": int(
+            (~trials["response_marker_present"].fillna(False)).sum()
+        ) if "response_marker_present" in trials else int(trials["choice_side"].isna().sum()),
         "rt_observed_trials": int(rt_values.notna().sum()),
         "rt_at_least_minimum_for_ddm": int(plausible_rt.sum()),
         "rt_below_minimum_for_ddm": int((rt_values.notna() & ~plausible_rt).sum()),
@@ -202,13 +271,69 @@ def main() -> None:
                 "cue_choice_same_side_fraction": float(
                     (group["cue_side"] == group["choice_side"]).mean()
                 ),
-                "interpretation": "descriptive only; not response correctness; filename task mapping unverified",
+                "interpretation": "channel-8 target side versus channel-9 DataLabel-declared action code; grouping by filename task code is descriptive only",
             }
         )
     write_csv(
         pd.DataFrame(cue_choice_alignment),
         output_dir / "behavior_cue_choice_alignment.csv",
     )
+
+    correctness_data = model_data.dropna(subset=["correct"]).copy()
+    correctness_data["correct"] = pd.to_numeric(correctness_data["correct"], errors="coerce")
+    correctness_predictor_sets = {
+        "cue_side_only": ["cue_side"],
+        "EEG_state_only": STATE_FEATURES,
+        "cue_side_plus_EEG_state": ["cue_side", *STATE_FEATURES],
+    }
+    correctness_predictions: list[pd.DataFrame] = []
+    correctness_folds: list[dict] = []
+    correctness_model_summary: dict[str, dict] = {}
+    for model_name, predictors in correctness_predictor_sets.items():
+        model_predictions, model_folds = grouped_binary_cv(
+            correctness_data, "correct", predictors, model_name
+        )
+        correctness_predictions.append(model_predictions)
+        correctness_folds.extend(model_folds)
+        scored_folds = [row for row in model_folds if row["status"].startswith("ok")]
+        balanced_folds = [
+            row for row in scored_folds if row["balanced_accuracy"] is not None
+        ]
+        correctness_model_summary[model_name] = {
+            "predictors": predictors,
+            "n_predictions": int(len(model_predictions)),
+            "scored_record_folds": len(scored_folds),
+            "mean_accuracy": float(np.mean([row["accuracy"] for row in scored_folds]))
+            if scored_folds else None,
+            "mean_balanced_accuracy": float(
+                np.mean([row["balanced_accuracy"] for row in balanced_folds])
+            ) if balanced_folds else None,
+            "folds": model_folds,
+        }
+    write_csv(
+        pd.concat(correctness_predictions, ignore_index=True)
+        if correctness_predictions else pd.DataFrame(),
+        output_dir / "behavior_correctness_predictions.csv",
+    )
+    write_csv(
+        pd.DataFrame(correctness_folds),
+        output_dir / "behavior_correctness_model_comparison.csv",
+    )
+    correctness_all = pd.to_numeric(trials["correct"], errors="coerce")
+    omission_all = pd.to_numeric(trials["is_omission"], errors="coerce")
+    outcome_by_record = []
+    for record, group in trials.groupby("record", sort=True):
+        correct_group = pd.to_numeric(group["correct"], errors="coerce")
+        omission_group = pd.to_numeric(group["is_omission"], errors="coerce")
+        outcome_by_record.append({
+            "record": record,
+            "n_trials": int(len(group)),
+            "correct_count": int(correct_group.eq(1).sum()),
+            "incorrect_count": int(correct_group.eq(0).sum()),
+            "omission_count": int(omission_group.eq(1).sum()),
+            "omission_rule": "no channel-9 action edge between this cue onset and the next cue onset",
+        })
+    write_csv(pd.DataFrame(outcome_by_record), output_dir / "behavior_outcomes_by_record.csv")
 
     if (
         len(model_data) < 12
@@ -287,7 +412,7 @@ def main() -> None:
         "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
         "rt_quality": rt_counts,
         "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
-        "ddm_reason": "This implementation uses a choice-only logistic fallback. RTs relative to the scheduled cue+2.2 s target are mostly below 100 ms; the target-time anchor is not separately marked.",
+        "ddm_reason": "Channel 9 supplies absolute response time t_act, but verified response-time duration requires an independently verified target onset. The cue+2.2 s schedule is retained only as a timing proxy; the observed short interval is not used as DDM RT.",
         "cross_validation": "leave-one-record-out; standardization fitted on training records only; primary set uses raw-signal QC, with Q1-retained sensitivity subset",
         "model_comparison": {
             "folds": comparison_folds,
@@ -309,8 +434,20 @@ def main() -> None:
         "mean_balanced_accuracy": float(np.mean([fold["balanced_accuracy"] for fold in valid_folds]))
         if valid_folds
         else None,
-        "correctness": "left unassigned; target-side truth is not available for every task",
-        "omissions": "all trials have a channel-9 marker; this does not establish that the protocol had no behavioral omissions",
+        "behavior_outcomes": {
+            "correct_count": int(correctness_all.eq(1).sum()),
+            "incorrect_count": int(correctness_all.eq(0).sum()),
+            "correctness_labeled_count": int(correctness_all.notna().sum()),
+            "omission_count": int(omission_all.eq(1).sum()),
+            "omission_labeled_count": int(omission_all.notna().sum()),
+            "by_record": outcome_by_record,
+            "correctness_rule": "compare channel-9 side decoded from its DataLabel-declared code within the first action bout with channel-8 VisCue target side",
+            "omission_rule": "no channel-9 action edge in the cue-onset-to-next-cue interval; late responses are not classified separately",
+            "omission_model_status": "not_fitted_no_positive_omission_examples" if omission_all.eq(1).sum() == 0 else "not_fitted_review_required",
+        },
+        "correctness_model": correctness_model_summary,
+        "correctness": "labeled from channel 8 target side and the channel-9 DataLabel-declared response code within the first action bout; no-response or undecodable trials remain correctness=null",
+        "omissions": "operationally labeled when no channel-9 action edge occurs in a cue-to-next-cue interval",
         "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time",
     }
     write_json(status, status_path)

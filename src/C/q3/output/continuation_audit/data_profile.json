@@ -172,7 +172,7 @@
       "stage": "cue_locked",
       "state_proxy": "V 视觉前馈代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.04797873628368561,
+      "equal_record_mean_cohens_d": 0.04797873628369462,
       "records_positive": 2,
       "records_negative": 2,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -181,7 +181,7 @@
       "stage": "cue_locked",
       "state_proxy": "H 记忆匹配代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.03368916963713177,
+      "equal_record_mean_cohens_d": 0.03368916963713149,
       "records_positive": 3,
       "records_negative": 1,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -190,7 +190,7 @@
       "stage": "cue_locked",
       "state_proxy": "P 认知控制代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.1032591484734422,
+      "equal_record_mean_cohens_d": 0.10325914847344202,
       "records_positive": 3,
       "records_negative": 1,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -199,7 +199,7 @@
       "stage": "target_locked",
       "state_proxy": "V 视觉前馈代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": -0.027404235889901037,
+      "equal_record_mean_cohens_d": -0.02740423588994113,
       "records_positive": 2,
       "records_negative": 2,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -208,7 +208,7 @@
       "stage": "target_locked",
       "state_proxy": "H 记忆匹配代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": -0.15072369514048903,
+      "equal_record_mean_cohens_d": -0.1507236951404901,
       "records_positive": 0,
       "records_negative": 4,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -217,7 +217,7 @@
       "stage": "target_locked",
       "state_proxy": "P 认知控制代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.25079736972998184,
+      "equal_record_mean_cohens_d": 0.2507973697299815,
       "records_positive": 3,
       "records_negative": 1,
       "interpretation": "descriptive only; four record groups, no participant-level inference"

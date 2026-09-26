@@ -1,5 +1,5 @@
-﻿record,raw_sample_rate_hz,cue_event_count,response_event_count,rt_median_s,rt_under_100ms_count,target_time_source,task_type
-VisualCogA_Task-1,256.0,100,100,0.0148437500000113,99,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
-VisualCogA_Task-2,256.0,100,100,0.0148437500000113,100,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
-VisualCogB_Task-1,256.0,100,100,0.0148437500000113,100,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
-VisualCogB_Task-2,256.0,100,100,0.0187499999999545,100,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels
+﻿record,raw_sample_rate_hz,cue_event_count,response_event_count,scheduled_rt_proxy_median_s,scheduled_rt_proxy_under_100ms_count,response_trial_count,no_response_marker_count,target_time_source,task_type,correct_trials,incorrect_trials,omission_trials
+VisualCogA_Task-1,256.0,100,100,0.0148437500000113,99,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,100,0,0
+VisualCogA_Task-2,256.0,100,100,0.0148437500000113,100,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,47,53,0
+VisualCogB_Task-1,256.0,100,100,0.0148437500000113,100,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,98,2,0
+VisualCogB_Task-2,256.0,100,100,0.0187499999999545,100,100,0,0.2s_cue_plus_approx_2.0s_wait_schedule_assumption,unresolved_from_allowed_channels,48,52,0

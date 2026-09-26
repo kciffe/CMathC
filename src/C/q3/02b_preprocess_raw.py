@@ -160,9 +160,10 @@ def main() -> None:
                 relative_times.append(relative_time)
                 epoch_sample_counts.append(n_samples)
 
-            response_time = (
-                float(row.response_time_s) if pd.notna(row.response_time_s) else np.nan
-            )
+            t_act = getattr(row, "t_act_s", np.nan)
+            if pd.isna(t_act):
+                t_act = getattr(row, "response_time_s", np.nan)
+            response_time = float(t_act) if pd.notna(t_act) else np.nan
             start_index = _sample_index(timestamps, cue_time)
             if np.isfinite(response_time):
                 endpoint_time = response_time - 0.100
@@ -183,6 +184,7 @@ def main() -> None:
                     "record": record,
                     "original_trial_index": int(row.original_trial_index),
                     "cue_time_s": cue_time,
+                    "t_act_s": response_time,
                     "response_time_s": response_time,
                     "endpoint_time_s": response_time - 0.100 if np.isfinite(response_time) else np.nan,
                     "endpoint_status": end_status,
@@ -258,6 +260,7 @@ def main() -> None:
         record=pre_frame["record"].to_numpy(dtype="U64"),
         original_trial_index=pre_frame["original_trial_index"].to_numpy(dtype=np.int32),
         cue_time_s=pre_frame["cue_time_s"].to_numpy(dtype=np.float64),
+        t_act_s=pre_frame["t_act_s"].to_numpy(dtype=np.float64),
         response_time_s=pre_frame["response_time_s"].to_numpy(dtype=np.float64),
         endpoint_time_s=pre_frame["endpoint_time_s"].to_numpy(dtype=np.float64),
         window_duration_s=pre_frame["window_duration_s"].to_numpy(dtype=np.float32),
@@ -288,10 +291,10 @@ def main() -> None:
         "target_offset_sensitivity_s": list(TARGET_OFFSET_SENSITIVITY_S),
         "nominal_target_offset_s": TARGET_OFFSET_S,
         "target_time_source": "schedule assumption; no independent target marker detected in permitted channels",
-        "response_endpoint": "response marker time minus 0.100s; response semantics remain subject to protocol verification",
+        "response_endpoint": "unique channel-9 zero-to-nonzero edge t_act minus 0.100s, per the reference model",
         "ica": "not used: only three frontal EEG channels and no independent EOG reference",
         "q1_clean_epochs": "used only for timestamp mapping and quality-label comparison; not used as the raw EEG feature source",
-        "channel_9": "not included in any EEG signal array; only its event times/codes appear as trial metadata",
+        "channel_9": "t_act defines the response-window endpoint; response codes/times are not included in any EEG signal array",
         "epoch_count": int(len(event_frame)),
         "pre_response_epoch_count": int(len(pre_frame)),
     }

@@ -1,0 +1,7 @@
+\begin{thebibliography}{99}
+\bibitem{cmc2026} 第二十三届中国研究生数学建模竞赛组委会. 服务于脑机接口与精神性疾病诊断的脑电图计算模型: C题题目[Z]. 2026.
+\bibitem{wilson1972} Wilson H R, Cowan J D. Excitatory and inhibitory interactions in localized populations of model neurons[J]. Biophysical Journal, 1972, 12(1): 1-24. DOI: 10.1016/S0006-3495(72)86068-5.
+\bibitem{hoerl1970} Hoerl A E, Kennard R W. Ridge regression: Biased estimation for nonorthogonal problems[J]. Technometrics, 1970, 12(1): 55-67. DOI: 10.1080/00401706.1970.10488634.
+\bibitem{glomb2022} Glomb K, Cabral J, Cattani A, et al. Computational models in electroencephalography[J]. Brain Topography, 2022, 35: 142-161.
+\bibitem{daume2024} Daume J, Kaminski J, Schjetnan A G P, et al. Control of working memory by phase-amplitude coupling of human hippocampal neurons[J]. Nature, 2024, 629: 393-401.
+\end{thebibliography}

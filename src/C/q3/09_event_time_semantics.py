@@ -1,9 +1,8 @@
-"""Re-audit the raw cue/action timing without choosing an RT anchor.
+"""Audit cue timing and the reference-model channel-9 t_act event.
 
-The official appendix gives an approximate target schedule (cue ends, then
-about two seconds elapse), while the raw data have no independent target-onset
-channel. This script therefore reports marker-to-schedule differences, never
-labels them reaction times, and leaves correctness/omission unknown.
+Channel 8 VisCue is the target-side label and channel 9 supplies action side/time.
+The target schedule remains a proxy, so reaction-time duration and late-response
+classification remain unavailable without a per-trial target onset/deadline.
 """
 
 from __future__ import annotations
@@ -19,7 +18,13 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 
-from common import detect_cues, detect_response_events, load_raw_record
+from common import (
+    decode_response_bout,
+    detect_cues,
+    detect_response_events,
+    load_raw_record,
+    measure_response_window,
+)
 from config import OUTPUT_DIR, RECORDS
 
 
@@ -75,6 +80,31 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
         pairing_counts.append(len(trial_responses))
         cue_run = cue_runs[i] if i < len(cue_runs) else None
         response = trial_responses[0] if trial_responses else None
+        decoded_response = (
+            decode_response_bout(
+                response_raw,
+                response["response_sample_index"],
+                trial_end,
+                raw["response_label"],
+            )
+            if response is not None
+            else {
+                "choice_side": None,
+                "decode_status": "no_response_bout",
+                "declared_response_code": None,
+                "bout_code_sequence": "",
+            }
+        )
+        response_timing = measure_response_window(
+            response_raw,
+            time,
+            int(cue["cue_sample_index"]),
+            trial_start,
+            trial_end,
+            sample_rate,
+            raw["response_label"],
+            int(response["response_sample_index"]) if response is not None else None,
+        )
         response_run = (
             response_run_by_start.get(int(response["response_sample_index"]))
             if response is not None else None
@@ -87,10 +117,9 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
         marker_time = float(response["response_time_s"]) if response is not None else np.nan
         marker_raw = float(response["response_raw"]) if response is not None else np.nan
         marker_code = int(response["response_code"]) if response is not None else None
-        choice_side = int(response["choice_side"]) if response is not None else None
-        marker_duration = (
-            float(response_run[3] - response_run[2]) if response_run is not None else np.nan
-        )
+        choice_side = decoded_response["choice_side"]
+        correct = int(choice_side == int(cue["cue_side"])) if choice_side is not None else None
+        marker_duration = response_timing["response_duration_s"]
         cue_duration = float(cue_offset - float(cue["cue_time_s"])) if np.isfinite(cue_offset) else np.nan
 
         rows.append(
@@ -108,9 +137,20 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
                 "channel9_response_event_count_in_cue_interval": len(trial_responses),
                 "response_sample_index": int(response["response_sample_index"]) if response else None,
                 "response_marker_time_s": marker_time,
+                "t_act_s": marker_time,
+                "t_act_relative_to_cue_s": marker_time - float(cue["cue_time_s"]),
+                "pre_response_endpoint_s": marker_time - float(cue["cue_time_s"]) - 0.100,
                 "response_raw_at_edge": marker_raw,
                 "response_code_standardized": marker_code,
                 "response_side": choice_side,
+                "response_decode_status": decoded_response["decode_status"],
+                "response_declared_code": decoded_response["declared_response_code"],
+                "response_bout_code_sequence": decoded_response["bout_code_sequence"],
+                **response_timing,
+                "target_side": int(cue["cue_side"]),
+                "correct": correct,
+                "correctness_status": "channel8_target_side_vs_channel9_DataLabel_declared_action_code" if choice_side is not None else "not_applicable_no_response",
+                "is_omission": int(len(trial_responses) == 0),
                 "response_marker_run_duration_s": marker_duration,
                 "response_minus_cue_onset_s": marker_time - float(cue["cue_time_s"]),
                 "response_minus_cue_offset_s": marker_time - cue_offset,
@@ -121,8 +161,9 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
                 "target_onset_verified": False,
                 "reaction_time_s": np.nan,
                 "reaction_time_status": "unknown_no_independent_trial_target_onset",
-                "correctness": "unknown_no_verified_trial_target_truth",
-                "omission_status": "unknown_no_verified_response_deadline",
+                "t_act_status": "channel9_zero_to_nonzero_edge_per_reference_model",
+                "correctness": "labeled_from_channel8_target_side_and_channel9_DataLabel_code" if choice_side is not None else "not_applicable_no_response",
+                "omission_status": "no_channel9_edge_in_cue_to_next_cue_interval" if len(trial_responses) == 0 else "response_observed_in_cue_to_next_cue_interval",
             }
         )
 
@@ -132,6 +173,8 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
     summary = {
         "record": record,
         "response_channel_label": raw["response_label"],
+        "t_act_definition": "channel-9 zero-to-nonzero edge; absolute timestamp",
+        "pre_response_endpoint_definition": "cue-relative t_act minus 0.100 s",
         "sample_rate_hz": sample_rate,
         "cue_event_count": len(cues),
         "channel9_response_edge_count": len(responses),
@@ -152,9 +195,19 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
         "response_marker_run_duration_median_s": float(np.nanmedian([row["response_marker_run_duration_s"] for row in rows])),
         "response_marker_run_duration_min_s": float(np.nanmin([row["response_marker_run_duration_s"] for row in rows])),
         "response_marker_run_duration_max_s": float(np.nanmax([row["response_marker_run_duration_s"] for row in rows])),
+        "timeliness_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+        "timely_trials": int(sum(row["is_timely"] == 1 for row in rows)),
+        "late_trials": int(sum(row["is_late"] == 1 for row in rows)),
+        "timeliness_unresolved_trials": int(sum(not np.isfinite(row["is_timely"]) for row in rows)),
+        "timeliness_rule": "the DataLabel-declared Action +/-1 or TgtAct +/-2 code must occur in cue-1 to cue+5 s; action in the cue-to-next-cue interval without that code in the window is late",
+        "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count divided by sample rate",
         "actual_target_onsets_available": False,
         "verified_response_deadlines_available": False,
-        "correctness_ground_truth_available": False,
+        "correctness_ground_truth_available": True,
+        "correct_trials": int(sum(row["correct"] == 1 for row in rows if row["correct"] is not None)),
+        "incorrect_trials": int(sum(row["correct"] == 0 for row in rows if row["correct"] is not None)),
+        "omission_trials": int(sum(row["is_omission"] == 1 for row in rows)),
+        "late_response_classification": "derived using the declared channel-9 code and the cue-centered [-1,+5] s analysis window",
         "interpretation": "The schedule proxy is cue-off plus approximately 2 s from the appendix. Marker-to-proxy differences are not reaction times.",
     }
     representative = {
@@ -271,7 +324,7 @@ def _save_example_trace(example: dict[str, Any], out: Path) -> None:
 
 def _build_mapping_summary(frame: pd.DataFrame) -> pd.DataFrame:
     data = frame.copy()
-    data["cue_response_same_side"] = data["cue_side"] == data["response_side"]
+    data["cue_response_same_side"] = pd.to_numeric(data["correct"], errors="coerce")
     data["task_suffix_candidate"] = data["filename_task_suffix_candidate"].map(
         lambda value: f"Task-{value}"
     )
@@ -292,7 +345,7 @@ def _build_mapping_summary(frame: pd.DataFrame) -> pd.DataFrame:
                     "n_trials": n,
                     "cue_response_same_side_count": same,
                     "cue_response_same_side_fraction": same / n if n else np.nan,
-                    "interpretation": "descriptive cue-response agreement only; not correctness or task-label validation",
+                    "interpretation": "correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only",
                 }
             )
     return pd.DataFrame(rows)
@@ -311,8 +364,8 @@ def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
     axes[0].set_yticks(y, record_order)
     axes[0].invert_yaxis()
     axes[0].set_xlim(0, 1.08)
-    axes[0].set_xlabel("Fraction cue side = response side")
-    axes[0].set_title("By MAT record")
+    axes[0].set_xlabel("Fraction of responses matching channel-8 target side")
+    axes[0].set_title("Correctness by MAT record")
     axes[0].grid(axis="x", color="#dddddd", linewidth=0.6)
     for yi, name in enumerate(record_order):
         count = int(record_stats.loc[name, "cue_response_same_side_count"])
@@ -341,12 +394,12 @@ def _save_task_mapping_figure(frame: pd.DataFrame, out: Path) -> pd.DataFrame:
     axes[1].set_yticks(yy, labels)
     axes[1].invert_yaxis()
     axes[1].set_xlim(0, 1.12)
-    axes[1].set_xlabel("Fraction cue side = response side")
+    axes[1].set_xlabel("Fraction of responses matching channel-8 target side")
     axes[1].set_title("Grouping-candidate contrast")
     axes[1].grid(axis="x", color="#dddddd", linewidth=0.6)
     for yi, (rate, count, n) in enumerate(zip(rates, counts, ns)):
         axes[1].text(rate + 0.02, yi, f"{count}/{n}", va="center", fontsize=8)
-    fig.suptitle("Cue-response agreement is descriptive, not correctness", fontsize=10.5)
+    fig.suptitle("Trial correctness from channel-8 target and channel-9 action", fontsize=10.5)
     fig.savefig(out.with_suffix(".png"), dpi=450, bbox_inches="tight")
     plt.close(fig)
     return summary
@@ -437,38 +490,39 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 
 ## 审计结论
 
-原始数据中检出 {n} 个 VisCue 起始边沿和 {n} 个通道9 非零起始边沿；{one_to_one}/{n} 个 cue 区间恰有一个通道9边沿。cue 非零段的中位持续时间为 {cue_dur:.4f} s。跨记录配对没有显示出逐试次索引错位，但这只能核实数据内的事件配对，不能证明通道9时钟边沿就是实际鼠标动作的精确发生时刻。
+原始数据中检出 {n} 个 VisCue 起始边沿和 {n} 个通道9 非零起始边沿；{one_to_one}/{n} 个 cue 区间恰有一个通道9边沿。按参考模型定义，通道9从零到非零的边沿作为应答时刻 `t_act`；cue 非零段的中位持续时间为 {cue_dur:.4f} s。
 
-通道9边沿距 cue 起始的总体中位数为 {event_from_cue:.4f} s。根据题目附录“提示消失后等待约2秒”的文字，以实测 cue 结束时刻加约2秒构造一个**计划时刻代理**，边沿相对该代理的中位差为 {event_from_schedule*1000:.1f} ms。此差值不是反应时：逐试次真实目标呈现时刻没有单独事件标记，且“约2秒”不是精确呈现日志。
+`t_act` 距 cue 起始的总体中位数为 {event_from_cue:.4f} s。根据题目附录“提示消失后等待约2秒”的文字，以实测 cue 结束时刻加约2秒构造一个**计划时刻代理**，`t_act` 相对该代理的中位差为 {event_from_schedule*1000:.1f} ms。该差值不是反应时长：逐试次真实目标呈现时刻没有单独事件标记，且“约2秒”不是精确呈现日志。
 
-以 cue+2.2 s 作敏感性参照时，{event_after_22}/{n} 个边沿位于其后100 ms以内；以 cue+2.0 s 作另一个敏感性参照时，边沿差的中位数为 {alt_median:.4f} s。两者均只展示锚点敏感性，**本审计不选取任一者作为真实 RT 起点**。
+以 cue+2.2 s 作敏感性参照时，{event_after_22}/{n} 个 `t_act` 位于其后100 ms以内；以 cue+2.0 s 作另一个敏感性参照时，边沿差的中位数为 {alt_median:.4f} s。两者均只展示计划时刻代理的敏感性，不改变 `t_act` 的参考模型定义。
 
 ## 证据与待定解释
 
 1. **目标呈现时刻：未被逐试次观测。** 附录支持“cue 结束后约2秒”的粗略计划；VisCue脉冲实测约0.20秒，因此计划代理约为 cue onset +2.20秒。原始通道没有 target-onset 事件，不能据此给每次试验填入精确 onset。
-2. **通道9语义：书面定义为目标应答/行动，实际时序仍需核验。** 官方题面将通道9定义为点击左/右目标的应答；但原始边沿在四份记录中高度集中于上述计划时刻附近，且通道9为持续非零段而非单采样脉冲。这种吻合既不能推翻官方定义，也不能单凭文件证明其边沿是鼠标首次动作。应答边沿与目标时刻的关系仍有语义/时间戳冲突。
+2. **通道9应答时刻：按参考模型使用。** 本实现将每个 cue 区间内唯一的通道9零到非零边沿定义为绝对应答时刻 `t_act`，并用 `t_act - 100 ms` 作为应答前 EEG 截止点。该定义支持应答锁定窗口；由于没有逐试次目标 onset，`t_act - target_onset` 形式的反应时长仍未知。
 3. **试次配对：当前未见错位证据。** 按每个 cue 到下一 cue 的区间检查，所有记录都是一段一个通道9边沿；故逐试次顺序错位暂不支持为主要解释。跨通道同步偏移或记录程序对通道9的写入语义，仍需要原始实验日志/软件定义才能排除。
 
-## Task 类型映射冲突
+## 逐试次正确性与分组解释
 
 《第三.pdf》把项目1定义为位置提示、项目2定义为形状提示，但没有在文本中给四份 MAT 文件写出机器可核对的逐文件项目映射。当前 Q3 将 `Task-1/Task-2` 后缀作为候选类型；Q2 的 `revision_v3/config.py` 则把 `VisualCogA_*` 两份文件归为 Task1、`VisualCogB_*` 两份归为 Task2。两套分组给出不同的 cue-应答同侧结构：
 
 {mapping_md}
 
-按 `Task-1/Task-2` 后缀分组的模式与位置提示/形状提示的行为预期相容；但同侧不等于正确，也不能用它来反向证明文件映射。按 `VisualCogA/B` 前缀分组则没有区分度。由于映射来源冲突且缺少实验记录表，**项目类型仍标为候选映射**；当前 OLS 中的任务项不作项目1/项目2效应解释。后续动态模型先不依赖该任务变量，并同时保存两种候选分组供敏感性审查。
+本题给出的通道定义已经确定逐试次目标侧，因此正确性不依赖文件名中的项目类型映射：通道8目标侧与通道9动作段中由 `DataLabel` 声明的左右码同侧即正确，不同即错误。Task-2 的首个动作边沿先出现 `±1`，随后同一连续动作段出现标签声明的 `±2`；程序用 `±2` 解码方向、用首个零到非零边沿定义 `t_act`。上表仅按文件名候选分组展示正确率；项目类型和任务效应仍需实验记录表核实，不能从分组正确率倒推。
 
 ## 标签规则
 
-- `response_side`：由通道9起始边沿的符号确定，并统一 `-1/-2 -> -2`、`+1/+2 -> +2`；保留原始边沿码。
-- `reaction_time_s`：本轮保留为空，状态为 `unknown_no_independent_trial_target_onset`。
-- `correctness`：本轮保留为未知；没有经过验证的逐试次目标真值与无冲突的任务类型映射。cue/response 同侧比例只是选择一致性，不等于正确率。
-- `omission_status`：本轮保留为未知；没有经过验证的反应截止时刻。通道9有边沿不等于已证明不存在漏答/迟答。
+- `response_side`：按通道9的 `DataLabel` 解码动作段中的左/右代码。Task-1 `Action` 使用 ±1；Task-2 `TgtAct` 使用 ±2。Task-2 的±1起始状态和后续±2代码同属一个连续动作段，先验证整段符号一致，不把两个幅值当成两次应答。
+- `t_act_s`：通道9零到非零边沿的绝对时间；应答前分析窗口在 `t_act - 100 ms` 截止。
+- `reaction_time_s`：本轮保留为空，状态为 `unknown_no_independent_trial_target_onset`；目标呈现时刻缺少逐试次记录。
+- `correct`：通道8的目标侧与通道9动作段中 `DataLabel` 声明的目标选择代码相同记1，不同记0；没有动作或动作方向无法由声明代码解析时记为空，不把未答混作答错。
+- `is_omission`：当前定义为本次 cue 起始至下一次 cue 起始之间没有通道9动作边沿。迟答与漏答不再区分；本数据400个区间各有一条动作边沿，因此本数据集的区间漏答数为0。
 
 ## 当前可用的时间窗
 
 - VisCue 锁定 EEG：相对已观测 cue 起始的时间窗可复现。
 - `cue+2.2 s` 锁定 EEG：只作为计划时刻敏感性分支，不标成真实 target-locked ERP。
-- 通道9边沿前约100 ms：可以抽取并命名为“channel-9-marker-preceding EEG”；在事件语义冲突澄清前，不将其解释为已验证的动作前生理窗口。
+- 通道9边沿前约100 ms：按参考模型抽取为应答前 EEG 窗口，并统计 cue 至 `t_act - 100 ms` 的累计窗及末500 ms窗口。
 - cue 至 marker 前100 ms 的逐时轨迹：可以按记录的事件码建立描述性轨迹；不能把轨迹中的阶段直接命名为目标出现后的记忆匹配阶段，因为 target onset 未被独立记录。
 
 ## 动态认知模型与数据处理的边界
@@ -479,7 +533,7 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 
 ## 下一步
 
-1. 找到实验程序/原始行为日志或目标显示触发记录，核实 target onset、response marker 的定义和共同时间基准；在此之前不拟合真实 RT、正确率、漏答率或 DDM。
+1. 找到实验程序/原始行为日志或目标显示触发记录，核实 target onset 和共同时间基准；在此之前不拟合真实 RT 或 DDM。通道8/9已能给出本题定义下的正确性与 cue 区间无应答标签。
 2. 先建立不声称解剖定位的时间域基线：按 cue 与通道9边沿索引 F3/Fz/F4 连续轨迹，做记录级留出预测/重构；预注册窗口和误差指标。
 3. 再把 Q2 的 LGN→Wilson–Cowan→源→导联结构接入状态空间：用可观测的 cue 驱动视觉子模块，把未观测 target/memory match 明确记为潜输入；只有外部真值或模型可识别性检验通过后，才拟合 H/P 转移与额外源权重。
 4. 每次模型或处理口径变更后，重新生成同一组审计图与留出诊断图，记录数据版本、窗口、参数、单位和未知标签数。
@@ -496,10 +550,28 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 
 ![原始 VisCue 与通道9 事件波形](figures/event_channel_trace_example.png)
 
-![两种候选任务分组下的提示-应答同侧比例](figures/task_mapping_candidate_audit.png)
+![按两种候选文件分组展示的通道8/9正确率](figures/task_mapping_candidate_audit.png)
 
 图中 cue+2.0 s / cue+2.2 s 仅为敏感性参照；cue-off+约2秒是由题目附录构造的计划时刻代理。任何垂直参考线都不代表已观测的真实目标起始。
 """
+    timely_count = int(pd.to_numeric(frame["is_timely"], errors="coerce").eq(1).sum())
+    late_count = int(pd.to_numeric(frame["is_late"], errors="coerce").eq(1).sum())
+    unresolved_count = int(pd.to_numeric(frame["is_timely"], errors="coerce").isna().sum())
+    duration_median = float(pd.to_numeric(frame["response_duration_s"], errors="coerce").median())
+    text += (
+        "\n\n## Task-defined channel-9 response timing\n\n"
+        "The analysis window is cue-1 to cue+5 seconds. A response is timely when "
+        "the response code declared in DataLabel occurs in that window (Action uses +/-1; "
+        "TgtAct uses +/-2). An action in the cue-to-next-cue interval without its declared "
+        "code in the analysis window is late.\n\n"
+        f"- Timely: {timely_count}; late: {late_count}; unresolved: {unresolved_count}.\n"
+        f"- Median duration of the first contiguous channel-9 nonzero bout: {duration_median:.4f} s.\n"
+        "- This bout duration is not target-to-response reaction time; target onset remains unverified.\n"
+    )
+    text = text.replace(
+        "迟答与漏答不再区分；本数据400个区间各有一条动作边沿，因此本数据集的区间漏答数为0。",
+        "迟答按下方定义单独统计；本数据400个 cue-to-next-cue 区间各有一条动作边沿，因此区间漏答数为0。",
+    )
     report_path.write_text(text, encoding="utf-8")
 
 
@@ -528,10 +600,22 @@ def main() -> None:
         "response_marker_minus_cue_plus_2p2_median_s_sensitivity_only": float(trials["marker_minus_cue_plus_2p2_s_sensitivity_only"].median()),
         "n_response_markers_under_100ms_after_cue_plus_2p2_s_sensitivity_only": int(((trials["marker_minus_cue_plus_2p2_s_sensitivity_only"] >= 0) & (trials["marker_minus_cue_plus_2p2_s_sensitivity_only"] < 0.1)).sum()),
         "n_verified_reaction_times": 0,
-        "n_verified_correctness_labels": 0,
-        "n_verified_omission_labels": 0,
+        "n_verified_correctness_labels": int(trials["correct"].notna().sum()),
+        "n_verified_omission_labels": int(trials["is_omission"].notna().sum()),
+        "n_verified_timeliness_labels": int(pd.to_numeric(trials["is_timely"], errors="coerce").notna().sum()),
+        "n_response_bout_duration_labels": int(pd.to_numeric(trials["response_duration_s"], errors="coerce").notna().sum()),
+        "correct_trials": int(pd.to_numeric(trials["correct"], errors="coerce").eq(1).sum()),
+        "incorrect_trials": int(pd.to_numeric(trials["correct"], errors="coerce").eq(0).sum()),
+        "omission_trials": int(pd.to_numeric(trials["is_omission"], errors="coerce").eq(1).sum()),
+        "timely_trials": int(pd.to_numeric(trials["is_timely"], errors="coerce").eq(1).sum()),
+        "late_trials": int(pd.to_numeric(trials["is_late"], errors="coerce").eq(1).sum()),
+        "correctness_rule": "channel-8 VisCue target side compared with the channel-9 L/R code declared in DataLabel and present in the first action bout",
+        "omission_rule": "no channel-9 nonzero response bout in the VisCue onset-to-next-VisCue onset interval",
+        "timeliness_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+        "timeliness_rule": "a DataLabel-declared Action +/-1 or TgtAct +/-2 code within cue-1 to cue+5 s is timely; an action within the cue-to-next-cue interval without the declared code inside this window is late",
+        "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count divided by sample rate; not target-to-response reaction time",
         "target_onset_status": "unknown; no independent per-trial marker in supplied allowed channels",
-        "response_marker_semantics_status": "officially described as target response/action; sample timing is inconsistent with a precise reaction-time interpretation under the approximate schedule",
+        "response_marker_semantics_status": "officially described as target response/action; channel-9 edge is t_act and gives action side; target-onset timing remains approximate",
         "trial_pairing_status": "one channel-9 event edge in each VisCue-to-next-VisCue interval for all supplied records",
         "anchor_selection": "none; cue+2.0 and cue+2.2 are sensitivity references only",
         "task_mapping_status": "conflict: Q3 used the Task-1/Task-2 suffix as a candidate, while Q2 revision_v3/config.py groups Task1/Task2 by VisualCogA/VisualCogB prefix; task mapping remains candidate-only",
@@ -564,7 +648,7 @@ def main() -> None:
             if stale_path.exists():
                 stale_path.unlink()
     _write_report(trials, summaries, AUDIT_DIR / "event_timing_semantics_report.md")
-    print(f"Audited {len(trials)} trials; exactly-one-edge pairing: {overall['n_exactly_one_response_edge_in_cue_interval']}; verified RT labels: 0.")
+    print(f"Audited {len(trials)} trials; exact-one-edge pairings: {overall['n_exactly_one_response_edge_in_cue_interval']}; correctness labels: {overall['n_verified_correctness_labels']}; omission labels: {overall['n_verified_omission_labels']}; RT labels: 0.")
     print(f"Wrote evidence to {AUDIT_DIR}")
 
 

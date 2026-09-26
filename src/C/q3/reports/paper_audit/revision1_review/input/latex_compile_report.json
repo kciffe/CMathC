@@ -1,0 +1,10 @@
+{
+  "status": "PASS_WITH_WARNINGS",
+  "engine": "XeLaTeX",
+  "passes": 2,
+  "page_count": 11,
+  "warnings": [
+    "One overfull hbox at source line 210; inspect equation wrapping."
+  ],
+  "visual_preview": "Figures are placeholders due to [demo] graphicx option and unresolved fig1..fig6 paths."
+}

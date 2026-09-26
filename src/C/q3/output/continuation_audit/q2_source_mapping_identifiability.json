@@ -8,8 +8,8 @@
   "singular_values": [
     9.6026539320842,
     1.7042797281892281,
-    0.1332864862607057
+    0.13328648626070572
   ],
-  "condition_number_nonzero_subspace": 72.04521779726117,
+  "condition_number_nonzero_subspace": 72.04521779726116,
   "interpretation": "At least two linearly independent source changes lie in the null space; the five Q2 source proxies cannot be uniquely recovered from three electrodes without additional constraints."
 }

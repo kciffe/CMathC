@@ -1,8 +1,9 @@
 """Cue-aligned Q3 dynamic-state model and record-held-out EEG validation.
 
-Candidate target times and stimulus identities are sensitivity scenarios. The
-script never treats channel 9 as a verified reaction time, target-onset marker,
-correctness label, EEG feature, or model input.
+Candidate target times and stimulus identities are sensitivity scenarios. A
+unique channel-9 zero-to-nonzero edge defines t_act and the pre-response scoring
+endpoint (t_act - 100 ms); it is not an EEG feature, state input, correctness
+label, or response-time duration.
 """
 
 from __future__ import annotations
@@ -28,7 +29,7 @@ for _path in (REPO_ROOT, Q3_DIR):
         sys.path.insert(0, str(_path))
 
 import dynamic_cognitive_model as macro
-from common import detect_cues, load_raw_record
+from common import decode_response_bout, detect_cues, detect_response_events, load_raw_record
 from config import EEG_CHANNELS, RECORDS
 
 
@@ -393,7 +394,7 @@ def filter_continuous_eeg(
 def _load_observed_epochs(
     preprocessing_modes: Iterable[str],
 ) -> tuple[dict[str, dict[tuple[str, int], np.ndarray]], pd.DataFrame]:
-    """Extract cue-only keyed EEG means while retaining a per-trial QC ledger."""
+    """Extract cue-locked EEG means and audit channel-9 response endpoints."""
 
     mode_list = tuple(preprocessing_modes)
     config_by_mode = {
@@ -423,16 +424,59 @@ def _load_observed_epochs(
             baseline_window_s=(TIME_START_S, 0.0),
         )
         events = detect_cues(raw["channels"]["VisCue"], timestamps)
+        response_events = detect_response_events(raw["response_signal"], timestamps)
         for event_index, event in enumerate(events):
             cue_time = float(event["cue_time_s"])
             next_cue = float(events[event_index + 1]["cue_time_s"]) if event_index + 1 < len(events) else None
             side = int(event["cue_side"])
+            trial_start = int(event["cue_sample_index"])
+            trial_end = (
+                int(events[event_index + 1]["cue_sample_index"])
+                if event_index + 1 < len(events)
+                else timestamps.size
+            )
+            trial_responses = [
+                response for response in response_events
+                if trial_start <= int(response["response_sample_index"]) < trial_end
+            ]
+            first_response = trial_responses[0] if trial_responses else None
+            t_act_s = float(first_response["response_time_s"]) if first_response else np.nan
+            t_act_relative_s = t_act_s - cue_time if np.isfinite(t_act_s) else np.nan
+            endpoint_relative_s = t_act_relative_s - 0.100 if np.isfinite(t_act_relative_s) else np.nan
+            decoded_response = (
+                decode_response_bout(
+                    raw["response_signal"],
+                    first_response["response_sample_index"],
+                    trial_end,
+                    raw["response_label"],
+                )
+                if first_response else {
+                    "choice_side": None,
+                    "decode_status": "no_response_bout",
+                    "declared_response_code": None,
+                    "bout_code_sequence": "",
+                }
+            )
+            response_side = decoded_response["choice_side"]
+            correct = int(response_side == side) if response_side is not None else np.nan
             row: dict[str, Any] = {
                 "record": record,
                 "original_trial_index": int(event["original_trial_index"]),
                 "cue_time_s": cue_time,
                 "cue_side": side,
                 "next_cue_time_s": next_cue,
+                "channel9_response_event_count": len(trial_responses),
+                "t_act_s": t_act_s,
+                "t_act_relative_to_cue_s": t_act_relative_s,
+                "t_act_side": response_side if response_side is not None else np.nan,
+                "response_decode_status": decoded_response["decode_status"],
+                "response_declared_code": decoded_response["declared_response_code"],
+                "response_bout_code_sequence": decoded_response["bout_code_sequence"],
+                "correct": correct,
+                "is_omission": int(len(trial_responses) == 0),
+                "outcome_rule": "channel-8 target side versus the DataLabel-declared channel-9 code within the first action bout; omission means no action edge in this cue interval",
+                "pre_response_endpoint_s": endpoint_relative_s,
+                "endpoint_definition": "unique channel-9 zero-to-nonzero edge minus 0.100 s",
                 "included": False,
                 "exclusion_reason": "",
             }
@@ -485,6 +529,33 @@ def _load_observed_epochs(
         }
     audit = pd.DataFrame(audit_rows)
     return means, audit
+
+
+def _response_window_summaries(trial_audit: pd.DataFrame) -> dict[tuple[str, int], dict[str, float | int]]:
+    """Summarize unique t_act edges for QC-included record-by-cue groups."""
+
+    included = trial_audit.loc[
+        trial_audit["included"]
+        & trial_audit["channel9_response_event_count"].eq(1)
+    ].copy()
+    for column in ("t_act_relative_to_cue_s", "pre_response_endpoint_s"):
+        included[column] = pd.to_numeric(included[column], errors="coerce")
+    summaries: dict[tuple[str, int], dict[str, float | int]] = {}
+    for (record, cue_side), group in included.groupby(["record", "cue_side"]):
+        t_act = group["t_act_relative_to_cue_s"].dropna().to_numpy(dtype=float)
+        endpoints = group["pre_response_endpoint_s"].dropna().to_numpy(dtype=float)
+        if not t_act.size or not endpoints.size:
+            continue
+        summaries[(str(record), int(cue_side))] = {
+            "n_trials_with_unique_t_act": int(t_act.size),
+            "t_act_median_from_cue_s": float(np.median(t_act)),
+            "t_act_q05_from_cue_s": float(np.quantile(t_act, 0.05)),
+            "t_act_q95_from_cue_s": float(np.quantile(t_act, 0.95)),
+            "pre_response_endpoint_median_s": float(np.median(endpoints)),
+            "pre_response_endpoint_q05_s": float(np.quantile(endpoints, 0.05)),
+            "pre_response_endpoint_q95_s": float(np.quantile(endpoints, 0.95)),
+        }
+    return summaries
 
 
 def _scenario_grid(
@@ -661,6 +732,7 @@ def _run_record_heldout(
     observed: dict[str, dict[tuple[str, int], np.ndarray]],
     scenarios: tuple[macro.DynamicScenario, ...],
     basis_lookup: dict[tuple[str, str, str, float | None, float], dict[str, Any]],
+    response_windows: dict[tuple[str, int], dict[str, float | int]],
 ) -> tuple[pd.DataFrame, list[dict[str, Any]], dict[str, Any] | None]:
     metric_rows: list[dict[str, Any]] = []
     prediction_records: list[dict[str, Any]] = []
@@ -731,11 +803,19 @@ def _run_record_heldout(
                         "predicted": y_pred.copy(),
                         "group_keys": list(test_keys),
                     })
-                    windows = dict(WINDOWS)
-                    candidate_window = _candidate_window(onset_s)
-                    if candidate_window is not None:
-                        windows["candidate_target_600ms"] = candidate_window
                     for group_index, group_key in enumerate(test_keys):
+                        windows = dict(WINDOWS)
+                        candidate_window = _candidate_window(onset_s)
+                        if candidate_window is not None:
+                            windows["candidate_target_600ms"] = candidate_window
+                        response_summary = response_windows.get(group_key)
+                        if response_summary is not None:
+                            endpoint_s = float(response_summary["pre_response_endpoint_median_s"])
+                            if 0.0 < endpoint_s <= float(OUTPUT_TIME_S[-1]):
+                                windows["t_act_pre_response_cumulative"] = (0.0, endpoint_s)
+                                windows["t_act_pre_response_terminal_500ms"] = (
+                                    max(0.0, endpoint_s - 0.5), endpoint_s
+                                )
                         for window_name, window_bounds in windows.items():
                             rmse, nrmse, corr = _score_prediction(
                                 y_test[group_index], y_pred[group_index],
@@ -762,7 +842,33 @@ def _run_record_heldout(
                                 "n_train_record_cue_means": len(train_keys),
                                 "n_test_trials_in_cue_group": np.nan,
                                 "fit_parameters_train_only": True,
-                                "response_channel_used": False,
+                                "response_channel_used": window_name.startswith("t_act_"),
+                                "response_channel_used_as_predictor": False,
+                                "t_act_used_for_window_endpoint": window_name.startswith("t_act_"),
+                                "window_endpoint_source": (
+                                    "median_unique_channel9_t_act_minus_100ms"
+                                    if window_name.startswith("t_act_") else "fixed_cue_locked_or_candidate_window"
+                                ),
+                                "n_test_trials_with_unique_t_act": (
+                                    response_summary["n_trials_with_unique_t_act"]
+                                    if response_summary is not None else 0
+                                ),
+                                "t_act_median_from_cue_s": (
+                                    response_summary["t_act_median_from_cue_s"]
+                                    if response_summary is not None else np.nan
+                                ),
+                                "t_act_q05_from_cue_s": (
+                                    response_summary["t_act_q05_from_cue_s"]
+                                    if response_summary is not None else np.nan
+                                ),
+                                "t_act_q95_from_cue_s": (
+                                    response_summary["t_act_q95_from_cue_s"]
+                                    if response_summary is not None else np.nan
+                                ),
+                                "pre_response_endpoint_median_s": (
+                                    response_summary["pre_response_endpoint_median_s"]
+                                    if response_summary is not None else np.nan
+                                ),
                             })
                     if (
                         model_name == "Q2_plus_memory_control"
@@ -797,10 +903,11 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
     if not audit_path.exists():
         raise FileNotFoundError(f"event-semantics audit is required: {audit_path}")
     events = pd.read_csv(audit_path, encoding="utf-8-sig")
-    if "response_marker_time_s" not in events or "cue_onset_time_s" not in events:
+    t_act_column = "t_act_s" if "t_act_s" in events else "response_marker_time_s"
+    if t_act_column not in events or "cue_onset_time_s" not in events:
         raise ValueError("event audit lacks cue/response marker times")
     marker_relative = (
-        events["response_marker_time_s"].astype(float)
+        events[t_act_column].astype(float)
         - events["cue_onset_time_s"].astype(float)
     ).dropna().to_numpy()
     fig, axes = plt.subplots(2, 1, figsize=(9.2, 5.6))
@@ -809,8 +916,9 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
         axes[0].axvline(candidate, color=color, linestyle="--", linewidth=1.15,
                         label=f"候选目标时刻 {candidate:.1f} 秒")
     median_marker = float(np.median(marker_relative))
+    endpoint_median = median_marker - 0.100
     axes[0].axvline(median_marker, color="#383838", linewidth=1.2,
-                    label=f"第9通道标记中位数 {median_marker:.3f} 秒")
+                    label=f"t_act 中位数 {median_marker:.3f} 秒")
     axes[0].set_xlim(1.7, 2.6)
     axes[0].set_xlabel("相对视觉提示的时间（秒）")
     axes[0].set_ylabel("试次数")
@@ -842,16 +950,18 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
     for candidate, color in ((2.0, "#4C8C6B"), (2.2, "#D1843D"), (2.4, "#9B5C71")):
         ax.axvline(candidate, color=color, linestyle="--", linewidth=1.0)
         ax.axvspan(candidate, min(candidate + 0.6, 3.0), color=color, alpha=0.08)
+    ax.axvspan(0.0, endpoint_median, color="#C9A66B", alpha=0.10)
+    ax.axvspan(max(0.0, endpoint_median - 0.5), endpoint_median, color="#BD806F", alpha=0.16)
     ax.axvline(median_marker, color="#383838", linewidth=1.0, alpha=0.8)
+    ax.axvline(endpoint_median, color="#A35C47", linewidth=1.0, linestyle=":", alpha=0.9)
     ax.set_xlim(-0.45, 3.1)
     ax.set_ylim(0.0, 3.8)
     ax.set_yticks([])
     ax.set_xlabel("相对视觉提示的时间（秒）")
-    ax.set_title("分析时间窗；目标周边窗口仅代表候选情景")
+    ax.set_title("\u7d2f\u8ba1\u7a97 [0, t_act - 0.1 s) \u548c\u7ec8\u672b500 ms\u7a97\u53e3")
     ax.grid(axis="x", color="#e5e5e5", linewidth=0.55)
     fig.suptitle(
-        f"审计 {len(events)} 个试次；提示至标记的中位间隔为 {median_marker:.3f} 秒。\n"
-        "第9通道标记尚不能确认为目标出现时刻或真实反应时。",
+        f"\u53c2\u8003\u6a21\u578b t_act \u4e2d\u4f4d\u6570 = {median_marker:.3f} s\uff1b\u5e94\u7b54\u524d\u622a\u6b62 = {endpoint_median:.3f} s",
         fontsize=10, y=0.99,
     )
     handles, labels = axes[0].get_legend_handles_labels()
@@ -868,6 +978,8 @@ def _plot_event_windows(audit_path: Path, output_path: Path) -> dict[str, Any]:
         "marker_relative_median_s": median_marker,
         "marker_relative_q05_s": float(np.quantile(marker_relative, 0.05)),
         "marker_relative_q95_s": float(np.quantile(marker_relative, 0.95)),
+        "t_act_definition": "unique channel-9 zero-to-nonzero edge per reference model",
+        "pre_response_endpoint_median_from_cue_s": float(endpoint_median),
     }
 
 
@@ -1345,7 +1457,7 @@ def _write_detailed_report(
 
 本轮针对题目要求的“借助问题二所建立的脑电信号形成机制，建立认知宏观模型并用给定脑电信号验证”，构建了一个**可检验的动态认知宏观模型**：问题二的视觉处理与脑电正向形成链提供视觉驱动和三通道观测接口；问题三增加独立的记忆相关状态和控制状态，并以整条记录留出的脑电预测误差检验新增状态是否有增量信息。题目没有规定必须达到某个预测百分点；留出误差与候选时刻敏感性是本实现采用的验证证据。
 
-事件审计文件给出 {event_summary['n_audited_trials']} 个视觉提示试次；第9通道响应标记相对视觉提示的中位时间为 {event_summary['marker_relative_median_s']:.4f} 秒，5%–95% 分位区间为 {event_summary['marker_relative_q05_s']:.4f}–{event_summary['marker_relative_q95_s']:.4f} 秒。第9通道只用于事件时间审计；目标呈现时间、正式反应时、正确性和漏答判定均未获独立核实，所以本轮不做行为标签拟合，也不把标记减去候选目标时刻称为真实反应时。
+事件审计文件给出 {event_summary['n_audited_trials']} 个视觉提示试次；按参考模型，第9通道零到非零边沿定义为绝对应答时刻 `t_act`。`t_act` 相对视觉提示的中位时间为 {event_summary['marker_relative_median_s']:.4f} 秒，5%–95% 分位区间为 {event_summary['marker_relative_q05_s']:.4f}–{event_summary['marker_relative_q95_s']:.4f} 秒。模型不把通道9作为 EEG 特征或状态输入；它只用于定义应答前窗口终点 `t_act - 100 ms`。逐试次正确性按通道8目标侧与通道9 `DataLabel` 声明的左右代码标记；cue 区间内没有动作边沿记为无应答。目标 onset 未逐试次记录，因此反应时长和迟答判别仍未知。
 
 原始脑电中审计 {n_trials} 个视觉提示事件，按非有限值、原始幅度阈值与平直通道规则保留 {n_included} 个完整试次（覆盖 {n_records} 个记录文件）。主验证为**逐份记录留出**：每折留出一份完整记录，观测方程的电极系数和标准化参数只在另外三份训练记录中估计。该验证检验跨记录外推；记录文件未能确认独立受试者身份，因此不等同于严格的跨受试者验证。
 
@@ -1395,7 +1507,7 @@ $$\mathbf y_i^c(\tau)=\operatorname{interp}\{\mathbf y(t_i^c+\tau)\},\qquad \Del
 
 ### 3.2 反应标记语义
 
-审计能确认的只是每个 VisCue 区间中通道9有一次起始边沿。相对于 cue 的标记中位时间约为 {event_summary['marker_relative_median_s']:.4f} s；它与候选 cue+2.x 时刻过于接近，现有通道又没有独立的 target-onset 标记。故标记边沿保留为事件审计证据，不作为逐试次目标真值、真实反应时、正确错误、漏答或 EEG 预测特征。此处理避免用不确定行为标签监督模型，也避免事件泄漏。
+审计能确认每个 VisCue 区间中的通道9动作边沿。Task-2 的 `TgtAct:L-2/R+2` 动作段先出现同号±1，随后出现题目声明的±2码；程序把它们作为一个连续动作段，用声明码解码选择方向，并保留首个零到非零边沿作为 `t_act`。通道8/9可生成逐试次正确/错误标签；cue 区间内没有动作边沿则为区间漏答，本数据各试次均观察到动作。动态 EEG 预测仍不把通道8/9结果作为特征，以避免行为标签泄漏。目标 onset 未独立标记，因此真实反应时长和迟答判别仍不产生。
 
 ### 3.3 阶段窗
 
@@ -1467,7 +1579,9 @@ $$\hat\beta_c=\arg\min_{\beta}\|z_c-X_c\beta\|_2^2+\alpha\|\beta\|_2^2,\qquad \a
 
 ## 7. 记录留出验证与模型比较
 
-每一折留出一份完整记录；由其余记录的“记录×cue 侧均值”拟合观测系数。训练行覆盖相同完整 cue-locked 时间网格；验证只在留出记录单独打分。测试标签只有 EEG 本身，VisCue 侧仅用于选择对应 Q2 视觉输入；通道9没有进入 EEG 特征、潜在状态、回归、参数选择或指标计算。
+每一折留出一份完整记录；由其余记录的“记录×cue 侧均值”拟合观测系数。训练行覆盖相同完整 cue-locked 时间网格；验证只在留出记录单独打分。通道9不进入 EEG 特征、潜在状态、回归或参数选择。除固定 cue 窗口外，另用留出记录×cue 侧中位 `t_act` 定义累计应答前窗 `[cue, t_act-100 ms)` 和末500 ms窗；这两类分数只按该窗裁切 EEG 均值波形，不回流到模型拟合。
+
+应答前分数使用每个留出记录×cue 侧组中具有唯一通道9边沿且通过 EEG 质量控制的试次。组中位 `t_act` 定义该组均值波形的终点，因此该结果是组级响应窗口验证，并非逐试次分类，也不代表反应时长。逐条件结果保存在 `output/dynamic_heldout_validation/t_act_endpoint_cv_metrics.csv`；窗口起止、组内 `t_act` 分布和有效试次数同时写入 CSV。
 
 对每个留出分组、模型、阶段窗报告：
 
@@ -1502,7 +1616,7 @@ NRMSE 是每条留出组内按实测标准差归一化后计算，再跨留出�
 - 改善是否在 none/causal/zero-phase 三种预处理中大体同向；
 - `Q2_plus_memory_control` 的额外收益是否跨留出记录存在，而不是只靠某个记录/电极。
 
-如果这些条件不成立，结论就是现有样本不能支持新增状态提升晚期 EEG 预测；动态状态仍是已明确方程和可复核结果的机制假设，分类、ERP/功率和静态路径分析仅作辅助证据。行为关联本轮不报告，因为目标真值、正确性、截止时间与真实反应时未验证。
+如果这些条件不成立，结论就是现有样本不能支持新增状态提升晚期 EEG 预测；动态状态仍是已明确方程和可复核结果的机制假设，分类、ERP/功率和静态路径分析仅作辅助证据。通道8/9正确性结果与 cue-locked V/H/P 的留出逻辑回归在 `05_behavior_model.py` 单独报告；动态场景验证不把行为结果并入 EEG 特征矩阵。
 
 ## 9. 中间产物、命令与复现
 
@@ -1510,6 +1624,7 @@ NRMSE 是每条留出组内按实测标准差归一化后计算，再跨留出�
 
 - `output/dynamic_heldout_validation/observed_trial_audit.csv`：每试次纳入状态和 QC 原因；
 - `output/dynamic_heldout_validation/dynamic_cv_metrics.csv`：完整预处理×情景×模型×留出记录×cue 侧×阶段分数；
+- `output/dynamic_heldout_validation/t_act_endpoint_cv_metrics.csv`：按 `t_act - 100 ms` 截止的累计窗与末500 ms留出分数；
 - `output/dynamic_heldout_validation/validation_summary.json`：汇总指标及事件语义限制；
 - `output/dynamic_heldout_validation/figures/`：六张中文 PNG 中间图；
 - Q2 前向数组只在当前运行期间保留于内存，不写出 `.npz` 缓存；下一次运行将重新计算候选场景。
@@ -1528,11 +1643,11 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
 
 ## 10. 适用范围与当前不能声称的结论
 
-1. 目标 onset、刺激与文件 task 的映射、trial correctness、omission 和实际 RT 仍未知；情景敏感性不能替代实验记录确认。
+1. 目标 onset、刺激与文件 task 的映射、真实 RT 和迟答状态仍未知；逐试次正确性由通道8/9方向比较生成，区间漏答由通道9是否有动作边沿生成，迟答不另行分类。
 2. 四份文件作为四个留出域；在受试者身份未知时不能说结果经过独立受试者外部验证。
 3. 宏观状态方程和时间常数当前是理论构造；拟合的是观测加载，不是对潜在过程的唯一识别。
 4. Q2 的五源通过问题二导联矩阵做正向投影；三电极观测不能唯一反演五源，也不能证明某潜在状态来自海马或 PFC。
-5. 现有任务数据不足以把已标准化的通道9边沿视作真实 RT 标签；正确性、漏答和行为—脑电关系保持未知。
+5. 通道9边沿按参考模型作为 `t_act` 应答时刻；目标 onset 未逐试次记录，所以真实反应时长和迟答判别仍未知。正确性与区间漏答标签见行为分析输出。
 6. 旧版分类、频带功率、ERP 与静态路径分析可作为辅助描述，不代替本报告的动态方程和留出预测检验。
 '''
     replacements = {
@@ -1573,7 +1688,7 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
         "**机制参数仍是构造值。** $\\tau_H$、写入/匹配增益及控制耦合尚未在训练记录的内层验证中估计；若真实保持时长或更新时序不同，当前 H 的时间轨迹会错位。",
         "**事件与刺激类型不确定。** 目标出现时刻没有独立标记，Task-1/Task-2 与 Q2 项目条件的映射未确认；把全部候选情景汇总会稀释某一真实但未知的条件效应。",
         "**记录间差异明显。** 四份记录是目前可用的留出单位，但独立受试者身份未知；传感器 EEG 的尺度和慢变形态可能存在记录间偏移。当前 NRMSE 大于 1，且预测波形未能跟随全部实测缓慢起伏，说明绝对拟合仍弱。",
-        f"**可用试次数有限。** 原始幅度 QC 排除了 {n_trials - n_included}/{n_trials} 个 epoch；其余约 {n_included} 个有效 trial 不能补足目标真值、正确性、漏答和正式反应时标签。",
+        f"**可用试次数有限。** 原始幅度 QC 排除了 {n_trials - n_included}/{n_trials} 个 epoch；其余约 {n_included} 个有效 trial 仍不能补足逐试次目标 onset、真实反应时和迟答标签。通道8/9方向给出的正确性及 cue 区间无动作标签按已定义规则计算。",
         "**预处理影响了误差水平。** 因果与零相位过滤下的整体 NRMSE 不同，而记忆态改善也未跨三种预处理一致；零相位仅是离线敏感性结果，不能当作实时 BCI 性能。",
         "**观测方程仍较简化。** 只使用 F3/Fz/F4 的线性加载和单一控制×Q2 交互，未覆盖其它脑区、电极或被试特异的噪声/参考方式；三电极无法据此确认海马或 PFC 来源。",
     ]
@@ -1681,7 +1796,10 @@ def run_validation(
                 )
                 basis_lookup[(mode, cue_side, target_type, onset_s, float(evidence))] = _make_processed_basis(base, candidate, cfg)
 
-    metrics, predictions, exemplar = _run_record_heldout(observed, scenarios, basis_lookup)
+    response_windows = _response_window_summaries(trial_audit)
+    metrics, predictions, exemplar = _run_record_heldout(
+        observed, scenarios, basis_lookup, response_windows
+    )
     if metrics.empty:
         raise RuntimeError("record-held-out validation produced no score rows")
     trial_counts = (
@@ -1695,6 +1813,10 @@ def run_validation(
         for row in metrics.itertuples(index=False)
     ]
     metrics.to_csv(output_dir / "dynamic_cv_metrics.csv", index=False, encoding="utf-8-sig")
+    endpoint_metrics = metrics.loc[metrics["t_act_used_for_window_endpoint"]].copy()
+    endpoint_metrics.to_csv(
+        output_dir / "t_act_endpoint_cv_metrics.csv", index=False, encoding="utf-8-sig"
+    )
     if exemplar is None:
         raise RuntimeError("no 2.2 s dots/mismatch causal fold available for state-contribution plot")
     _plot_states_and_contributions(
@@ -1734,7 +1856,22 @@ def run_validation(
         "event_marker_summary": event_summary,
         "target_onset_status": "candidate sensitivity only; no independent target marker",
         "behavioral_labels_used": False,
+        "behavioral_outcome_labels_derived": True,
+        "behavioral_correct_count": int(pd.to_numeric(trial_audit["correct"], errors="coerce").eq(1).sum()),
+        "behavioral_incorrect_count": int(pd.to_numeric(trial_audit["correct"], errors="coerce").eq(0).sum()),
+        "behavioral_omission_count": int(pd.to_numeric(trial_audit["is_omission"], errors="coerce").eq(1).sum()),
+        "omission_rule": "no channel-9 action edge between cue onset and the next cue onset; late responses are not separated",
         "channel9_used_in_eeg_or_model": False,
+        "channel9_used_as_predictor_or_state_input": False,
+        "channel9_used_for_response_window_scoring": True,
+        "t_act_definition": "unique channel-9 zero-to-nonzero edge; absolute timestamp",
+        "pre_response_endpoint_definition": "t_act minus 0.100 s",
+        "response_window_grouping": "QC-included trials grouped by record and cue side; median group t_act defines the mean-waveform score endpoint",
+        "n_record_cue_groups_with_t_act_windows": int(len(response_windows)),
+        "n_trials_with_unique_t_act_included": int(sum(
+            item["n_trials_with_unique_t_act"] for item in response_windows.values()
+        )),
+        "response_time_duration_status": "unknown without an independently verified per-trial target onset",
         "split": "leave one complete record file out; participant independence unverified",
         "ridge_alpha": RIDGE_ALPHA,
         "macro_parameters": asdict(macro.MacroParameters()),
@@ -1756,7 +1893,7 @@ def run_validation(
     if removed_caches:
         print(f"Removed stale Q2 NPZ caches: {removed_caches}", flush=True)
     print(f"Included EEG epochs: {int(trial_audit['included'].sum())}/{len(trial_audit)}", flush=True)
-    print(f"Late-stage model metrics saved: {output_dir / 'dynamic_cv_metrics.csv'}", flush=True)
+    print(f"Cross-window model metrics saved: {output_dir / 'dynamic_cv_metrics.csv'}", flush=True)
     print(f"Detailed method/results note: {report_path}", flush=True)
     print(f"PNG figures only: {figure_dir}", flush=True)
     for mode, result in summary["memory_delta_by_preprocessing"].items():

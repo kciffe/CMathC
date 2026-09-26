@@ -1,5 +1,5 @@
-﻿record,n_trials,n_ground_truth_labels,n_target_onsets,n_schedule_target_anchors,n_deadlines,n_response_markers,n_decoded_response_sides,n_correctness_known,n_correct,n_incorrect,n_within_deadline,n_late,n_verified_omission,n_omission_unknown,accuracy_among_decodable_responses
-VisualCogA_Task-1,100,0,0,100,0,100,100,0,0,0,0,0,0,0,
-VisualCogA_Task-2,100,0,0,100,0,100,100,0,0,0,0,0,0,0,
-VisualCogB_Task-1,100,0,0,100,0,100,100,0,0,0,0,0,0,0,
-VisualCogB_Task-2,100,0,0,100,0,100,100,0,0,0,0,0,0,0,
+﻿record,n_trials,n_external_truth_labels,n_channel8_target_labels,n_target_onsets,n_schedule_target_anchors,n_deadlines,n_response_markers,n_decoded_response_sides,n_correctness_known,n_correct,n_incorrect,n_within_deadline,n_late,n_omission_intervals,n_response_intervals,accuracy_among_decodable_responses
+VisualCogA_Task-1,100,0,100,0,100,0,100,100,100,100,0,,,0,100,1.0
+VisualCogA_Task-2,100,0,100,0,100,0,100,100,100,47,53,,,0,100,0.47
+VisualCogB_Task-1,100,0,100,0,100,0,100,100,100,98,2,,,0,100,0.98
+VisualCogB_Task-2,100,0,100,0,100,0,100,100,100,48,52,,,0,100,0.48

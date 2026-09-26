@@ -52,13 +52,19 @@
     }
   ],
   "channel9_no_marker_trials": 0,
-  "correctness_labels_present": 0,
+  "correctness_labels_present": 400,
+  "correct_trials": 293,
+  "incorrect_trials": 107,
+  "omission_labels_present": 400,
+  "omission_trials": 0,
+  "correctness_rule": "channel-8 VisCue target side compared with the channel-9 DataLabel-declared L/R code within the first action bout; no-response or undecodable trials have no correctness label",
+  "omission_rule": "no channel-9 action edge in the cue-onset-to-next-cue interval; late responses are not classified separately",
   "deadline_column_present": false,
   "target_time_per_trial_marker_present": false,
   "target_time_source": "cue duration about 0.2 s plus about 2 s after cue disappearance per official task appendix; exact onset remains unmarked",
-  "assumed_2p2_rt_median_s": 0.0148437500000113,
-  "assumed_2p2_rt_under_100ms": 399,
+  "assumed_2p2_rt_median_s": null,
+  "assumed_2p2_rt_under_100ms": 0,
   "assumed_2p0_rt_median_s": 0.21484375,
-  "missingness_note": "A missing correctness/deadline value is structural until target truth/deadline are supplied; it is not a negative outcome.",
+  "missingness_note": "Target onset and deadline remain unavailable, so reaction-time duration and late-response classification remain unknown. Correctness and interval-level no-response labels are derived from channel 8/9 semantics.",
   "data_units_note": "Raw EEG unit is not independently documented in the MAT metadata."
 }

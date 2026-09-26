@@ -17,11 +17,11 @@
       "state_proxy": "V 视觉前馈代理",
       "n_left": 54,
       "n_right": 46,
-      "mean_left": 1.8466450743680523,
+      "mean_left": 1.846645074366615,
       "mean_right": 1.3110740615532215,
-      "mean_difference_right_minus_left": -0.5355710128148308,
-      "pooled_sd": 38.425716309875,
-      "cohens_d_right_minus_left": -0.013937827690597787,
+      "mean_difference_right_minus_left": -0.5355710128133935,
+      "pooled_sd": 38.42571630987506,
+      "cohens_d_right_minus_left": -0.013937827690560362,
       "inference": "descriptive per-record effect; no participant-level p-value"
     },
     {
@@ -32,10 +32,10 @@
       "n_left": 54,
       "n_right": 46,
       "mean_left": 2.6509755742996277,
-      "mean_right": 2.6522638865336945,
-      "mean_difference_right_minus_left": 0.0012883122340667796,
+      "mean_right": 2.6522638865336936,
+      "mean_difference_right_minus_left": 0.0012883122340658915,
       "pooled_sd": 0.8378900216435603,
-      "cohens_d_right_minus_left": 0.0015375672233686412,
+      "cohens_d_right_minus_left": 0.001537567223367581,
       "inference": "descriptive per-record effect; no participant-level p-value"
     },
     {
@@ -132,8 +132,8 @@
       "mean_left": 2.641515512372247,
       "mean_right": 2.667038476722063,
       "mean_difference_right_minus_left": 0.025522964349816046,
-      "pooled_sd": 0.7421640084982007,
-      "cohens_d_right_minus_left": 0.034389924676437506,
+      "pooled_sd": 0.7421640084982001,
+      "cohens_d_right_minus_left": 0.03438992467643753,
       "inference": "descriptive per-record effect; no participant-level p-value"
     },
     {
@@ -143,11 +143,11 @@
       "state_proxy": "V 视觉前馈代理",
       "n_left": 46,
       "n_right": 47,
-      "mean_left": -4.26348171462225,
+      "mean_left": -4.263481714622144,
       "mean_right": -12.54095425195146,
-      "mean_difference_right_minus_left": -8.27747253732921,
-      "pooled_sd": 75.48500367302329,
-      "cohens_d_right_minus_left": -0.1096571787051181,
+      "mean_difference_right_minus_left": -8.277472537329317,
+      "pooled_sd": 75.4850036730233,
+      "cohens_d_right_minus_left": -0.10965717870511948,
       "inference": "descriptive per-record effect; no participant-level p-value"
     },
     {
@@ -172,10 +172,10 @@
       "n_left": 46,
       "n_right": 47,
       "mean_left": 2.4190800743513137,
-      "mean_right": 2.5103816092437667,
-      "mean_difference_right_minus_left": 0.09130153489245307,
+      "mean_right": 2.5103816092437663,
+      "mean_difference_right_minus_left": 0.09130153489245263,
       "pooled_sd": 0.6070874077060008,
-      "cohens_d_right_minus_left": 0.15039273378680987,
+      "cohens_d_right_minus_left": 0.15039273378680912,
       "inference": "descriptive per-record effect; no participant-level p-value"
     }
   ],
@@ -184,7 +184,7 @@
       "stage": "cue_locked",
       "state_proxy": "V 视觉前馈代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.04797873628368561,
+      "equal_record_mean_cohens_d": 0.04797873628369462,
       "records_positive": 2,
       "records_negative": 2,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -193,7 +193,7 @@
       "stage": "cue_locked",
       "state_proxy": "H 记忆匹配代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.03368916963713177,
+      "equal_record_mean_cohens_d": 0.03368916963713149,
       "records_positive": 3,
       "records_negative": 1,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -202,7 +202,7 @@
       "stage": "cue_locked",
       "state_proxy": "P 认知控制代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.1032591484734422,
+      "equal_record_mean_cohens_d": 0.10325914847344202,
       "records_positive": 3,
       "records_negative": 1,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -211,7 +211,7 @@
       "stage": "target_locked",
       "state_proxy": "V 视觉前馈代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": -0.027404235889901037,
+      "equal_record_mean_cohens_d": -0.02740423588994113,
       "records_positive": 2,
       "records_negative": 2,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -220,7 +220,7 @@
       "stage": "target_locked",
       "state_proxy": "H 记忆匹配代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": -0.15072369514048903,
+      "equal_record_mean_cohens_d": -0.1507236951404901,
       "records_positive": 0,
       "records_negative": 4,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -229,7 +229,7 @@
       "stage": "target_locked",
       "state_proxy": "P 认知控制代理",
       "n_record_estimates": 4,
-      "equal_record_mean_cohens_d": 0.25079736972998184,
+      "equal_record_mean_cohens_d": 0.2507973697299815,
       "records_positive": 3,
       "records_negative": 1,
       "interpretation": "descriptive only; four record groups, no participant-level inference"
@@ -257,11 +257,11 @@
   "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
   "ddm_gate": {
     "response_trials": 400,
-    "no_response_marker_trials": 0,
-    "rt_observed_trials": 400,
-    "rt_at_least_minimum_for_ddm": 1,
-    "rt_below_minimum_for_ddm": 399,
-    "rt_median_s": 0.0148437500000113,
+    "no_response_marker_observed_trials": 0,
+    "rt_observed_trials": 0,
+    "rt_at_least_minimum_for_ddm": 0,
+    "rt_below_minimum_for_ddm": 0,
+    "rt_median_s": null,
     "minimum_rt_gate_s": 0.1,
     "deadline_known": false
   },

@@ -31,7 +31,7 @@ BODY = r"""# 问题重述与分析
 
 题目要求在问题二脑电形成机制的基础上建立认知宏观模型，从实测脑电中截取与视觉认知相关的信号并验证模型；题面同时提醒，应答可能错误，也可能未及时发生\cite{problem2026}。本题数据提供四份连续记录、F3/Fz/F4三个脑电通道、视觉提示通道VisCue以及第9通道行动标记和时间戳。问题二给出的视觉前端与源到头皮的正向机制可为视觉驱动和电极观测关系提供结构约束。
 
-本实现把“模型构造”和“事件真值”分开处理。动态状态由问题二前向视觉驱动及预设情景产生，实测EEG只用于训练折中的传感器映射拟合和外层留出评价。第9通道的事件语义与候选目标时刻尚未独立澄清，因此主验证使用VisCue对齐的固定时间窗，不将其改写为真实反应时或目标锁定信号。
+本实现把“模型构造”和“事件真值”分开处理。动态状态由问题二前向视觉驱动及预设情景产生，实测EEG只用于训练折中的传感器映射拟合和外层留出评价。按参考模型，第9通道零到非零边沿定义为应答时刻`t_act`，用于补充定义应答前累计窗和末500 ms窗；它不作为EEG特征、状态或回归输入。目标呈现时刻没有逐试次标记，因此`t_act`相对目标 onset 的反应时长仍未知。
 
 ## 问题分析
 
@@ -75,7 +75,7 @@ BODY = r"""# 问题重述与分析
 
 质量筛选检查epoch是否越过记录边界或与下一提示重叠，是否存在非有限值、原始幅度绝对值不小于999.5的样本，以及任一通道是否平直。原始数据单位未独立校准，因此幅度门槛以原始单位表述，不换算为微伏。筛选后保留355个完整试次，覆盖四份记录；所有分支使用同一纳入集合。
 
-事件审计在每个提示区间中检出一个第9通道起始沿，标记相对提示的中位时间为2.2148 s，5%至95%分位数为2.2148至2.2188 s。题面将第9通道说明为目标应答，但该边沿与候选cue+2.2 s时刻接近，且未提供独立target-onset时间。因此，第9通道仅用于检查事件配对和时间分布，不作为反应时起点、正确/错误标签、漏答标签或EEG预测特征。题目提出的“应答前约100 ms”信号终点在当前数据口径下无法独立定位，本文不将其称为已验证的动作前窗口。
+事件审计在每个提示区间中检出一个第9通道起始沿，标记相对提示的中位时间为2.2148 s，5%至95%分位数为2.2148至2.2188 s。依参考模型，将唯一的零到非零边沿作为绝对应答时刻`t_act`，并以`t_act-100 ms`作为应答前窗口截止点。候选cue+2.2 s仅是目标时间计划代理，不能用于推定真实反应时长；正确性和漏答状态也仍需真实值及截止时间。
 
 图1用于说明已观测提示、通道9标记、候选目标时刻和实际评价窗口之间的关系。其作用是界定可观测边界；图中的候选线不表示真实目标起点。
 
@@ -211,7 +211,7 @@ $\Delta_H>0$表示加入H后误差下降。先在每份留出记录内对提示�
 
 本模型把问题二的视觉前向动力学和三电极观测端接入动态认知状态，使视觉驱动、记忆相关过程和控制/冲突过程具有明确时序方程；四份记录整份留出，降低了同一文件信号同时进入训练与验证造成的信息泄漏。共同预处理、训练折内标准化和预设候选网格也使不同状态模型可以在一致口径下比较。
 
-当前证据仍有明确边界。第一，晚期窗固定在提示后0.8至2.8 s，通道9标记集中在约2.215 s，目标起点却没有独立标记。因此晚期窗不能解释成纯粹的目标后记忆阶段，也不能替代题面提出的应答前约100 ms终点。第二，目标类型、时刻与匹配证据是情景输入，真实试次的目标、正确性、反应时和漏答状态仍未知；本研究没有训练DDM或行为分类器。第三，状态参数采用预设值，训练折估计的只是传感器映射系数；若时间常数或情景映射与真实实验不符，H/P的形态可能错位。第四，四份记录并未确认对应四名独立受试者，NRMSE均值和标准差不能替代外部样本验证或显著性检验。第五，三个电极不足以唯一分解五个源代理，加载系数仅有传感器预测意义，不证明海马或前额叶来源。第六，不同滤波口径改变误差，零相位结果只适用于离线分析，因果滤波结果虽保留时间因果性但仍有相位延迟。
+当前证据仍有明确边界。第一，晚期窗固定在提示后0.8至2.8 s，不能解释成纯粹的目标后记忆阶段；按`t_act-100 ms`另算的应答前分数使用留出记录×提示侧组中位端点，不是逐试次分类。第二，目标类型、时刻与匹配证据是情景输入，真实试次的目标、正确性、反应时长和漏答状态仍未知；本研究没有训练DDM或行为分类器。第三，状态参数采用预设值，训练折估计的只是传感器映射系数；若时间常数或情景映射与真实实验不符，H/P的形态可能错位。第四，四份记录并未确认对应四名独立受试者，NRMSE均值和标准差不能替代外部样本验证或显著性检验。第五，三个电极不足以唯一分解五个源代理，加载系数仅有传感器预测意义，不证明海马或前额叶来源。第六，不同滤波口径改变误差，零相位结果只适用于离线分析，因果滤波结果虽保留时间因果性但仍有相位延迟。
 
 后续若取得逐试次target-onset、刺激真值、任务文件映射、反应截止时间和行为日志，可先冻结事件语义与主评价窗，再只在各外层训练记录内部估计时间常数或增益，并保留整份记录作为最终评估。若新增状态仍不能在不同记录、目标候选时刻和合理预处理下稳定降低留出误差，应将其保留为可复核的建模假设，而不将结构设想写成已确认的认知机制。现阶段结论限于：动态状态模型已按代码实现并完成记录留出验证；当前样本尚未显示记忆态的稳定晚期预测增益。
 
@@ -293,7 +293,7 @@ def prepare_inputs() -> None:
     write_json(INPUTS / "claim_registry.json", {
         "claims": [
             {"id": "Q3_DATA_400_355", "claim": "400 audited cue events; 355 included trials across four records", "evidence": "validation_summary.json:n_trials_audited,n_trials_included,n_records_included"},
-            {"id": "Q3_MARKER_SEMANTICS", "claim": "channel-9 marker median is 2.2148 s relative to cue; target onset and behavioral labels are not used", "evidence": "validation_summary.json:event_marker_summary,behavioral_labels_used,channel9_used_in_eeg_or_model"},
+            {"id": "Q3_MARKER_SEMANTICS", "claim": "channel-9 zero-to-nonzero edge defines t_act per the reference model and sets response-window endpoints; it is not an EEG predictor", "evidence": "validation_summary.json:t_act_definition,channel9_used_for_response_window_scoring,channel9_used_as_predictor_or_state_input"},
             {"id": "Q3_Q2_PROJECTION", "claim": "Q2 forward projection maximum absolute discrepancy is 5.954e-08", "evidence": "validation_summary.json:q2_projection_max_abs_error"},
             {"id": "Q3_MEMORY_NO_STABLE_GAIN", "claim": "only 2 of 9 nonempty-onset preprocessing cells improve; overall gain is preprocessing-sensitive", "evidence": "validation_summary.json:memory_improvement_by_preprocessing,positive_preprocessing_onset_cells,total_preprocessing_onset_cells"},
             {"id": "Q3_FOUR_RECORD_CV", "claim": "the outer validation leaves out one full record file at a time", "evidence": "validation_summary.json:split"},
@@ -309,7 +309,7 @@ def prepare_inputs() -> None:
     })
     write_json(INPUTS / "figure_registry.json", {
         "figures": [
-            {"file": "output/dynamic_heldout_validation/figures/analysis_event_windows.png", "claim": "response-marker timing is not independently identifiable as target onset", "use": "event semantics and analysis windows"},
+            {"file": "output/dynamic_heldout_validation/figures/analysis_event_windows.png", "claim": "t_act and t_act-minus-100-ms response-window endpoints alongside candidate target times", "use": "event semantics and analysis windows"},
             {"file": "output/dynamic_heldout_validation/figures/observed_three_channel_stages.png", "claim": "cue-aligned measured traces and record-group variability", "use": "data description"},
             {"file": "output/dynamic_heldout_validation/figures/dynamic_states_sensor_contributions.png", "claim": "scenario states and training-fitted sensor contributions", "use": "model interpretation with non-anatomical caveat"},
             {"file": "output/dynamic_heldout_validation/figures/heldout_model_comparison.png", "claim": "cross-record prediction error differs by model and stage", "use": "model comparison"},
@@ -516,7 +516,7 @@ def render_and_report(markdown: str, tex: str, summary: dict) -> dict:
     generation_report = {
         "status": "PASS",
         "scope": "Q3 dynamic macro-state solution paper only",
-        "primary_data": {key: summary[key] for key in ("n_trials_audited", "n_trials_included", "n_records_included", "split", "behavioral_labels_used", "channel9_used_in_eeg_or_model")},
+        "primary_data": {key: summary[key] for key in ("n_trials_audited", "n_trials_included", "n_records_included", "split", "behavioral_labels_used", "t_act_definition", "channel9_used_for_response_window_scoring", "channel9_used_as_predictor_or_state_input", "n_record_cue_groups_with_t_act_windows")},
         "primary_result": summary["memory_improvement_by_preprocessing"],
         "onset_cells": {"positive": summary["positive_preprocessing_onset_cells"], "total": summary["total_preprocessing_onset_cells"]},
         "numerical_interface_check": summary["q2_projection_max_abs_error"],

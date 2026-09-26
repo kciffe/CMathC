@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -14,8 +15,9 @@ from config import (
     ALLOWED_CHANNELS,
     OUTPUT_DIR,
     Q1_CLEAN_DIR,
-    REPO_ROOT,
+    RAW_DATA_DIR,
     RECORDS,
+    RESPONSE_ANALYSIS_WINDOW_S,
     RESPONSE_CHANNEL_NAMES,
     TARGET_OFFSET_S,
     TARGET_OFFSET_SOURCE,
@@ -69,10 +71,9 @@ def _selected_channel_indices(
 
 
 def find_record_path(record: str) -> Path:
-    candidates = (REPO_ROOT / "data").rglob(f"{record}.mat")
-    path = next(candidates, None)
-    if path is None:
-        raise FileNotFoundError(f"Could not find raw MAT file for {record}")
+    path = RAW_DATA_DIR / f"{record}.mat"
+    if not path.exists():
+        raise FileNotFoundError(f"Could not find raw MAT file for {record}: {path}")
     return path
 
 
@@ -175,6 +176,223 @@ def detect_response_events(
     ]
 
 
+def _response_code_legend(response_label: str) -> dict[str, float]:
+    return {
+        side.upper(): float(value)
+        for side, value in re.findall(
+            r"([LR])\s*([+-]?\d+(?:\.\d+)?)", str(response_label), flags=re.IGNORECASE
+        )
+    }
+
+
+def measure_response_window(
+    raw_response: np.ndarray,
+    timestamps: np.ndarray,
+    cue_sample_index: int,
+    trial_start_sample_index: int,
+    trial_end_sample_index: int,
+    sample_rate_hz: float,
+    response_label: str,
+    response_onset_sample_index: int | None,
+) -> dict[str, Any]:
+    """Measure the cue-centered response window and first full action-bout duration.
+
+    Timeliness is defined by the L/R code declared in the channel-9 DataLabel:
+    the declared code must occur between cue-1 s and cue+5 s. A nonzero action
+    elsewhere in the cue-to-next-cue interval is late. This is a task-defined
+    timing label, not a target-onset reaction time.
+    """
+    signal = np.asarray(raw_response, dtype=np.float64).reshape(-1)
+    time = np.asarray(timestamps, dtype=np.float64).reshape(-1)
+    cue_index = int(cue_sample_index)
+    trial_start = int(trial_start_sample_index)
+    trial_end = min(int(trial_end_sample_index), signal.size, time.size)
+    cue_time = float(time[cue_index])
+    window_start_s = cue_time + RESPONSE_ANALYSIS_WINDOW_S[0]
+    window_end_s = cue_time + RESPONSE_ANALYSIS_WINDOW_S[1]
+    window_start = int(np.searchsorted(time, window_start_s, side="left"))
+    window_end = int(np.searchsorted(time, window_end_s, side="right"))
+    window_end_clipped = min(window_end, signal.size, time.size)
+    window_start_clipped = min(window_start, window_end_clipped)
+    window = signal[window_start_clipped:window_end_clipped]
+    window_active = np.isfinite(window) & (window != 0)
+    trial = signal[trial_start:trial_end]
+    trial_active = np.isfinite(trial) & (trial != 0)
+
+    legend = _response_code_legend(response_label)
+    legend_valid = (
+        set(legend) == {"L", "R"}
+        and np.sign(legend["L"]) == -1
+        and np.sign(legend["R"]) == 1
+    )
+    declared_code_count = 0
+    declared_code_time = np.nan
+    if legend_valid and window.size:
+        code_mask = np.zeros(window.shape, dtype=bool)
+        for code in legend.values():
+            code_mask |= np.isclose(window, code, rtol=0.0, atol=1e-8)
+        declared_code_count = int(code_mask.sum())
+        if declared_code_count:
+            declared_code_time = float(time[window_start_clipped + int(np.flatnonzero(code_mask)[0])])
+
+    recording_start_s = float(time[0]) if time.size else np.inf
+    recording_end_exclusive_s = (
+        float(time[-1] + 1.0 / sample_rate_hz) if time.size else -np.inf
+    )
+    window_fully_observed = bool(
+        window_start_s >= recording_start_s
+        and window_end_s <= recording_end_exclusive_s + 1e-9
+        and window_end <= min(signal.size, time.size)
+    )
+    any_response = bool(window_active.any() or trial_active.any())
+    if declared_code_count:
+        timeliness_status = "timely_declared_response_code_in_cue_window"
+        is_timely: float = 1.0
+        is_late: float = 0.0
+    elif not window_fully_observed:
+        timeliness_status = "response_window_not_fully_recorded"
+        is_timely = np.nan
+        is_late = np.nan
+    elif not any_response:
+        timeliness_status = "no_response_in_cue_window_or_trial_interval"
+        is_timely = 0.0
+        is_late = 0.0
+    elif not legend_valid:
+        timeliness_status = "response_label_code_unreadable"
+        is_timely = np.nan
+        is_late = np.nan
+    else:
+        timeliness_status = "late_declared_response_code_outside_cue_window"
+        is_timely = 0.0
+        is_late = 1.0
+
+    response_duration_s = np.nan
+    response_bout_end_time_s = np.nan
+    if response_onset_sample_index is not None:
+        bout_start = int(response_onset_sample_index)
+        bout_stop_limit = min(trial_end, signal.size)
+        if 0 <= bout_start < bout_stop_limit and np.isfinite(signal[bout_start]) and signal[bout_start] != 0:
+            bout_stop = bout_start + 1
+            while bout_stop < bout_stop_limit and np.isfinite(signal[bout_stop]) and signal[bout_stop] != 0:
+                bout_stop += 1
+            response_duration_s = float((bout_stop - bout_start) / sample_rate_hz)
+            if bout_stop < time.size:
+                response_bout_end_time_s = float(time[bout_stop])
+            elif time.size:
+                response_bout_end_time_s = float(time[-1] + 1.0 / sample_rate_hz)
+
+    return {
+        "response_analysis_window_start_s": window_start_s,
+        "response_analysis_window_end_s": window_end_s,
+        "response_analysis_window_start_sample_index": window_start_clipped,
+        "response_analysis_window_end_sample_index_exclusive": window_end_clipped,
+        "response_window_fully_observed": window_fully_observed,
+        "response_nonzero_sample_count_in_analysis_window": int(window_active.sum()),
+        "response_present_in_analysis_window": bool(window_active.any()),
+        "response_declared_code_sample_count_in_analysis_window": declared_code_count,
+        "response_declared_code_time_in_analysis_window_s": declared_code_time,
+        "timeliness_status": timeliness_status,
+        "is_timely": is_timely,
+        "is_late": is_late,
+        "response_duration_s": response_duration_s,
+        "response_bout_end_time_s": response_bout_end_time_s,
+    }
+
+
+def decode_response_bout(
+    raw_response: np.ndarray,
+    onset_sample_index: int,
+    interval_end_sample_index: int,
+    response_label: str,
+) -> dict[str, Any]:
+    """Decode one action bout using the response codes declared in its MAT label.
+
+    The onset remains the first zero-to-nonzero edge. Some TgtAct records change
+    from a signed ±1 level to the declared signed ±2 click code within that same
+    nonzero bout, so magnitude codes are not treated as separate responses.
+    """
+    signal = np.asarray(raw_response, dtype=np.float64).reshape(-1)
+    start = int(onset_sample_index)
+    stop_limit = min(int(interval_end_sample_index), signal.size)
+    if start < 0 or start >= stop_limit or not np.isfinite(signal[start]) or signal[start] == 0:
+        return {
+            "choice_side": None,
+            "decode_status": "invalid_response_bout_start",
+            "declared_response_code": None,
+            "bout_code_sequence": "",
+        }
+
+    stop = start + 1
+    while stop < stop_limit and np.isfinite(signal[stop]) and signal[stop] != 0:
+        stop += 1
+    bout = signal[start:stop]
+    signs = np.unique(np.sign(bout[np.isfinite(bout) & (bout != 0)]))
+    code_sequence = list(dict.fromkeys(int(value) for value in bout if np.isfinite(value)))
+    sequence_text = "|".join(str(value) for value in code_sequence)
+    if signs.size != 1:
+        return {
+            "choice_side": None,
+            "decode_status": "conflicting_or_missing_direction_within_response_bout",
+            "declared_response_code": None,
+            "bout_code_sequence": sequence_text,
+        }
+
+    legend = _response_code_legend(response_label)
+    if set(legend) != {"L", "R"} or np.sign(legend["L"]) != -1 or np.sign(legend["R"]) != 1:
+        return {
+            "choice_side": None,
+            "decode_status": "response_channel_legend_unreadable",
+            "declared_response_code": None,
+            "bout_code_sequence": sequence_text,
+        }
+
+    matching_sides = [
+        side for side, code in legend.items()
+        if np.any(np.isclose(bout, code, rtol=0.0, atol=1e-8))
+    ]
+    if len(matching_sides) != 1:
+        return {
+            "choice_side": None,
+            "decode_status": "declared_response_code_missing_or_ambiguous_in_bout",
+            "declared_response_code": None,
+            "bout_code_sequence": sequence_text,
+        }
+
+    side = matching_sides[0]
+    expected_sign = -1 if side == "L" else 1
+    if int(signs[0]) != expected_sign:
+        return {
+            "choice_side": None,
+            "decode_status": "response_bout_sign_conflicts_with_mat_legend",
+            "declared_response_code": legend[side],
+            "bout_code_sequence": sequence_text,
+        }
+    if channel_name(response_label).lower() == "tgtact":
+        onset_stage_code = float(expected_sign)
+        declared_code = float(legend[side])
+        onset_stage_index = next(
+            (i for i, value in enumerate(code_sequence) if np.isclose(value, onset_stage_code)),
+            None,
+        )
+        declared_code_index = next(
+            (i for i, value in enumerate(code_sequence) if np.isclose(value, declared_code)),
+            None,
+        )
+        if onset_stage_index != 0 or declared_code_index is None or declared_code_index <= onset_stage_index:
+            return {
+                "choice_side": None,
+                "decode_status": "tgtact_requires_signed_stage1_then_declared_stage2_code",
+                "declared_response_code": declared_code,
+                "bout_code_sequence": sequence_text,
+            }
+    return {
+        "choice_side": expected_sign,
+        "decode_status": "decoded_from_declared_channel_code",
+        "declared_response_code": legend[side],
+        "bout_code_sequence": sequence_text,
+    }
+
+
 def load_q1_clean(record: str) -> dict[str, Any]:
     """Load Q1 quality-retained trials, selecting EEG/VisCue/TimeStamp only."""
     path = Q1_CLEAN_DIR / f"{record}_clean.mat"
@@ -267,10 +485,38 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
             for response in response_events
             if trial_start <= response["response_sample_index"] < trial_end
         ]
+        response = trial_responses[0] if trial_responses else None
+        decoded_response = (
+            decode_response_bout(
+                raw["response_signal"],
+                response["response_sample_index"],
+                trial_end,
+                raw["response_label"],
+            )
+            if response is not None
+            else {
+                "choice_side": None,
+                "decode_status": "no_response_bout",
+                "declared_response_code": None,
+                "bout_code_sequence": "",
+            }
+        )
+        response_timing = measure_response_window(
+            raw["response_signal"],
+            timestamps,
+            int(event["cue_sample_index"]),
+            trial_start,
+            trial_end,
+            sr,
+            raw["response_label"],
+            int(response["response_sample_index"]) if response is not None else None,
+        )
         response_by_trial[trial_index] = {
             "response_events": trial_responses,
             "response_event_count": len(trial_responses),
-            "response": trial_responses[0] if trial_responses else None,
+            "response": response,
+            "decoded_response": decoded_response,
+            "response_timing": response_timing,
         }
 
     quality = load_quality_table(record)
@@ -354,18 +600,24 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
         q1_match = mapping.get(original_index)
         response_info = response_by_trial[original_index]
         response = response_info["response"]
+        decoded_response = response_info["decoded_response"]
+        response_count = int(response_info["response_event_count"])
         response_code = int(response["response_code"]) if response else 0
         response_time = float(response["response_time_s"]) if response else np.nan
-        target_time = float(event["cue_time_s"] + TARGET_OFFSET_S)
-        reaction_time = response_time - target_time if response else np.nan
+        target_side = int(event["cue_side"])
+        response_side = decoded_response["choice_side"]
+        correct = int(response_side == target_side) if response_side is not None else np.nan
+        is_omission = int(response_count == 0)
+        target_time_proxy = float(event["cue_time_s"] + TARGET_OFFSET_S)
+        schedule_rt_proxy = response_time - target_time_proxy if response else np.nan
         if response is None:
-            rt_status = "no_response_marker"
-        elif reaction_time < 0:
-            rt_status = "before_assumed_target"
-        elif reaction_time < 0.10:
-            rt_status = "shorter_than_100ms_review_timing_anchor"
+            rt_status = "no_response_marker_observed_deadline_unknown"
+        elif schedule_rt_proxy < 0:
+            rt_status = "before_assumed_target_schedule_proxy"
+        elif schedule_rt_proxy < 0.10:
+            rt_status = "under_100ms_from_schedule_proxy_review_anchor"
         else:
-            rt_status = "nonnegative_100ms_or_more"
+            rt_status = "schedule_proxy_only_not_verified_rt"
         quality_info = quality_by_trial.get(original_index, {})
         q1_drop = quality_info.get("q1_final_drop")
         if q1_match is not None:
@@ -381,7 +633,8 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "record": record,
                 **event,
                 "cue_side_text": "left" if event["cue_side"] < 0 else "right",
-                "target_time_s": target_time,
+                # Keep the legacy field name as a schedule-only target proxy.
+                "target_time_s": target_time_proxy,
                 "target_time_source": TARGET_OFFSET_SOURCE,
                 "task_type": "unresolved_from_allowed_channels",
                 "q1_trial_index": q1_match["q1_trial_index"] if q1_match else None,
@@ -390,18 +643,52 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "q1_final_drop": q1_drop,
                 "eeg_quality": eeg_quality,
                 "response_channel_label": raw["response_label"],
-                "response_event_count": response_info["response_event_count"],
+                "response_event_count": response_count,
                 "response_raw": response["response_raw"] if response else np.nan,
                 "response_code": response_code,
+                # Channel 9's zero-to-nonzero edge is the response time t_act.
+                # Keep the legacy name as an alias for existing readers.
+                "t_act_s": response_time,
                 "response_time_s": response_time,
-                "response_side": "left" if response_code < 0 else "right" if response_code > 0 else "",
-                "choice_side": response["choice_side"] if response else np.nan,
-                "choice_side_text": "left" if response_code < 0 else "right" if response_code > 0 else "",
-                "reaction_time_s": reaction_time,
+                "response_side": "left" if response_side == -1 else "right" if response_side == 1 else "",
+                "choice_side": response_side if response_side is not None else np.nan,
+                "choice_side_text": "left" if response_side == -1 else "right" if response_side == 1 else "",
+                "response_decode_status": decoded_response["decode_status"],
+                "response_declared_code": decoded_response["declared_response_code"],
+                "response_bout_code_sequence": decoded_response["bout_code_sequence"],
+                **response_info["response_timing"],
+                "target_side": target_side,
+                "correct_response_side": target_side,
+                "target_time_schedule_proxy_s": target_time_proxy,
+                "scheduled_rt_proxy_s": schedule_rt_proxy,
+                # RT duration needs a verified target onset, which is not
+                # available in the raw event channels.
+                "reaction_time_s": np.nan,
                 "rt_status": rt_status,
-                "correct": np.nan,
-                "is_omission": response is None,
-                "behavior_label_status": "channel9_response_marker" if response else "no_channel9_response_marker",
+                "correct": correct,
+                "correctness_status": (
+                    "channel8_target_side_vs_declared_channel9_action_code"
+                    if response_side is not None
+                    else "not_applicable_no_response"
+                    if response_count == 0
+                    else "response_side_unresolved_from_declared_code"
+                ),
+                "is_omission": is_omission,
+                "response_marker_present": response is not None,
+                "omission_status": (
+                    "no_channel9_edge_in_cue_to_next_cue_interval"
+                    if response_count == 0
+                    else "response_observed_in_cue_to_next_cue_interval"
+                ),
+                "behavior_label_status": (
+                    "channel9_side_unresolved_from_declared_code"
+                    if response_count > 0 and response_side is None
+                    else "first_channel9_action_labeled_multiple_edges"
+                    if response_count > 1
+                    else "channel8_channel9_outcome_labeled"
+                    if response_count == 1
+                    else "channel9_no_action_in_cue_interval"
+                ),
             }
         )
 
@@ -422,11 +709,14 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
         "response_channel_label": raw["response_label"],
         "response_trial_count": sum(info["response_event_count"] > 0 for info in response_by_trial.values()),
         "multiple_response_trial_count": sum(info["response_event_count"] > 1 for info in response_by_trial.values()),
-        "omission_marker_count": sum(info["response_event_count"] == 0 for info in response_by_trial.values()),
-        "rt_median_s": float(np.nanmedian([row["reaction_time_s"] for row in event_rows]))
-        if any(np.isfinite(row["reaction_time_s"]) for row in event_rows)
+        "no_response_marker_count": sum(info["response_event_count"] == 0 for info in response_by_trial.values()),
+        "scheduled_rt_proxy_median_s": float(np.nanmedian([row["scheduled_rt_proxy_s"] for row in event_rows]))
+        if any(np.isfinite(row["scheduled_rt_proxy_s"]) for row in event_rows)
         else np.nan,
-        "rt_under_100ms_count": sum(row["rt_status"] == "shorter_than_100ms_review_timing_anchor" for row in event_rows),
+        "scheduled_rt_proxy_under_100ms_count": sum(
+            row["rt_status"] == "under_100ms_from_schedule_proxy_review_anchor"
+            for row in event_rows
+        ),
         "q1_clean_trial_count": len(clean["clean_events"]),
         "q1_timestamp_mapping_count": len(mapping),
         "q1_quality_csv_order_validated": quality_order_validated,

@@ -204,12 +204,17 @@ def main() -> None:
             "response_code": int(pre_archive["response_code"][index]),
             "choice_side": int(np.sign(pre_archive["response_code"][index])),
             "stage": "pre_response_endpoint",
-            "analysis_variant": "cue_to_marker_minus_100ms",
+            "analysis_variant": "cue_to_t_act_minus_100ms",
             "filename_task_code_candidate": filename_task_code,
             "task_mapping_status": "filename suffix only; project/task semantics not independently verified",
             "sample_rate_hz": float(pre_archive["sample_rate_hz"][index]),
             "window_n_samples": length,
             "window_duration_s": float(pre_archive["window_duration_s"][index]),
+            "t_act_s": (
+                float(pre_archive["t_act_s"][index])
+                if "t_act_s" in pre_archive
+                else float(pre_archive["response_time_s"][index])
+            ),
             "response_time_s": float(pre_archive["response_time_s"][index]),
             "endpoint_status": str(pre_archive["endpoint_status"][index]),
         }

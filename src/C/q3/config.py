@@ -42,6 +42,12 @@ TARGET_OFFSET_S = 2.2
 TARGET_OFFSET_SOURCE = "0.2s_cue_plus_approx_2.0s_wait_schedule_assumption"
 MIN_DDM_RT_S = 0.10
 
+# User-defined behavioral trial window around the channel-8 cue.
+# The Task-specific declared channel-9 response code inside this window marks
+# a timely response; a response elsewhere in the cue-to-next-cue interval is
+# recorded separately as late.
+RESPONSE_ANALYSIS_WINDOW_S = (-1.0, 5.0)
+
 # Exploratory signal window that stops about 100 ms before the action marker.
 # It is extracted from a uniformly filtered pass over the full continuous EEG.
 PRE_RESPONSE_WINDOW_S = (-1.10, -0.10)

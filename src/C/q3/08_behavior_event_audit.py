@@ -6,8 +6,9 @@ Run from the repository root after scripts 01_audit_events.py and
     python src/C/q3/08_behavior_event_audit.py
 
 If external input tables are missing, this script creates keyed CSV templates
-under ``src/C/q3/input/`` and still writes a partial audit. Blank labels,
-target onsets, deadlines, and identities remain explicitly unknown.
+under ``src/C/q3/input/`` and still audits channel-derived correctness and
+cue-interval omissions. Target onsets, deadlines, and record identities remain
+unknown unless independently supplied.
 
 All event times must use the same absolute recording clock as the MAT
 ``TimeStamp`` channel. See ``src/C/q3/input/README_外部信息表说明.md`` for the
@@ -127,10 +128,10 @@ def _write_input_readme(path: Path) -> None:
         "`src/C/q3/output/trial_table.csv` 对齐。试次编号从 0 开始。不要按行号\n"
         "猜测对应关系。保留空值表示未知，不要填 0 代替未知。\n\n"
         "## trial_truth.csv\n\n"
-        "必填列：`record`、`original_trial_index`、`correct_response_side`。\n"
-        "正确响应侧填 `left/right` 或 `-1/+1`，由该试次真实目标和任务规则决定；\n"
-        "不能直接复制 VisCue 标签。`truth_source` 填真值表/实验记录的来源。\n"
-        "`authoritative_omission` 可选，只有实验日志明确标注漏答时才填 true/false。\n\n"
+        "该表为可选的独立核验表，列为 `record`、`original_trial_index`、\n"
+        "`correct_response_side`、`truth_source`、`authoritative_omission`。\n"
+        "题目已定义通道8 VisCue 为目标侧（-1左、+1右），主分析直接用通道8；\n"
+        "此表只用于独立核对，不是生成正确/错误标签的前置条件。\n\n"
         "## event_log.csv\n\n"
         "真实事件日志是可选输入。没有真实 target marker 时，脚本沿用 trial_table.csv\n"
         "已有 cue+2.2 s 排程锚点，并明确标记为假设值，不称为真实 target onset。\n"
@@ -145,10 +146,9 @@ def _write_input_readme(path: Path) -> None:
         "按实验登记表填写，不能根据文件名推断被试或真实任务编号。编码信息会另从\n"
         "MAT 的 DataLabel、VisCue 事件取值和当前事件解析代码中审计。\n\n"
         "## 判定口径\n\n"
-        "脚本用 MAT 的 Action/TgtAct 响应事件作为实际选择，并按 MAT 通道标签中的\n"
-        "L/R 数值码解码。只有真值和可解码响应均存在时才判正确/错误。没有响应事件\n"
-        "时，只有日志明确标注漏答，或提供了截止时刻且 MAT 记录覆盖到截止时刻，才\n"
-        "记为已核实漏答；否则记为无法判定。目标 onset 缺失时不计算反应时。\n",
+        "脚本将通道8目标侧与通道9首个动作侧比较，生成正确/错误标签。\n"
+        "某 VisCue 到下一 VisCue 区间没有通道9动作边沿，则按本项目口径记为区间漏答；\n"
+        "迟答不单独分类。目标 onset 缺失时不计算真实反应时。\n",
         encoding="utf-8",
     )
 
@@ -372,22 +372,28 @@ def audit_record_metadata(
 
         left_code = response_info["mat_left_response_code"]
         right_code = response_info["mat_right_response_code"]
-        observed_response_codes = sorted(
+        observed_onset_codes = sorted(
             pd.to_numeric(part.get("response_raw", pd.Series(dtype=float)), errors="coerce")
             .dropna()
             .unique()
             .tolist()
         )
-        unmapped_response_codes = [
+        observed_bout_codes = sorted({
+            int(code)
+            for sequence in part.get("response_bout_code_sequence", pd.Series(dtype=str)).dropna().astype(str)
+            for code in sequence.split("|")
+            if code.strip()
+        })
+        unmapped_bout_codes = [
             code
-            for code in observed_response_codes
+            for code in observed_bout_codes
             if left_code is None
             or right_code is None
             or (np.sign(code) != np.sign(left_code) and np.sign(code) != np.sign(right_code))
         ]
-        magnitude_mismatch_codes = [
+        onset_stage_codes = [
             code
-            for code in observed_response_codes
+            for code in observed_onset_codes
             if left_code is not None
             and right_code is not None
             and np.sign(code) in (np.sign(left_code), np.sign(right_code))
@@ -395,8 +401,12 @@ def audit_record_metadata(
         ]
         response_map_ok = (
             response_info["mat_response_code_map_status"] == "parsed_from_mat_channel_label"
-            and not unmapped_response_codes
+            and not unmapped_bout_codes
             and channel_matches is not False
+        )
+        declared_code_coverage = int(
+            pd.to_numeric(part.get("response_declared_code", pd.Series(dtype=float)), errors="coerce")
+            .notna().sum()
         )
         raw_response_signal = np.asarray(raw["response_signal"], dtype=float).reshape(-1)
         raw_response_counts = {
@@ -407,7 +417,8 @@ def audit_record_metadata(
             "left_code": left_code,
             "right_code": right_code,
             "mapping_ok": bool(response_map_ok),
-            "magnitude_mismatch_codes": magnitude_mismatch_codes,
+            "onset_stage_codes": onset_stage_codes,
+            "unmapped_bout_codes": unmapped_bout_codes,
             "mapping_source": "raw MAT DataLabel",
         }
 
@@ -474,15 +485,17 @@ def audit_record_metadata(
                 **response_info,
                 "declared_response_channel": declared_channel or None,
                 "response_channel_matches_mat": channel_matches,
-                "observed_response_event_codes": json.dumps(observed_response_codes),
+                "observed_response_event_codes": json.dumps(observed_onset_codes),
+                "observed_response_bout_codes": json.dumps(observed_bout_codes),
+                "response_declared_code_in_bout_count": declared_code_coverage,
                 "raw_response_sample_code_counts": json.dumps(raw_response_counts),
-                "response_event_codes_with_magnitude_difference": json.dumps(magnitude_mismatch_codes),
-                "unmapped_response_event_codes": json.dumps(unmapped_response_codes),
+                "response_onset_stage_codes_not_in_DataLabel": json.dumps(onset_stage_codes),
+                "unmapped_response_bout_codes": json.dumps(unmapped_bout_codes),
                 "response_code_map_status": (
                     "matched"
-                    if response_map_ok and not magnitude_mismatch_codes
-                    else "sign_consistent_magnitude_differs"
-                    if response_map_ok and magnitude_mismatch_codes
+                    if response_map_ok and not onset_stage_codes
+                    else "declared_code_in_bout_with_onset_stage_codes"
+                    if response_map_ok and onset_stage_codes
                     else response_info["mat_response_code_map_status"]
                 ),
             }
@@ -522,34 +535,45 @@ def _map_response_side(
     count = pd.to_numeric(pd.Series([response_event_count]), errors="coerce").iloc[0]
     if pd.isna(count) or int(count) == 0:
         return np.nan, "no_response_marker"
-    if int(count) > 1:
-        return np.nan, "multiple_response_markers"
+    multiple = int(count) > 1
     if _blank(raw_code):
         return np.nan, "response_code_missing"
     if not code_map.get("mapping_ok", False):
         return np.nan, "response_code_map_unverified"
     if _same_code(raw_code, code_map.get("left_code")):
-        return -1.0, "decoded_from_mat_channel_label"
+        return -1.0, "first_response_from_multiple_events" if multiple else "decoded_from_mat_channel_label"
     if _same_code(raw_code, code_map.get("right_code")):
-        return 1.0, "decoded_from_mat_channel_label"
+        return 1.0, "first_response_from_multiple_events" if multiple else "decoded_from_mat_channel_label"
     if np.sign(float(raw_code)) == np.sign(float(code_map.get("left_code"))):
-        return -1.0, "decoded_by_mat_legend_sign_magnitude_differs"
+        return -1.0, "first_response_from_multiple_events" if multiple else "decoded_by_mat_legend_sign_magnitude_differs"
     if np.sign(float(raw_code)) == np.sign(float(code_map.get("right_code"))):
-        return 1.0, "decoded_by_mat_legend_sign_magnitude_differs"
+        return 1.0, "first_response_from_multiple_events" if multiple else "decoded_by_mat_legend_sign_magnitude_differs"
     return np.nan, "response_code_not_in_mat_channel_legend"
 
 
 def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[str, Any]:
-    response_side, response_decode_status = _map_response_side(
-        getattr(row, "response_raw", np.nan),
-        getattr(row, "response_event_count", np.nan),
-        code_map,
-    )
-    correct_side = getattr(row, "correct_response_side", np.nan)
-    if not np.isfinite(correct_side):
-        correctness = "ground_truth_missing"
-    elif np.isfinite(response_side):
-        correctness = "correct" if response_side == correct_side else "incorrect"
+    if hasattr(row, "response_decode_status"):
+        response_side = pd.to_numeric(
+            pd.Series([getattr(row, "choice_side", np.nan)]), errors="coerce"
+        ).iloc[0]
+        response_decode_status = str(getattr(row, "response_decode_status"))
+    else:
+        response_side, response_decode_status = _map_response_side(
+            getattr(row, "response_raw", np.nan),
+            getattr(row, "response_event_count", np.nan),
+            code_map,
+        )
+    channel_target_side = pd.to_numeric(
+        pd.Series([getattr(row, "cue_side", np.nan)]), errors="coerce"
+    ).iloc[0]
+    external_correct_side = pd.to_numeric(
+        pd.Series([getattr(row, "correct_response_side_truth", np.nan)]),
+        errors="coerce",
+    ).iloc[0]
+    if np.isfinite(channel_target_side) and np.isfinite(response_side):
+        correctness = "correct" if response_side == channel_target_side else "incorrect"
+    elif not np.isfinite(channel_target_side):
+        correctness = "target_side_missing"
     elif response_decode_status == "no_response_marker":
         correctness = "no_response"
     else:
@@ -586,71 +610,64 @@ def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[
         else str(schedule_anchor_source or "")
     )
 
-    if np.isfinite(event_count) and int(event_count) > 1:
-        timing_status = "multiple_response_events"
-    elif np.isfinite(response_time):
-        if np.isfinite(deadline):
-            if np.isfinite(target_onset) and response_time < target_onset:
-                timing_status = "response_precedes_target_check_clock"
-            elif not np.isfinite(target_onset) and np.isfinite(schedule_anchor) and response_time < schedule_anchor:
-                timing_status = "response_precedes_schedule_anchor_review"
-            elif response_time <= deadline:
-                timing_status = "within_deadline"
-            else:
-                timing_status = "late_response"
-        else:
-            timing_status = "deadline_unknown"
-    elif np.isfinite(event_count) and int(event_count) > 1:
-        timing_status = "multiple_response_events"
-    elif np.isfinite(authoritative_omission):
-        timing_status = "no_response_authoritatively_labeled_omission" if bool(authoritative_omission) else "omission_label_conflicts_with_no_response_marker"
-    elif not np.isfinite(deadline):
-        timing_status = "no_response_deadline_unknown"
-    elif not np.isfinite(record_end) or record_end < deadline:
-        timing_status = "recording_ends_before_deadline"
-    else:
-        timing_status = "no_response_by_deadline_verified"
-
-    if np.isfinite(authoritative_omission) and np.isfinite(event_count) and int(event_count) > 0:
-        omission_status = "external_omission_label_conflicts_with_response_marker"
-    elif np.isfinite(authoritative_omission):
-        if bool(authoritative_omission):
-            omission_status = "confirmed_by_external_label"
-        elif response_decode_status == "no_response_marker":
-            omission_status = "external_label_says_not_omission_but_marker_absent"
-        else:
-            omission_status = "external_label_says_not_omission"
-    elif response_decode_status == "no_response_marker" and timing_status == "no_response_by_deadline_verified":
-        omission_status = "verified_no_response_through_deadline"
-    elif response_decode_status == "no_response_marker":
-        omission_status = "unknown_no_response_marker_not_sufficient"
-    else:
-        omission_status = "not_an_omission_marker_present_or_ambiguous"
-
-    if timing_status == "within_deadline":
-        outcome = f"{correctness}_timely" if correctness in {"correct", "incorrect"} else "response_timely_correctness_unknown"
-    elif timing_status == "late_response":
-        outcome = f"{correctness}_late" if correctness in {"correct", "incorrect"} else "late_response_correctness_unknown"
-    elif omission_status in {"confirmed_by_external_label", "verified_no_response_through_deadline"}:
-        outcome = "omission_by_deadline"
-    elif response_decode_status == "no_response_marker":
-        outcome = "no_response_status_unknown"
-    elif response_decode_status.startswith("multiple_response"):
-        outcome = "ambiguous_multiple_responses"
-    elif correctness in {"correct", "incorrect"}:
-        outcome = f"{correctness}_deadline_unknown"
-    else:
-        outcome = "outcome_unknown"
+    has_response = bool(np.isfinite(event_count) and int(event_count) > 0)
+    custom_timeliness_status = str(getattr(row, "timeliness_status", "")).strip()
+    if not custom_timeliness_status or custom_timeliness_status.lower() == "nan":
+        custom_timeliness_status = "custom_timeliness_not_available"
+    custom_is_timely = pd.to_numeric(
+        pd.Series([getattr(row, "is_timely", np.nan)]), errors="coerce"
+    ).iloc[0]
+    custom_is_late = pd.to_numeric(
+        pd.Series([getattr(row, "is_late", np.nan)]), errors="coerce"
+    ).iloc[0]
+    response_duration = pd.to_numeric(
+        pd.Series([getattr(row, "response_duration_s", np.nan)]), errors="coerce"
+    ).iloc[0]
+    omission_status = (
+        "response_observed_in_cue_interval"
+        if has_response
+        else "no_channel9_action_in_cue_interval"
+    )
+    timing_status = custom_timeliness_status
+    outcome = (
+        f"{correctness}_timely"
+        if correctness in {"correct", "incorrect"} and custom_is_timely == 1
+        else f"{correctness}_late"
+        if correctness in {"correct", "incorrect"} and custom_is_late == 1
+        else correctness
+        if correctness in {"correct", "incorrect"}
+        else "no_response_in_cue_interval"
+        if not has_response
+        else "outcome_unknown"
+    )
 
     return {
         "actual_response_side_from_mat": response_side,
         "response_decode_status": response_decode_status,
+        "response_declared_code": getattr(row, "response_declared_code", np.nan),
         "correctness_status": correctness,
+        "correct": int(correctness == "correct") if correctness in {"correct", "incorrect"} else np.nan,
+        "is_omission": int(not has_response),
+        "target_side_used": channel_target_side,
+        "target_side_source": "channel8_VisCue",
+        "external_correct_response_side": external_correct_side,
+        "external_target_side_disagreement": bool(
+            np.isfinite(external_correct_side)
+            and np.isfinite(channel_target_side)
+            and external_correct_side != channel_target_side
+        ),
         "target_onset_time_s": target_onset,
         "schedule_target_anchor_time_s": schedule_anchor,
         "target_time_source": target_time_source,
         "response_deadline_time_s": deadline,
         "response_time_s": response_time,
+        "response_analysis_window_start_s": getattr(row, "response_analysis_window_start_s", np.nan),
+        "response_analysis_window_end_s": getattr(row, "response_analysis_window_end_s", np.nan),
+        "response_present_in_analysis_window": getattr(row, "response_present_in_analysis_window", np.nan),
+        "response_duration_s": response_duration,
+        "timeliness_status": custom_timeliness_status,
+        "is_timely": custom_is_timely,
+        "is_late": custom_is_late,
         "reaction_time_s_from_verified_target": reaction_time,
         "reaction_time_status": reaction_time_status,
         "reaction_time_s_from_schedule_anchor": schedule_reaction_time,
@@ -744,11 +761,11 @@ def analyze(
                 "original_trial_index": int(row.original_trial_index),
                 "cue_side_from_mat": getattr(row, "cue_side", np.nan),
                 "viscue_raw_code_at_event": raw_cue,
-                "correct_response_side": getattr(row, "correct_response_side", np.nan),
-                "truth_source": getattr(row, "truth_source", ""),
-                "authoritative_omission": getattr(row, "authoritative_omission", np.nan),
+                "external_truth_source": getattr(row, "truth_source_truth", getattr(row, "truth_source", "")),
+                "authoritative_omission": getattr(row, "authoritative_omission_truth", getattr(row, "authoritative_omission", np.nan)),
                 "response_event_count": getattr(row, "response_event_count", np.nan),
                 "response_raw_code": getattr(row, "response_raw", np.nan),
+                "response_bout_code_sequence": getattr(row, "response_bout_code_sequence", ""),
                 "mat_response_channel_label": getattr(row, "response_channel_label", ""),
                 **derived,
                 "timing_source": getattr(row, "timing_source", ""),
@@ -767,7 +784,8 @@ def analyze(
             {
                 "record": record,
                 "n_trials": int(len(part)),
-                "n_ground_truth_labels": int(part["correct_response_side"].notna().sum()),
+                "n_external_truth_labels": int(part["external_correct_response_side"].notna().sum()),
+                "n_channel8_target_labels": int(part["target_side_used"].notna().sum()),
                 "n_target_onsets": int(part["target_onset_time_s"].notna().sum()),
                 "n_schedule_target_anchors": int(part["schedule_target_anchor_time_s"].notna().sum()),
                 "n_deadlines": int(part["response_deadline_time_s"].notna().sum()),
@@ -776,10 +794,11 @@ def analyze(
                 "n_correctness_known": int(part["correctness_status"].isin(["correct", "incorrect"]).sum()),
                 "n_correct": int(part["correctness_status"].eq("correct").sum()),
                 "n_incorrect": int(part["correctness_status"].eq("incorrect").sum()),
-                "n_within_deadline": int(part["response_timing_status"].eq("within_deadline").sum()),
-                "n_late": int(part["response_timing_status"].eq("late_response").sum()),
-                "n_verified_omission": int(part["omission_status"].isin(["confirmed_by_external_label", "verified_no_response_through_deadline"]).sum()),
-                "n_omission_unknown": int(part["omission_status"].eq("unknown_no_response_marker_not_sufficient").sum()),
+                "n_timely_by_cue_window": int(pd.to_numeric(part["is_timely"], errors="coerce").eq(1).sum()),
+                "n_late_by_cue_window": int(pd.to_numeric(part["is_late"], errors="coerce").eq(1).sum()),
+                "n_response_duration_labeled": int(pd.to_numeric(part["response_duration_s"], errors="coerce").notna().sum()),
+                "n_omission_intervals": int(pd.to_numeric(part["is_omission"], errors="coerce").eq(1).sum()),
+                "n_response_intervals": int(pd.to_numeric(part["is_omission"], errors="coerce").eq(0).sum()),
                 "accuracy_among_decodable_responses": (
                     float(part.loc[part["correctness_status"].isin(["correct", "incorrect"]), "correctness_status"].eq("correct").mean())
                     if part["correctness_status"].isin(["correct", "incorrect"]).any()
@@ -791,21 +810,32 @@ def analyze(
     summary_by_record.to_csv(output_dir / "behavior_record_summary.csv", index=False, encoding="utf-8-sig")
 
     field_coverage = {
-        "trials_with_correct_response_side": int(merged["correct_response_side"].notna().sum()),
-        "trials_with_truth_source": int(merged["truth_source"].fillna("").astype(str).str.strip().ne("").sum()),
+        "trials_with_external_correct_response_side": int(
+            pd.to_numeric(merged["correct_response_side_truth"], errors="coerce").notna().sum()
+        ),
+        "trials_with_external_truth_source": int(
+            merged["truth_source_truth"].fillna("").astype(str).str.strip().ne("").sum()
+            if "truth_source_truth" in merged
+            else merged["truth_source"].fillna("").astype(str).str.strip().ne("").sum()
+            if "truth_source" in merged
+            else 0
+        ),
+        "trials_with_channel8_target_side": int(outcomes["target_side_used"].notna().sum()),
+        "trials_with_channel8_9_correctness": int(outcomes["correct"].notna().sum()),
+        "trials_with_interval_omission_label": int(outcomes["is_omission"].notna().sum()),
+        "trials_with_cue_window_timeliness_label": int(pd.to_numeric(outcomes["is_timely"], errors="coerce").notna().sum()),
+        "trials_with_response_duration": int(pd.to_numeric(outcomes["response_duration_s"], errors="coerce").notna().sum()),
         "trials_with_target_onset": int(pd.to_numeric(merged["target_onset_time_s"], errors="coerce").notna().sum()),
         "trials_with_response_deadline": int(pd.to_numeric(merged["response_deadline_time_s"], errors="coerce").notna().sum()),
         "records_with_complete_identity_mapping": int(metadata_audit["identity_mapping_status"].eq("complete").sum()),
     }
     fully_observed = (
-        field_coverage["trials_with_correct_response_side"] == len(merged)
-        and field_coverage["trials_with_truth_source"] == len(merged)
-        and field_coverage["trials_with_target_onset"] == len(merged)
+        field_coverage["trials_with_target_onset"] == len(merged)
         and field_coverage["trials_with_response_deadline"] == len(merged)
         and field_coverage["records_with_complete_identity_mapping"] == len(metadata_audit)
     )
     summary = {
-        "status": "complete_for_requested_outcomes" if fully_observed else "partial_external_information_missing",
+        "status": "external_timing_or_identity_metadata_complete" if fully_observed else "channel_outcomes_derived_external_timing_metadata_partial",
         "analysis_unit": "trial keyed by record and original_trial_index",
         "trial_table": str(trial_table_path),
         "input_files": {
@@ -817,15 +847,26 @@ def analyze(
         "n_records": int(trial_table["record"].nunique()),
         "external_key_coverage": coverage,
         "external_field_coverage": field_coverage,
+        "derived_outcome_counts": {
+            "correct": int(pd.to_numeric(outcomes["correct"], errors="coerce").eq(1).sum()),
+            "incorrect": int(pd.to_numeric(outcomes["correct"], errors="coerce").eq(0).sum()),
+            "omission_in_cue_interval": int(pd.to_numeric(outcomes["is_omission"], errors="coerce").eq(1).sum()),
+            "timely_by_cue_window": int(pd.to_numeric(outcomes["is_timely"], errors="coerce").eq(1).sum()),
+            "late_by_cue_window": int(pd.to_numeric(outcomes["is_late"], errors="coerce").eq(1).sum()),
+        },
         "event_log_format": event_diagnostics,
         "record_metadata_complete": int(metadata_audit["identity_mapping_status"].eq("complete").sum()),
         "record_metadata_total": int(len(metadata_audit)),
-        "correctness_rule": "computed only when correct_response_side is supplied and exactly one response is decoded from the MAT channel legend",
-        "omission_rule": "requires an explicit authoritative omission label, or no response marker plus a supplied deadline that the MAT recording reaches",
+        "correctness_rule": "compare channel-8 VisCue target side with the DataLabel-declared left/right code found in the same contiguous channel-9 nonzero bout; preserve the first 0-to-nonzero edge as response onset; no channel-9 bout in a cue interval is an operational omission",
+        "omission_rule": "no channel-9 action bout in the cue-onset-to-next-cue interval",
+        "timeliness_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+        "timeliness_rule": "timely when the channel-9 L/R code declared in DataLabel is observed within cue-1 to cue+5 s; Task-1 Action codes are +/-1 and Task-2 TgtAct codes are +/-2; an action in the cue interval without its declared code in this window is late",
+        "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout (sample count / sample rate); this is not target-to-response reaction time",
+        "late_response_status": "classified by the task-defined cue window; this is not an independently verified experiment deadline",
         "timing_rule": "external target onset/deadline are absolute seconds on the MAT TimeStamp clock; if actual target onset is absent, the existing cue+2.2 s schedule anchor is reported separately as an assumption",
         "coding_rule": "VisCue event sign is reported from raw samples; Action/TgtAct left/right codes are parsed from the MAT DataLabel",
-        "response_code_magnitude_discrepancy_records": metadata_audit.loc[
-            metadata_audit["response_code_map_status"].eq("sign_consistent_magnitude_differs"), "record"
+        "response_onset_stage_code_records": metadata_audit.loc[
+            metadata_audit["response_code_map_status"].eq("declared_code_in_bout_with_onset_stage_codes"), "record"
         ].astype(str).tolist(),
         "outputs": [
             "behavior_trial_audit.csv",
@@ -879,7 +920,7 @@ def main() -> None:
         print("Created input templates:")
         for path in created:
             print(f"  {path}")
-        print("The audit will keep unsupported outcomes unknown until these templates are filled.")
+        print("The audit can derive correctness and cue-interval omissions from channels 8/9; external files add timing and record metadata only.")
 
     summary = analyze(args.trial_table, args.input_dir, args.output_dir)
     if created:
@@ -889,7 +930,9 @@ def main() -> None:
     print(f"Wrote behavior audit for {summary['n_trial_rows']} trials to {args.output_dir}")
     print(
         "Verified fields: "
-        f"correct-answer labels={summary['external_field_coverage']['trials_with_correct_response_side']}/"
+        f"channel-derived correctness labels={summary['external_field_coverage']['trials_with_channel8_9_correctness']}/"
+        f"{summary['n_trial_rows']}, external truth labels="
+        f"{summary['external_field_coverage']['trials_with_external_correct_response_side']}/"
         f"{summary['n_trial_rows']}, target onsets="
         f"{summary['external_field_coverage']['trials_with_target_onset']}/"
         f"{summary['n_trial_rows']}, deadlines="
