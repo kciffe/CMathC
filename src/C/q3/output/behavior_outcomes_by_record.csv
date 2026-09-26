@@ -1,5 +1,5 @@
-﻿record,n_trials,correct_count,incorrect_count,omission_count,omission_rule
-VisualCogA_Task-1,100,100,0,0,no channel-9 action edge between this cue onset and the next cue onset
-VisualCogA_Task-2,100,47,53,0,no channel-9 action edge between this cue onset and the next cue onset
-VisualCogB_Task-1,100,98,2,0,no channel-9 action edge between this cue onset and the next cue onset
-VisualCogB_Task-2,100,48,52,0,no channel-9 action edge between this cue onset and the next cue onset
+﻿record,n_trials,direction_consistent_count,direction_inconsistent_count,cue_intervals_with_action_marker_count,cue_intervals_without_action_marker_count,declared_response_code_in_analysis_window_count,response_duration_labeled_count,response_duration_median_s,direction_consistency_rule
+VisualCogA_Task-1,100,100,0,100,0,100,100,1.142578125,same/different channel-8 cue and channel-9 response directions; not task correctness
+VisualCogA_Task-2,100,47,53,100,0,100,100,1.396484375,same/different channel-8 cue and channel-9 response directions; not task correctness
+VisualCogB_Task-1,100,98,2,100,0,100,100,1.109375,same/different channel-8 cue and channel-9 response directions; not task correctness
+VisualCogB_Task-2,100,48,52,100,0,100,100,1.326171875,same/different channel-8 cue and channel-9 response directions; not task correctness

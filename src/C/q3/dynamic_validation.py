@@ -2,8 +2,8 @@
 
 Candidate target times and stimulus identities are sensitivity scenarios. A
 unique channel-9 zero-to-nonzero edge defines t_act and the pre-response scoring
-endpoint (t_act - 100 ms); it is not an EEG feature, state input, correctness
-label, or response-time duration.
+endpoint (t_act - 100 ms); it is not an EEG feature, state input, direction-
+consistency label, or response-time duration.
 """
 
 from __future__ import annotations
@@ -29,7 +29,13 @@ for _path in (REPO_ROOT, Q3_DIR):
         sys.path.insert(0, str(_path))
 
 import dynamic_cognitive_model as macro
-from common import decode_response_bout, detect_cues, detect_response_events, load_raw_record
+from common import (
+    decode_response_bout,
+    detect_cues,
+    detect_response_events,
+    load_raw_record,
+    measure_response_window,
+)
 from config import EEG_CHANNELS, RECORDS
 
 
@@ -457,8 +463,18 @@ def _load_observed_epochs(
                     "bout_code_sequence": "",
                 }
             )
+            response_timing = measure_response_window(
+                raw["response_signal"],
+                timestamps,
+                int(event["cue_sample_index"]),
+                trial_start,
+                trial_end,
+                float(raw["sample_rate_hz"]),
+                raw["response_label"],
+                int(first_response["response_sample_index"]) if first_response else None,
+            )
             response_side = decoded_response["choice_side"]
-            correct = int(response_side == side) if response_side is not None else np.nan
+            direction_consistent = int(response_side == side) if response_side is not None else np.nan
             row: dict[str, Any] = {
                 "record": record,
                 "original_trial_index": int(event["original_trial_index"]),
@@ -472,9 +488,13 @@ def _load_observed_epochs(
                 "response_decode_status": decoded_response["decode_status"],
                 "response_declared_code": decoded_response["declared_response_code"],
                 "response_bout_code_sequence": decoded_response["bout_code_sequence"],
-                "correct": correct,
-                "is_omission": int(len(trial_responses) == 0),
-                "outcome_rule": "channel-8 target side versus the DataLabel-declared channel-9 code within the first action bout; omission means no action edge in this cue interval",
+                **{
+                    key: value for key, value in response_timing.items()
+                    if key not in {"timeliness_status", "is_timely", "is_late"}
+                },
+                "cue_response_direction_consistent": direction_consistent,
+                "has_channel9_action_marker_in_cue_interval": int(len(trial_responses) > 0),
+                "outcome_rule": "channel-8 cue direction versus channel-9 response direction; same/different direction only, not task correctness",
                 "pre_response_endpoint_s": endpoint_relative_s,
                 "endpoint_definition": "unique channel-9 zero-to-nonzero edge minus 0.100 s",
                 "included": False,
@@ -1457,7 +1477,7 @@ def _write_detailed_report(
 
 本轮针对题目要求的“借助问题二所建立的脑电信号形成机制，建立认知宏观模型并用给定脑电信号验证”，构建了一个**可检验的动态认知宏观模型**：问题二的视觉处理与脑电正向形成链提供视觉驱动和三通道观测接口；问题三增加独立的记忆相关状态和控制状态，并以整条记录留出的脑电预测误差检验新增状态是否有增量信息。题目没有规定必须达到某个预测百分点；留出误差与候选时刻敏感性是本实现采用的验证证据。
 
-事件审计文件给出 {event_summary['n_audited_trials']} 个视觉提示试次；按参考模型，第9通道零到非零边沿定义为绝对应答时刻 `t_act`。`t_act` 相对视觉提示的中位时间为 {event_summary['marker_relative_median_s']:.4f} 秒，5%–95% 分位区间为 {event_summary['marker_relative_q05_s']:.4f}–{event_summary['marker_relative_q95_s']:.4f} 秒。模型不把通道9作为 EEG 特征或状态输入；它只用于定义应答前窗口终点 `t_act - 100 ms`。逐试次正确性按通道8目标侧与通道9 `DataLabel` 声明的左右代码标记；cue 区间内没有动作边沿记为无应答。目标 onset 未逐试次记录，因此反应时长和迟答判别仍未知。
+事件审计文件给出 {event_summary['n_audited_trials']} 个视觉提示试次；按参考模型，第9通道零到非零边沿定义为绝对应答时刻 `t_act`。`t_act` 相对视觉提示的中位时间为 {event_summary['marker_relative_median_s']:.4f} 秒，5%–95% 分位区间为 {event_summary['marker_relative_q05_s']:.4f}–{event_summary['marker_relative_q95_s']:.4f} 秒。模型不把通道9作为 EEG 特征或状态输入；它只用于定义应答前窗口终点 `t_act - 100 ms`。通道8线索方向与通道9 `DataLabel` 声明的响应方向比较，只产生方向一致/不一致指标；Task-2 任务映射尚未核实，不能称为任务正确性。cue 区间边沿仅作动作标记计数。目标 onset 和正式截止规则均未逐试次记录，因此真实反应时长和迟答情况仍未知。
 
 原始脑电中审计 {n_trials} 个视觉提示事件，按非有限值、原始幅度阈值与平直通道规则保留 {n_included} 个完整试次（覆盖 {n_records} 个记录文件）。主验证为**逐份记录留出**：每折留出一份完整记录，观测方程的电极系数和标准化参数只在另外三份训练记录中估计。该验证检验跨记录外推；记录文件未能确认独立受试者身份，因此不等同于严格的跨受试者验证。
 
@@ -1507,7 +1527,7 @@ $$\mathbf y_i^c(\tau)=\operatorname{interp}\{\mathbf y(t_i^c+\tau)\},\qquad \Del
 
 ### 3.2 反应标记语义
 
-审计能确认每个 VisCue 区间中的通道9动作边沿。Task-2 的 `TgtAct:L-2/R+2` 动作段先出现同号±1，随后出现题目声明的±2码；程序把它们作为一个连续动作段，用声明码解码选择方向，并保留首个零到非零边沿作为 `t_act`。通道8/9可生成逐试次正确/错误标签；cue 区间内没有动作边沿则为区间漏答，本数据各试次均观察到动作。动态 EEG 预测仍不把通道8/9结果作为特征，以避免行为标签泄漏。目标 onset 未独立标记，因此真实反应时长和迟答判别仍不产生。
+审计能确认每个 VisCue 区间中的通道9动作边沿。Task-2 的 `TgtAct:L-2/R+2` 动作段先出现同号±1，随后出现题目声明的±2码；程序把它们作为一个连续动作段，用声明码解码响应方向，并保留首个零到非零边沿作为 `t_act`。通道8/9仅生成逐试次方向一致/不一致标签；Task-2 映射未核实，因此不报告任务正确性。cue 区间动作边沿只作事件计数，不直接称为漏答。动态 EEG 预测仍不把通道8/9结果作为特征，以避免标签泄漏。目标 onset 与正式截止规则未独立记录，因此真实反应时长和迟答情况均未知。
 
 ### 3.3 阶段窗
 
@@ -1616,7 +1636,7 @@ NRMSE 是每条留出组内按实测标准差归一化后计算，再跨留出�
 - 改善是否在 none/causal/zero-phase 三种预处理中大体同向；
 - `Q2_plus_memory_control` 的额外收益是否跨留出记录存在，而不是只靠某个记录/电极。
 
-如果这些条件不成立，结论就是现有样本不能支持新增状态提升晚期 EEG 预测；动态状态仍是已明确方程和可复核结果的机制假设，分类、ERP/功率和静态路径分析仅作辅助证据。通道8/9正确性结果与 cue-locked V/H/P 的留出逻辑回归在 `05_behavior_model.py` 单独报告；动态场景验证不把行为结果并入 EEG 特征矩阵。
+如果这些条件不成立，结论就是现有样本不能支持新增状态提升晚期 EEG 预测；动态状态仍是已明确方程和可复核结果的机制假设，分类、ERP/功率和静态路径分析仅作辅助证据。通道8/9方向一致性与 cue-locked V/H/P 的留出预测在 `05_behavior_model.py` 单独报告；Task-2映射尚未核实，不能将方向一致性解释为任务正确性。动态场景验证不把行为结果并入 EEG 特征矩阵。
 
 ## 9. 中间产物、命令与复现
 
@@ -1643,11 +1663,11 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
 
 ## 10. 适用范围与当前不能声称的结论
 
-1. 目标 onset、刺激与文件 task 的映射、真实 RT 和迟答状态仍未知；逐试次正确性由通道8/9方向比较生成，区间漏答由通道9是否有动作边沿生成，迟答不另行分类。
+1. 目标 onset、Task-2线索—目标映射、真实 RT 和迟答状态仍未知；通道8/9方向比较仅生成方向一致性，区间动作边沿只作事件计数。
 2. 四份文件作为四个留出域；在受试者身份未知时不能说结果经过独立受试者外部验证。
 3. 宏观状态方程和时间常数当前是理论构造；拟合的是观测加载，不是对潜在过程的唯一识别。
 4. Q2 的五源通过问题二导联矩阵做正向投影；三电极观测不能唯一反演五源，也不能证明某潜在状态来自海马或 PFC。
-5. 通道9边沿按参考模型作为 `t_act` 应答时刻；目标 onset 未逐试次记录，所以真实反应时长和迟答判别仍未知。正确性与区间漏答标签见行为分析输出。
+5. 通道9边沿按参考模型作为 `t_act` 应答时刻；目标 onset 和正式截止规则未逐试次记录，所以真实反应时长和迟答判别仍未知。方向一致性与区间动作标记计数见行为分析输出。
 6. 旧版分类、频带功率、ERP 与静态路径分析可作为辅助描述，不代替本报告的动态方程和留出预测检验。
 '''
     replacements = {
@@ -1674,6 +1694,18 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
     }
     for token, value in replacements.items():
         document = document.replace(token, value)
+    document = document.replace(
+        "真实 RT、任务映射和迟答状态仍未知；通道8/9方向比较只表示方向一致性，cue 区间动作边沿只作事件计数。",
+        "真实 target-to-response RT 与实验正式截止规则仍未知；通道8/9方向比较只表示方向一致性，cue 区间动作边沿只作事件计数，cue-1 至 cue+5 秒窗口只统计 DataLabel 代码。",
+    )
+    document = document.replace(
+        "真实反应时和迟答标签",
+        "真实 target-to-response RT 与实际迟答状态（均待真实目标时刻和正式截止规则核验）",
+    )
+    document = document.replace(
+        "真实应答时和迟答标签",
+        "真实 target-to-response RT 与实际迟答状态（均待真实目标时刻和正式截止规则核验）",
+    )
     parameter_section = (
         "\n\n### 动态状态方程的参数初值\n\n"
         + macro_parameter_table
@@ -1688,7 +1720,7 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
         "**机制参数仍是构造值。** $\\tau_H$、写入/匹配增益及控制耦合尚未在训练记录的内层验证中估计；若真实保持时长或更新时序不同，当前 H 的时间轨迹会错位。",
         "**事件与刺激类型不确定。** 目标出现时刻没有独立标记，Task-1/Task-2 与 Q2 项目条件的映射未确认；把全部候选情景汇总会稀释某一真实但未知的条件效应。",
         "**记录间差异明显。** 四份记录是目前可用的留出单位，但独立受试者身份未知；传感器 EEG 的尺度和慢变形态可能存在记录间偏移。当前 NRMSE 大于 1，且预测波形未能跟随全部实测缓慢起伏，说明绝对拟合仍弱。",
-        f"**可用试次数有限。** 原始幅度 QC 排除了 {n_trials - n_included}/{n_trials} 个 epoch；其余约 {n_included} 个有效 trial 仍不能补足逐试次目标 onset、真实反应时和迟答标签。通道8/9方向给出的正确性及 cue 区间无动作标签按已定义规则计算。",
+        f"**可用试次数有限。** 原始幅度 QC 排除了 {n_trials - n_included}/{n_trials} 个 epoch；其余约 {n_included} 个有效 trial 仍不能补足逐试次目标 onset、正式截止规则和真实反应时。通道8/9方向比较只表示方向一致性，cue 区间边沿只作事件计数。",
         "**预处理影响了误差水平。** 因果与零相位过滤下的整体 NRMSE 不同，而记忆态改善也未跨三种预处理一致；零相位仅是离线敏感性结果，不能当作实时 BCI 性能。",
         "**观测方程仍较简化。** 只使用 F3/Fz/F4 的线性加载和单一控制×Q2 交互，未覆盖其它脑区、电极或被试特异的噪声/参考方式；三电极无法据此确认海马或 PFC 来源。",
     ]
@@ -1701,7 +1733,7 @@ python src/C/q3/dynamic_validation.py --target-onsets 2.0,2.4 --target-types dot
         "1. 先取得 target-onset、刺激真值/类型与通道9事件写入说明，厘清每个文件对应的任务条件；更新事件图和候选网格。\n"
         "2. 冻结连续记录滤波、重采样、伪迹 QC 与阶段窗；对被排除的 45 个试次检查是否为真实硬件饱和或可修复的数据格式问题，不为增加样本而放宽阈值。\n"
         "3. 事件语义确认后，在每个外层留出折的训练记录内用内层验证估计 $\\tau_H$、增益和观测加载；外层留出记录仍只用于最终一次评估，禁止按外层分数挑参数。\n"
-        "4. 增加经验证的 target-locked 波形/状态对照，并在标签可用时单独分析 RT、正确性或实际选择；通道9继续仅作事件/行为变量，不进入 EEG 特征。\n"
+        "4. 增加经验证的 target-locked 波形/状态对照，并在外部真值可用时单独分析 RT、任务正确性或实际选择；通道9继续仅作事件/行为变量，不进入 EEG 特征。\n"
         "5. 若跨记录与事件敏感性后仍没有稳定的晚期预测增益，应保留动态模型作为可复核的机制假设，并明确写出现有数据不足以支持记忆机制。\n"
     )
     output_path.write_text(document, encoding="utf-8")
@@ -1857,10 +1889,18 @@ def run_validation(
         "target_onset_status": "candidate sensitivity only; no independent target marker",
         "behavioral_labels_used": False,
         "behavioral_outcome_labels_derived": True,
-        "behavioral_correct_count": int(pd.to_numeric(trial_audit["correct"], errors="coerce").eq(1).sum()),
-        "behavioral_incorrect_count": int(pd.to_numeric(trial_audit["correct"], errors="coerce").eq(0).sum()),
-        "behavioral_omission_count": int(pd.to_numeric(trial_audit["is_omission"], errors="coerce").eq(1).sum()),
-        "omission_rule": "no channel-9 action edge between cue onset and the next cue onset; late responses are not separated",
+        "behavioral_direction_consistent_count": int(pd.to_numeric(trial_audit["cue_response_direction_consistent"], errors="coerce").eq(1).sum()),
+        "behavioral_direction_inconsistent_count": int(pd.to_numeric(trial_audit["cue_response_direction_consistent"], errors="coerce").eq(0).sum()),
+        "cue_intervals_with_action_marker_count": int(pd.to_numeric(trial_audit["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(1).sum()),
+        "cue_intervals_without_action_marker_count": int(pd.to_numeric(trial_audit["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(0).sum()),
+        "declared_response_code_in_analysis_window_count": int(pd.to_numeric(trial_audit["response_declared_code_sample_count_in_analysis_window"], errors="coerce").gt(0).sum()),
+        "behavioral_response_duration_labeled_count": int(pd.to_numeric(trial_audit["response_duration_s"], errors="coerce").notna().sum()),
+        "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
+        "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_deadline",
+        "cue_interval_action_marker_rule": "event marker count only; not a verified omission rate without the official response interval",
+        "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+        "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; not a timeliness classification",
+        "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count / sample rate; not target-to-response reaction time",
         "channel9_used_in_eeg_or_model": False,
         "channel9_used_as_predictor_or_state_input": False,
         "channel9_used_for_response_window_scoring": True,
@@ -1879,7 +1919,7 @@ def run_validation(
     (output_dir / "validation_summary.json").write_text(
         json.dumps(summary_json, indent=2, ensure_ascii=False), encoding="utf-8"
     )
-    report_path = Q3_DIR / "问题三实现流程与模型说明.md"
+    report_path = OUTPUT_DIR / "dynamic_validation_report.md"
     _write_detailed_report(
         report_path, event_summary, trial_audit, metrics, summary,
         scenarios, figure_dir, resolution, target_duration_s,

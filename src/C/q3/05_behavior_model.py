@@ -231,6 +231,11 @@ def main() -> None:
         validate="one_to_one",
     )
     model_data["choice_side"] = model_data["choice_side"].map(parse_choice)
+    # Task-2 response mapping is not verified, so model the channel-8/channel-9
+    # same-direction indicator only as direction consistency.
+    model_data["cue_response_direction_consistent"] = pd.to_numeric(
+        model_data["cue_response_direction_consistent"], errors="coerce"
+    )
     model_data = model_data.replace([np.inf, -np.inf], np.nan)
     model_data["cue_by_task_code_candidate"] = model_data["cue_side"] * (
         pd.to_numeric(model_data["filename_task_code_candidate"], errors="coerce") - 1.5
@@ -271,7 +276,7 @@ def main() -> None:
                 "cue_choice_same_side_fraction": float(
                     (group["cue_side"] == group["choice_side"]).mean()
                 ),
-                "interpretation": "channel-8 target side versus channel-9 DataLabel-declared action code; grouping by filename task code is descriptive only",
+                "interpretation": "channel-8 cue direction versus channel-9 response direction; same-side relation only, not task correctness",
             }
         )
     write_csv(
@@ -279,27 +284,26 @@ def main() -> None:
         output_dir / "behavior_cue_choice_alignment.csv",
     )
 
-    correctness_data = model_data.dropna(subset=["correct"]).copy()
-    correctness_data["correct"] = pd.to_numeric(correctness_data["correct"], errors="coerce")
-    correctness_predictor_sets = {
+    consistency_data = model_data.dropna(subset=["cue_response_direction_consistent"]).copy()
+    consistency_predictor_sets = {
         "cue_side_only": ["cue_side"],
         "EEG_state_only": STATE_FEATURES,
         "cue_side_plus_EEG_state": ["cue_side", *STATE_FEATURES],
     }
-    correctness_predictions: list[pd.DataFrame] = []
-    correctness_folds: list[dict] = []
-    correctness_model_summary: dict[str, dict] = {}
-    for model_name, predictors in correctness_predictor_sets.items():
+    consistency_predictions: list[pd.DataFrame] = []
+    consistency_folds: list[dict] = []
+    consistency_model_summary: dict[str, dict] = {}
+    for model_name, predictors in consistency_predictor_sets.items():
         model_predictions, model_folds = grouped_binary_cv(
-            correctness_data, "correct", predictors, model_name
+            consistency_data, "cue_response_direction_consistent", predictors, model_name
         )
-        correctness_predictions.append(model_predictions)
-        correctness_folds.extend(model_folds)
+        consistency_predictions.append(model_predictions)
+        consistency_folds.extend(model_folds)
         scored_folds = [row for row in model_folds if row["status"].startswith("ok")]
         balanced_folds = [
             row for row in scored_folds if row["balanced_accuracy"] is not None
         ]
-        correctness_model_summary[model_name] = {
+        consistency_model_summary[model_name] = {
             "predictors": predictors,
             "n_predictions": int(len(model_predictions)),
             "scored_record_folds": len(scored_folds),
@@ -311,27 +315,45 @@ def main() -> None:
             "folds": model_folds,
         }
     write_csv(
-        pd.concat(correctness_predictions, ignore_index=True)
-        if correctness_predictions else pd.DataFrame(),
-        output_dir / "behavior_correctness_predictions.csv",
+        pd.concat(consistency_predictions, ignore_index=True)
+        if consistency_predictions else pd.DataFrame(),
+        output_dir / "behavior_consistency_predictions.csv",
     )
     write_csv(
-        pd.DataFrame(correctness_folds),
-        output_dir / "behavior_correctness_model_comparison.csv",
+        pd.DataFrame(consistency_folds),
+        output_dir / "behavior_consistency_model_comparison.csv",
     )
-    correctness_all = pd.to_numeric(trials["correct"], errors="coerce")
-    omission_all = pd.to_numeric(trials["is_omission"], errors="coerce")
+    consistency_all = pd.to_numeric(trials["cue_response_direction_consistent"], errors="coerce")
+    marker_present_all = trials.get(
+        "response_marker_present", pd.Series(False, index=trials.index)
+    ).fillna(False).astype(bool)
+    code_count_all = pd.to_numeric(
+        trials.get("response_declared_code_sample_count_in_analysis_window", pd.Series(np.nan, index=trials.index)),
+        errors="coerce",
+    )
+    duration_all = pd.to_numeric(trials.get("response_duration_s", pd.Series(np.nan, index=trials.index)), errors="coerce")
     outcome_by_record = []
     for record, group in trials.groupby("record", sort=True):
-        correct_group = pd.to_numeric(group["correct"], errors="coerce")
-        omission_group = pd.to_numeric(group["is_omission"], errors="coerce")
+        consistency_group = pd.to_numeric(group["cue_response_direction_consistent"], errors="coerce")
+        marker_present_group = group.get(
+            "response_marker_present", pd.Series(False, index=group.index)
+        ).fillna(False).astype(bool)
+        code_count_group = pd.to_numeric(
+            group.get("response_declared_code_sample_count_in_analysis_window", pd.Series(np.nan, index=group.index)),
+            errors="coerce",
+        )
+        duration_group = pd.to_numeric(group.get("response_duration_s", pd.Series(np.nan, index=group.index)), errors="coerce")
         outcome_by_record.append({
             "record": record,
             "n_trials": int(len(group)),
-            "correct_count": int(correct_group.eq(1).sum()),
-            "incorrect_count": int(correct_group.eq(0).sum()),
-            "omission_count": int(omission_group.eq(1).sum()),
-            "omission_rule": "no channel-9 action edge between this cue onset and the next cue onset",
+            "direction_consistent_count": int(consistency_group.eq(1).sum()),
+            "direction_inconsistent_count": int(consistency_group.eq(0).sum()),
+            "cue_intervals_with_action_marker_count": int(marker_present_group.sum()),
+            "cue_intervals_without_action_marker_count": int((~marker_present_group).sum()),
+            "declared_response_code_in_analysis_window_count": int(code_count_group.gt(0).sum()),
+            "response_duration_labeled_count": int(duration_group.notna().sum()),
+            "response_duration_median_s": float(duration_group.median()) if duration_group.notna().any() else None,
+            "direction_consistency_rule": "same/different channel-8 cue and channel-9 response directions; not task correctness",
         })
     write_csv(pd.DataFrame(outcome_by_record), output_dir / "behavior_outcomes_by_record.csv")
 
@@ -435,19 +457,26 @@ def main() -> None:
         if valid_folds
         else None,
         "behavior_outcomes": {
-            "correct_count": int(correctness_all.eq(1).sum()),
-            "incorrect_count": int(correctness_all.eq(0).sum()),
-            "correctness_labeled_count": int(correctness_all.notna().sum()),
-            "omission_count": int(omission_all.eq(1).sum()),
-            "omission_labeled_count": int(omission_all.notna().sum()),
+            "direction_consistent_count": int(consistency_all.eq(1).sum()),
+            "direction_inconsistent_count": int(consistency_all.eq(0).sum()),
+            "direction_consistency_labeled_count": int(consistency_all.notna().sum()),
+            "cue_intervals_with_action_marker_count": int(marker_present_all.sum()),
+            "cue_intervals_without_action_marker_count": int((~marker_present_all).sum()),
+            "declared_response_code_in_analysis_window_count": int(code_count_all.gt(0).sum()),
+            "response_duration_labeled_count": int(duration_all.notna().sum()),
+            "response_duration_median_s": float(duration_all.median()) if duration_all.notna().any() else None,
             "by_record": outcome_by_record,
-            "correctness_rule": "compare channel-9 side decoded from its DataLabel-declared code within the first action bout with channel-8 VisCue target side",
-            "omission_rule": "no channel-9 action edge in the cue-onset-to-next-cue interval; late responses are not classified separately",
-            "omission_model_status": "not_fitted_no_positive_omission_examples" if omission_all.eq(1).sum() == 0 else "not_fitted_review_required",
+            "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while Task-2 mapping is unverified",
+            "cue_interval_action_marker_rule": "report presence/count of channel-9 markers within cue-to-next-cue intervals; this is not a verified omission label without the official response window",
+            "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+            "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timely or late response",
+            "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout; not target-to-response reaction time",
+            "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
+            "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_deadline",
         },
-        "correctness_model": correctness_model_summary,
-        "correctness": "labeled from channel 8 target side and the channel-9 DataLabel-declared response code within the first action bout; no-response or undecodable trials remain correctness=null",
-        "omissions": "operationally labeled when no channel-9 action edge occurs in a cue-to-next-cue interval",
+        "direction_consistency_model": consistency_model_summary,
+        "direction_consistency": "same/different relation between channel-8 cue direction and channel-9 DataLabel-declared response direction; not a task-correctness label",
+        "action_marker_counts": "counts/presence of channel-9 edges in the cue interval and declared-code samples in the selected analysis window; neither establishes experiment-level omission or timeliness",
         "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time",
     }
     write_json(status, status_path)

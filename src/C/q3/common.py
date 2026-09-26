@@ -195,12 +195,10 @@ def measure_response_window(
     response_label: str,
     response_onset_sample_index: int | None,
 ) -> dict[str, Any]:
-    """Measure the cue-centered response window and first full action-bout duration.
+    """Measure the selected cue-centered observation window and action-bout duration.
 
-    Timeliness is defined by the L/R code declared in the channel-9 DataLabel:
-    the declared code must occur between cue-1 s and cue+5 s. A nonzero action
-    elsewhere in the cue-to-next-cue interval is late. This is a task-defined
-    timing label, not a target-onset reaction time.
+    The cue-relative window only supports event/code counts. It does not define
+    timely or late behavior without the experiment's formal response deadline.
     """
     signal = np.asarray(raw_response, dtype=np.float64).reshape(-1)
     time = np.asarray(timestamps, dtype=np.float64).reshape(-1)
@@ -216,8 +214,6 @@ def measure_response_window(
     window_start_clipped = min(window_start, window_end_clipped)
     window = signal[window_start_clipped:window_end_clipped]
     window_active = np.isfinite(window) & (window != 0)
-    trial = signal[trial_start:trial_end]
-    trial_active = np.isfinite(trial) & (trial != 0)
 
     legend = _response_code_legend(response_label)
     legend_valid = (
@@ -244,27 +240,14 @@ def measure_response_window(
         and window_end_s <= recording_end_exclusive_s + 1e-9
         and window_end <= min(signal.size, time.size)
     )
-    any_response = bool(window_active.any() or trial_active.any())
-    if declared_code_count:
-        timeliness_status = "timely_declared_response_code_in_cue_window"
-        is_timely: float = 1.0
-        is_late: float = 0.0
-    elif not window_fully_observed:
-        timeliness_status = "response_window_not_fully_recorded"
-        is_timely = np.nan
-        is_late = np.nan
-    elif not any_response:
-        timeliness_status = "no_response_in_cue_window_or_trial_interval"
-        is_timely = 0.0
-        is_late = 0.0
-    elif not legend_valid:
-        timeliness_status = "response_label_code_unreadable"
-        is_timely = np.nan
-        is_late = np.nan
+    if not window_fully_observed:
+        analysis_window_observation_status = "window_not_fully_recorded"
+    elif declared_code_count:
+        analysis_window_observation_status = "declared_response_code_observed"
+    elif window_active.any():
+        analysis_window_observation_status = "nonzero_action_observed_without_declared_code"
     else:
-        timeliness_status = "late_declared_response_code_outside_cue_window"
-        is_timely = 0.0
-        is_late = 1.0
+        analysis_window_observation_status = "no_action_code_observed_in_window"
 
     response_duration_s = np.nan
     response_bout_end_time_s = np.nan
@@ -291,9 +274,7 @@ def measure_response_window(
         "response_present_in_analysis_window": bool(window_active.any()),
         "response_declared_code_sample_count_in_analysis_window": declared_code_count,
         "response_declared_code_time_in_analysis_window_s": declared_code_time,
-        "timeliness_status": timeliness_status,
-        "is_timely": is_timely,
-        "is_late": is_late,
+        "analysis_window_observation_status": analysis_window_observation_status,
         "response_duration_s": response_duration_s,
         "response_bout_end_time_s": response_bout_end_time_s,
     }
@@ -606,8 +587,7 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
         response_time = float(response["response_time_s"]) if response else np.nan
         target_side = int(event["cue_side"])
         response_side = decoded_response["choice_side"]
-        correct = int(response_side == target_side) if response_side is not None else np.nan
-        is_omission = int(response_count == 0)
+        direction_consistent = int(response_side == target_side) if response_side is not None else np.nan
         target_time_proxy = float(event["cue_time_s"] + TARGET_OFFSET_S)
         schedule_rt_proxy = response_time - target_time_proxy if response else np.nan
         if response is None:
@@ -657,37 +637,30 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "response_declared_code": decoded_response["declared_response_code"],
                 "response_bout_code_sequence": decoded_response["bout_code_sequence"],
                 **response_info["response_timing"],
-                "target_side": target_side,
-                "correct_response_side": target_side,
+                "cue_direction": target_side,
                 "target_time_schedule_proxy_s": target_time_proxy,
                 "scheduled_rt_proxy_s": schedule_rt_proxy,
                 # RT duration needs a verified target onset, which is not
                 # available in the raw event channels.
                 "reaction_time_s": np.nan,
                 "rt_status": rt_status,
-                "correct": correct,
-                "correctness_status": (
-                    "channel8_target_side_vs_declared_channel9_action_code"
+                "cue_response_direction_consistent": direction_consistent,
+                "direction_consistency_status": (
+                    "channel8_channel9_same_or_different_direction_only"
                     if response_side is not None
-                    else "not_applicable_no_response"
-                    if response_count == 0
-                    else "response_side_unresolved_from_declared_code"
+                    else "direction_unresolved"
                 ),
-                "is_omission": is_omission,
+                "cue_interval_action_marker_count": response_count,
+                "has_channel9_action_marker_in_cue_interval": int(response_count > 0),
                 "response_marker_present": response is not None,
-                "omission_status": (
-                    "no_channel9_edge_in_cue_to_next_cue_interval"
-                    if response_count == 0
-                    else "response_observed_in_cue_to_next_cue_interval"
-                ),
                 "behavior_label_status": (
-                    "channel9_side_unresolved_from_declared_code"
+                    "channel9_response_direction_unresolved"
                     if response_count > 0 and response_side is None
-                    else "first_channel9_action_labeled_multiple_edges"
+                    else "multiple_channel9_action_edges_in_cue_interval"
                     if response_count > 1
-                    else "channel8_channel9_outcome_labeled"
+                    else "cue_response_direction_comparable"
                     if response_count == 1
-                    else "channel9_no_action_in_cue_interval"
+                    else "no_channel9_action_edge_in_cue_interval"
                 ),
             }
         )

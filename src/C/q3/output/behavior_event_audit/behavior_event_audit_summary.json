@@ -22,17 +22,27 @@
   "external_field_coverage": {
     "trials_with_external_correct_response_side": 0,
     "trials_with_external_truth_source": 0,
-    "trials_with_channel8_target_side": 400,
-    "trials_with_channel8_9_correctness": 400,
-    "trials_with_interval_omission_label": 400,
+    "trials_with_channel8_cue_direction": 400,
+    "trials_with_direction_consistency": 400,
+    "trials_with_verified_task_correctness": 0,
+    "trials_with_action_marker_in_cue_interval": 400,
+    "trials_without_action_marker_in_cue_interval": 0,
+    "trials_with_declared_code_in_analysis_window": 400,
+    "trials_with_formal_deadline_status": 0,
+    "trials_with_response_duration": 400,
     "trials_with_target_onset": 0,
     "trials_with_response_deadline": 0,
     "records_with_complete_identity_mapping": 0
   },
   "derived_outcome_counts": {
-    "correct": 293,
-    "incorrect": 107,
-    "omission_in_cue_interval": 0
+    "direction_consistent": 293,
+    "direction_inconsistent": 107,
+    "verified_task_correct": 0,
+    "verified_task_incorrect": 0,
+    "cue_intervals_with_action_marker": 400,
+    "cue_intervals_without_action_marker": 0,
+    "within_formal_deadline": 0,
+    "after_formal_deadline": 0
   },
   "event_log_format": {
     "format": "wide",
@@ -40,9 +50,17 @@
   },
   "record_metadata_complete": 0,
   "record_metadata_total": 4,
-  "correctness_rule": "compare channel-8 VisCue target side with the DataLabel-declared left/right code found in the same contiguous channel-9 nonzero bout; preserve the first 0-to-nonzero edge as response onset; no channel-9 bout in a cue interval is an operational omission",
-  "omission_rule": "no channel-9 action edge in the cue-onset-to-next-cue interval; late responses are not classified separately",
-  "late_response_status": "not modeled by the selected scope",
+  "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while Task-2 mapping is unverified",
+  "task_correctness_rule": "compare response side with external correct_response_side only when the keyed trial_truth table supplies verified truth",
+  "cue_interval_action_marker_rule": "count channel-9 edges in the cue-onset-to-next-cue interval; marker absence alone is not an omission label",
+  "analysis_window_s_relative_to_channel8_cue": [
+    -1.0,
+    5.0
+  ],
+  "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timeliness",
+  "formal_deadline_rule": "classify response against response_deadline_time_s only when an external formal deadline is supplied and the recording covers it",
+  "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout (sample count / sample rate); this is not target-to-response reaction time",
+  "actual_lateness_status": "undetermined unless an external response deadline is supplied and covered by the recording",
   "timing_rule": "external target onset/deadline are absolute seconds on the MAT TimeStamp clock; if actual target onset is absent, the existing cue+2.2 s schedule anchor is reported separately as an assumption",
   "coding_rule": "VisCue event sign is reported from raw samples; Action/TgtAct left/right codes are parsed from the MAT DataLabel",
   "response_onset_stage_code_records": [

@@ -145,11 +145,8 @@
   },
   "target_onset_status": "candidate sensitivity only; no independent target marker",
   "behavioral_labels_used": false,
-  "behavioral_outcome_labels_derived": true,
-  "behavioral_correct_count": 293,
-  "behavioral_incorrect_count": 107,
-  "behavioral_omission_count": 0,
-  "omission_rule": "no channel-9 action edge between cue onset and the next cue onset; late responses are not separated",
+  "behavioral_response_duration_labeled_count": 400,
+  "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count / sample rate; not target-to-response reaction time",
   "channel9_used_in_eeg_or_model": false,
   "channel9_used_as_predictor_or_state_input": false,
   "channel9_used_for_response_window_scoring": true,
@@ -170,5 +167,19 @@
     "memory_to_control_gain": 0.25,
     "conflict_gain": 0.8,
     "topdown_control_gain": 0.1
-  }
+  },
+  "direction_consistency_labels_derived": true,
+  "behavioral_direction_consistent_count": 293,
+  "behavioral_direction_inconsistent_count": 107,
+  "cue_intervals_with_action_marker_count": 400,
+  "cue_intervals_without_action_marker_count": 0,
+  "trials_with_declared_code_in_analysis_window_count": 400,
+  "cue_interval_action_marker_rule": "count channel-9 zero-to-nonzero action edges from each channel-8 cue to the next cue; this is an event count, not an omission label",
+  "analysis_window_s_relative_to_channel8_cue": [
+    -1.0,
+    5.0
+  ],
+  "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples in the custom analysis window only; this window does not define experimental timeliness",
+  "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
+  "actual_lateness_status": "undetermined_without_verified_target_onset_and_formal_deadline"
 }

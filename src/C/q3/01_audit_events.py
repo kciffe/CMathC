@@ -33,22 +33,21 @@ def main() -> None:
         "target_time": "cue_time + 2.2 s (schedule assumption; not verified from an allowed event channel)",
         "response_labels": "channel 9 zero-to-nonzero edge is t_act; response side is decoded from the L/R code declared in DataLabel within the same nonzero bout; raw codes are preserved",
         "response_channel_scope": "t_act and response side metadata / endpoint definition only; excluded from EEG predictors and features",
-        "correctness": "channel 8 VisCue gives target side; compare with the side decoded from channel 9's DataLabel-declared code within the first action bout",
-        "correct_trials": int(pd.to_numeric(event_table["correct"], errors="coerce").eq(1).sum()),
-        "incorrect_trials": int(pd.to_numeric(event_table["correct"], errors="coerce").eq(0).sum()),
+        "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+        "direction_consistent_trials": int(pd.to_numeric(event_table["cue_response_direction_consistent"], errors="coerce").eq(1).sum()),
+        "direction_inconsistent_trials": int(pd.to_numeric(event_table["cue_response_direction_consistent"], errors="coerce").eq(0).sum()),
         "response_bouts_with_unresolved_side": int(
             (
                 pd.to_numeric(event_table["response_event_count"], errors="coerce").fillna(0).gt(0)
                 & event_table["choice_side"].isna()
             ).sum()
         ),
-        "omission_trials": int(pd.to_numeric(event_table["is_omission"], errors="coerce").eq(1).sum()),
-        "omission_definition": "no channel-9 action bout in the VisCue onset-to-next-VisCue interval",
-        "timeliness_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-        "timeliness_rule": "timely when a channel-9 code declared in DataLabel (Action +/-1 or TgtAct +/-2) appears in the cue-centered window; an action in the cue-to-next-cue interval without that code in the window is late",
-        "timely_trials": int(pd.to_numeric(event_table["is_timely"], errors="coerce").eq(1).sum()),
-        "late_trials": int(pd.to_numeric(event_table["is_late"], errors="coerce").eq(1).sum()),
-        "timeliness_unresolved_trials": int(pd.to_numeric(event_table["is_timely"], errors="coerce").isna().sum()),
+        "cue_intervals_with_action_marker": int(pd.to_numeric(event_table["cue_interval_action_marker_count"], errors="coerce").gt(0).sum()),
+        "cue_intervals_without_action_marker": int(pd.to_numeric(event_table["cue_interval_action_marker_count"], errors="coerce").eq(0).sum()),
+        "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+        "trials_with_declared_code_in_analysis_window": int(pd.to_numeric(event_table["response_declared_code_sample_count_in_analysis_window"], errors="coerce").gt(0).sum()),
+        "analysis_window_rule": "count DataLabel-declared response-code samples only; not a timeliness classification",
+        "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_response_deadline",
         "response_bout_duration_status": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sampling rate; not target-to-response reaction time",
         "response_bout_duration_median_s": float(pd.to_numeric(event_table["response_duration_s"], errors="coerce").median()),
         "reaction_time": "duration remains unknown without a verified per-trial target onset; cue+2.2s is a schedule proxy only",
@@ -62,8 +61,7 @@ def main() -> None:
             f"timestamp matches={row['q1_timestamp_mapping_count']}, "
             f"responses={row['response_trial_count']}, "
             f"no response marker={row['no_response_marker_count']}, "
-            f"timely={int(pd.to_numeric(event_table.loc[event_table['record'].eq(row['record']), 'is_timely'], errors='coerce').eq(1).sum())}, "
-            f"late={int(pd.to_numeric(event_table.loc[event_table['record'].eq(row['record']), 'is_late'], errors='coerce').eq(1).sum())}, "
+            f"intervals with action markers={int(pd.to_numeric(event_table.loc[event_table['record'].eq(row['record']), 'cue_interval_action_marker_count'], errors='coerce').gt(0).sum())}, "
             f"median schedule-RT proxy={row['scheduled_rt_proxy_median_s']:.3f}s, "
             f"proxy<100ms={row['scheduled_rt_proxy_under_100ms_count']}"
         )

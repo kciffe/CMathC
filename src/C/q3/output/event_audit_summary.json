@@ -110,11 +110,20 @@
   "target_time": "cue_time + 2.2 s (schedule assumption; not verified from an allowed event channel)",
   "response_labels": "channel 9 zero-to-nonzero edge is t_act; response side is decoded from the L/R code declared in DataLabel within the same nonzero bout; raw codes are preserved",
   "response_channel_scope": "t_act and response side metadata / endpoint definition only; excluded from EEG predictors and features",
-  "correctness": "channel 8 VisCue gives target side; compare with the side decoded from channel 9's DataLabel-declared code within the first action bout",
-  "correct_trials": 293,
-  "incorrect_trials": 107,
+  "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+  "direction_consistent_trials": 293,
+  "direction_inconsistent_trials": 107,
   "response_bouts_with_unresolved_side": 0,
-  "omission_trials": 0,
-  "omission_definition": "no channel-9 zero-to-nonzero edge in the VisCue onset-to-next-VisCue interval; late responses are not separately classified",
+  "cue_intervals_with_action_marker": 400,
+  "cue_intervals_without_action_marker": 0,
+  "analysis_window_s_relative_to_channel8_cue": [
+    -1.0,
+    5.0
+  ],
+  "trials_with_declared_code_in_analysis_window": 400,
+  "analysis_window_rule": "count DataLabel-declared response-code samples only; not a timeliness classification",
+  "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_response_deadline",
+  "response_bout_duration_status": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sampling rate; not target-to-response reaction time",
+  "response_bout_duration_median_s": 1.234375,
   "reaction_time": "duration remains unknown without a verified per-trial target onset; cue+2.2s is a schedule proxy only"
 }

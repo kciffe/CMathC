@@ -1,4 +1,4 @@
-field,source,meaning,units_or_codes,analysis_role,limitations
+﻿field,source,meaning,units_or_codes,analysis_role,limitations
 record,record_audit.csv,continuous EEG recording identifier,4 MAT files,grouping and held-out validation,not a verified participant identifier
 original_trial_index,trial_table.csv,trial order within a recording,zero-based index,trial key and serial-order diagnostics,does not identify participant across files
 cue_time_s,trial_table.csv,VisCue event timestamp,seconds,EEG epoch anchor,clock origin is recording-specific
@@ -9,8 +9,8 @@ response_code,trial_table.csv,standardized channel-9 response code,raw -2/-1 -> 
 response_time_s,trial_table.csv,channel-9 event edge timestamp,seconds,response-time metadata,officially described as target click/action; exact marker latency not independently calibrated
 reaction_time_s,trial_table.csv,response time minus assumed target time,seconds,behavior timing diagnostic,invalid for DDM until target onset is verified
 correct,trial_table.csv,trial correctness,boolean or missing,behavior outcome,missing without target truth and verified task mapping
-is_omission,trial_table.csv,marker-missing indicator,boolean,marker audit,absence of marker is not omission without a deadline
-qc_valid,trial_features.csv,trial signal quality flag,true/false,feature inclusion,flags nonfinite, hard clip and flatline checks only
+cue_interval_action_marker_count,trial_table.csv,"Count of channel-9 action edges from this cue to the next cue; marker count only, not an omission label",nonnegative event count,cue-interval event audit,Absence of an action marker cannot establish an experimental omission without an authoritative response deadline
+qc_valid,trial_features.csv,trial signal quality flag,true/false,feature inclusion,flags nonfinite
 erp_mean_F3/Fz/F4,trial_features.csv,baseline-corrected frontal ERP mean,microvolt units not confirmed,EEG feature,potential ERP/P300 candidate; not a standard parietal P300 claim
 log_theta/alpha/beta_power,trial_features.csv,log integrated band power,theta 4-8; alpha 8-13; beta 13-30 Hz,EEG feature,short single-trial window limits frequency resolution
 AI_alpha,trial_features.csv,log alpha power F4 minus F3,log-power difference,EEG feature,three frontal electrodes only

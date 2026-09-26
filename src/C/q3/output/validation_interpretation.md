@@ -12,8 +12,8 @@
 - Channel 9 markers: 400; median t_act relative to cue is 2.215 s. The cue+2.2 s schedule proxy is under 100 ms before t_act for 399 trials; this proxy is not RT duration.
 - Channel 9 choice Logistic, leave-one-record-out balanced accuracy: 0.747.
 - Choice baseline comparison: cue/task-code BA 0.755; cue/task-code+EEG BA 0.747; EEG increment -0.007.
-- Channel-8/9 correctness by filename task-code candidate: code 1: 196/198 same-side (99.0%); code 2: 87/189 same-side (46.0%). Correctness uses the supplied channel semantics; filename task grouping is descriptive only.
-- Trial outcomes: correct 293, incorrect 107, omission 0; correctness-model LO-record-out BA: cue_side_only BA 0.500; EEG_state_only BA 0.497; cue_side_plus_EEG_state BA 0.500.
+- Channel-8/9 direction consistency by filename task-code candidate: code 1: 196/198 same-side (99.0%); code 2: 87/189 same-side (46.0%). These are same-side counts only; Task-2 cue-to-target mapping is unverified, so they are not correctness or accuracy results.
+- Trial outcomes: direction-consistent 293, direction-inconsistent 107, cue intervals with an action marker 400; consistency-prediction LO-record-out BA: cue_side_only BA 0.500; EEG_state_only BA 0.497; cue_side_plus_EEG_state BA 0.500.
 
 The main results use raw continuous EEG filtered in separate 0.5-30 Hz ERP and 1-80 Hz time-frequency branches. The Q1-clean epochs are used only for mapping and a matched-sample comparison. Leave-one-record-out is the main validation; it is not leave-one-participant-out because file-to-participant identity is unverified.
 
@@ -31,4 +31,4 @@ These are hypotheses, not established causes. PLV and theta-gamma PAC are marked
 
 ## Interpretation boundary
 
-Channel 9 supplies response direction and t_act and is never an EEG feature or V/H/P input. Correctness compares channel-9 action side with the channel-8 target side. An omission is no channel-9 action edge between a cue onset and the next cue onset; late-response timing is not modeled separately. Target onset is not independently marked, so reaction-time duration and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.
+Channel 9 supplies response direction, t_act, and the duration of its first contiguous nonzero bout; it is never an EEG feature or V/H/P input. Comparing channel-9 direction with channel-8 cue direction yields a direction-consistency label only; unverified Task-2 mapping prevents interpreting it as task correctness. A cue-relative [-1,+5] s window may be used to count declared channel-9 code samples, but it does not classify timely or late responses. Actual lateness cannot be determined without per-trial target onset and the formal response deadline. Cue-interval edge counts are event counts, not verified omission rates. Target onset is not independently marked, so target-to-response reaction time and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.

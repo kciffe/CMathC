@@ -22,8 +22,9 @@
     "choice_side",
     "response_time_s",
     "reaction_time_s",
-    "correct",
-    "is_omission",
+    "cue_response_direction_consistent",
+    "task_correct",
+    "verified_omission",
     "VisCue label"
   ],
   "channel9_in_cue_classifier_feature_set": false,

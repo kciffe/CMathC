@@ -319,12 +319,14 @@ def write_interpretation(
     )
     behavior_balanced_accuracy = behavior_status.get("mean_balanced_accuracy")
     behavior_outcomes = behavior_status.get("behavior_outcomes", {})
-    correctness_models = behavior_status.get("correctness_model", {})
-    correctness_model_text = "; ".join(
+    consistency_models = behavior_status.get(
+        "direction_consistency_model", behavior_status.get("correctness_model", {})
+    )
+    consistency_model_text = "; ".join(
         f"{name} BA {result['mean_balanced_accuracy']:.3f}"
-        for name, result in correctness_models.items()
+        for name, result in consistency_models.items()
         if result.get("mean_balanced_accuracy") is not None
-    ) or "no valid mixed-class held-out folds"
+    ) or "no valid mixed-class held-out folds; this is not task correctness"
     behavior_comparison = behavior_status.get("model_comparison", {})
     behavior_comparison_ba = behavior_comparison.get("mean_balanced_accuracy", {})
     cue_choice_alignment = behavior_comparison.get(
@@ -395,10 +397,10 @@ def write_interpretation(
         if behavior_comparison_ba.get("cue_plus_task_code") is not None
         and behavior_comparison_ba.get("cue_task_plus_EEG") is not None
         else "- Choice baseline comparison: not available.",
-        f"- Channel-8/9 correctness by filename task-code candidate: {cue_choice_alignment_text}. Correctness uses the supplied channel semantics; filename task grouping is descriptive only."
+        f"- Channel-8/9 direction consistency by filename task-code candidate: {cue_choice_alignment_text}. These are same-side counts only; Task-2 cue-to-target mapping is unverified, so they are not correctness or accuracy results."
         if cue_choice_alignment_text
-        else "- Channel-8/9 correctness summary: not available.",
-        f"- Trial outcomes: correct {behavior_outcomes.get('correct_count', 0)}, incorrect {behavior_outcomes.get('incorrect_count', 0)}, omission {behavior_outcomes.get('omission_count', 0)}; correctness-model LO-record-out BA: {correctness_model_text}.",
+        else "- Channel-8/9 direction-consistency summary: not available.",
+        f"- Trial outcomes: direction-consistent {behavior_outcomes.get('direction_consistent_count', behavior_outcomes.get('correct_count', 0))}, direction-inconsistent {behavior_outcomes.get('direction_inconsistent_count', behavior_outcomes.get('incorrect_count', 0))}, cue intervals with an action marker {behavior_outcomes.get('cue_intervals_with_action_marker_count', 'unknown')}; consistency-prediction LO-record-out BA: {consistency_model_text}.",
         "",
         "The main results use raw continuous EEG filtered in separate 0.5-30 Hz ERP and 1-80 Hz time-frequency branches. The Q1-clean epochs are used only for mapping and a matched-sample comparison. Leave-one-record-out is the main validation; it is not leave-one-participant-out because file-to-participant identity is unverified.",
         "",
@@ -416,7 +418,7 @@ def write_interpretation(
         "",
         "## Interpretation boundary",
         "",
-        "Channel 9 supplies response direction and t_act and is never an EEG feature or V/H/P input. Correctness compares channel-9 action side with the channel-8 target side. An omission is no channel-9 action edge between a cue onset and the next cue onset; late-response timing is not modeled separately. Target onset is not independently marked, so reaction-time duration and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.",
+        "Channel 9 supplies response direction, t_act, and the duration of its first contiguous nonzero bout; it is never an EEG feature or V/H/P input. Comparing channel-9 direction with channel-8 cue direction yields a direction-consistency label only; unverified Task-2 mapping prevents interpreting it as task correctness. A cue-relative [-1,+5] s window may be used to count declared channel-9 code samples, but it does not classify timely or late responses. Actual lateness cannot be determined without per-trial target onset and the formal response deadline. Cue-interval edge counts are event counts, not verified omission rates. Target onset is not independently marked, so target-to-response reaction time and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.",
         "",
     ]
     (output_dir / "validation_interpretation.md").write_text("\n".join(lines), encoding="utf-8")
@@ -551,7 +553,7 @@ def main() -> None:
         behavior_status = {"status": "not_run; run 05_behavior_model.py"}
 
     summary = {
-        "EEG_validation_target": "VisCue direction (-1/+1), not choice, correctness, RT, or omission",
+        "EEG_validation_target": "VisCue direction (-1/+1), not response choice, direction consistency, RT, or omission",
         "feature_source": "raw continuous F3/Fz/F4; ERP 0.5-30 Hz branch and TF 1-80 Hz branch; Q1 clean is mapping/quality reference only",
         "artifact_qc": "event epochs flagged for non-finite samples, a flat channel, or absolute amplitude >= 999.5 raw data units; branch and joint pass counts are in raw_feature_qc_summary.json",
         "CV": "leave one recording file out; all scaling estimated from training records only",
@@ -566,7 +568,7 @@ def main() -> None:
         "behavior_validation": behavior_status,
         "target_locking": "nominal event is fixed cue + 2.2 s by schedule assumption; sensitivity offsets span 2.0-2.4 s",
         "channel_9_scope": "used for event/response direction and endpoint metadata only; excluded from EEG feature arrays and predictors",
-        "interpretation_limit": "EEG classification estimates cue-side decodability; choice and correctness models are separate; neither is a clinical diagnosis result",
+        "interpretation_limit": "EEG classification estimates cue-side decodability; choice and direction-consistency models are separate, and direction consistency is not task correctness; none is a clinical diagnosis result",
     }
     baseline = summary["legacy_q1_baseline_reference"].get("stage_results", {})
     summary["q1_matched_delta_vs_legacy"] = {

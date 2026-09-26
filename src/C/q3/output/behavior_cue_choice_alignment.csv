@@ -1,3 +1,3 @@
 ﻿filename_task_code_candidate,n_trials,n_cue_choice_same_side,cue_choice_same_side_fraction,interpretation
-1,198,196,0.98989898989899,channel-8 target side versus channel-9 DataLabel-declared action code; grouping by filename task code is descriptive only
-2,189,87,0.4603174603174603,channel-8 target side versus channel-9 DataLabel-declared action code; grouping by filename task code is descriptive only
+1,198,196,0.98989898989899,"channel-8 cue direction versus channel-9 response direction; same-side relation only, not task correctness"
+2,189,87,0.4603174603174603,"channel-8 cue direction versus channel-9 response direction; same-side relation only, not task correctness"

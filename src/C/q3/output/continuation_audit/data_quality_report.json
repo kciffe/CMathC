@@ -51,20 +51,30 @@
       "mapping_rule": "2 -> 2"
     }
   ],
-  "channel9_no_marker_trials": 0,
-  "correctness_labels_present": 400,
-  "correct_trials": 293,
-  "incorrect_trials": 107,
-  "omission_labels_present": 400,
-  "omission_trials": 0,
-  "correctness_rule": "channel-8 VisCue target side compared with the channel-9 DataLabel-declared L/R code within the first action bout; no-response or undecodable trials have no correctness label",
-  "omission_rule": "no channel-9 action edge in the cue-onset-to-next-cue interval; late responses are not classified separately",
-  "deadline_column_present": false,
   "target_time_per_trial_marker_present": false,
   "target_time_source": "cue duration about 0.2 s plus about 2 s after cue disappearance per official task appendix; exact onset remains unmarked",
   "assumed_2p2_rt_median_s": null,
   "assumed_2p2_rt_under_100ms": 0,
   "assumed_2p0_rt_median_s": 0.21484375,
-  "missingness_note": "Target onset and deadline remain unavailable, so reaction-time duration and late-response classification remain unknown. Correctness and interval-level no-response labels are derived from channel 8/9 semantics.",
-  "data_units_note": "Raw EEG unit is not independently documented in the MAT metadata."
+  "missingness_note": "Task correctness is undetermined without a verified Task-2 cue-to-target mapping or authoritative response truth. Actual lateness is undetermined without per-trial target onset and the formal deadline. The custom cue-relative window provides code counts only.",
+  "data_units_note": "Raw EEG unit is not independently documented in the MAT metadata.",
+  "response_duration_labeled_trials": 400,
+  "response_duration_median_s": 1.234375,
+  "response_duration_rule": "Duration of the first contiguous channel-9 nonzero action bout, sample count / sample rate; not target-onset-to-action-onset reaction time.",
+  "channel9_action_marker_count_total": 400,
+  "direction_consistency_labels_present": 400,
+  "direction_consistent_trials": 293,
+  "direction_inconsistent_trials": 107,
+  "cue_intervals_with_action_marker_count": 400,
+  "cue_intervals_without_action_marker_count": 0,
+  "trials_with_declared_code_in_analysis_window_count": 400,
+  "declared_code_samples_in_analysis_window_total": 58729,
+  "analysis_window_s_relative_to_channel8_cue": [
+    -1.0,
+    5.0
+  ],
+  "analysis_window_rule": "Count DataLabel-declared channel-9 response-code samples in the custom cue-relative window only; the window is not an experimental deadline.",
+  "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
+  "actual_lateness_status": "undetermined_without_verified_target_onset_and_formal_deadline",
+  "formal_deadline_data_available": false
 }

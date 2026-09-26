@@ -14,30 +14,32 @@
 2. **通道9应答时刻：按参考模型使用。** 本实现将每个 cue 区间内唯一的通道9零到非零边沿定义为绝对应答时刻 `t_act`，并用 `t_act - 100 ms` 作为应答前 EEG 截止点。该定义支持应答锁定窗口；由于没有逐试次目标 onset，`t_act - target_onset` 形式的反应时长仍未知。
 3. **试次配对：当前未见错位证据。** 按每个 cue 到下一 cue 的区间检查，所有记录都是一段一个通道9边沿；故逐试次顺序错位暂不支持为主要解释。跨通道同步偏移或记录程序对通道9的写入语义，仍需要原始实验日志/软件定义才能排除。
 
-## 逐试次正确性与分组解释
+## 逐试次线索—响应方向一致性与分组解释
 
 《第三.pdf》把项目1定义为位置提示、项目2定义为形状提示，但没有在文本中给四份 MAT 文件写出机器可核对的逐文件项目映射。当前 Q3 将 `Task-1/Task-2` 后缀作为候选类型；Q2 的 `revision_v3/config.py` 则把 `VisualCogA_*` 两份文件归为 Task1、`VisualCogB_*` 两份归为 Task2。两套分组给出不同的 cue-应答同侧结构：
 
-| grouping_scheme               | group             |   n_trials |   cue_response_same_side_count |   cue_response_same_side_fraction | interpretation                                                                                                                         |
-|:------------------------------|:------------------|-----------:|-------------------------------:|----------------------------------:|:---------------------------------------------------------------------------------------------------------------------------------------|
-| suffix: Task-1/Task-2         | Task-1            |        200 |                            198 |                             0.990 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| suffix: Task-1/Task-2         | Task-2            |        200 |                             95 |                             0.475 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| prefix: VisualCogA/VisualCogB | VisualCogA        |        200 |                            147 |                             0.735 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| prefix: VisualCogA/VisualCogB | VisualCogB        |        200 |                            146 |                             0.730 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| record                        | VisualCogA_Task-1 |        100 |                            100 |                             1.000 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| record                        | VisualCogA_Task-2 |        100 |                             47 |                             0.470 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| record                        | VisualCogB_Task-1 |        100 |                             98 |                             0.980 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
-| record                        | VisualCogB_Task-2 |        100 |                             48 |                             0.480 | correctness from channel-8 target side and channel-9 DataLabel-declared code within the action bout; task grouping is descriptive only |
+| grouping_scheme               | group             |   n_trials |   cue_response_same_side_count |   cue_response_same_side_fraction | interpretation                                                                                              |
+|:------------------------------|:------------------|-----------:|-------------------------------:|----------------------------------:|:------------------------------------------------------------------------------------------------------------|
+| suffix: Task-1/Task-2         | Task-1            |        200 |                            198 |                             0.990 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| suffix: Task-1/Task-2         | Task-2            |        200 |                             95 |                             0.475 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| prefix: VisualCogA/VisualCogB | VisualCogA        |        200 |                            147 |                             0.735 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| prefix: VisualCogA/VisualCogB | VisualCogB        |        200 |                            146 |                             0.730 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| record                        | VisualCogA_Task-1 |        100 |                            100 |                             1.000 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| record                        | VisualCogA_Task-2 |        100 |                             47 |                             0.470 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| record                        | VisualCogB_Task-1 |        100 |                             98 |                             0.980 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
+| record                        | VisualCogB_Task-2 |        100 |                             48 |                             0.480 | same-side/different-side direction comparison only; not task correctness because task mapping is unverified |
 
-本题给出的通道定义已经确定逐试次目标侧，因此正确性不依赖文件名中的项目类型映射：通道8目标侧与通道9动作段中由 `DataLabel` 声明的左右码同侧即正确，不同即错误。Task-2 的首个动作边沿先出现 `±1`，随后同一连续动作段出现标签声明的 `±2`；程序用 `±2` 解码方向、用首个零到非零边沿定义 `t_act`。上表仅按文件名候选分组展示正确率；项目类型和任务效应仍需实验记录表核实，不能从分组正确率倒推。
+上表比较通道8线索方向与通道9响应方向的同侧比例。该比例只称为“线索—响应方向一致性”，不能称为正确率：Task-2 的线索方向与正确目标位置之间的映射尚未核实，文件名候选分组也不能替代实验任务映射。Task-2 的首个动作边沿先出现 `±1`，随后同一连续动作段出现标签声明的 `±2`；程序用 `±2` 解码响应方向、用首个零到非零边沿定义 `t_act`。
 
 ## 标签规则
 
 - `response_side`：按通道9的 `DataLabel` 解码动作段中的左/右代码。Task-1 `Action` 使用 ±1；Task-2 `TgtAct` 使用 ±2。Task-2 的±1起始状态和后续±2代码同属一个连续动作段，先验证整段符号一致，不把两个幅值当成两次应答。
 - `t_act_s`：通道9零到非零边沿的绝对时间；应答前分析窗口在 `t_act - 100 ms` 截止。
 - `reaction_time_s`：本轮保留为空，状态为 `unknown_no_independent_trial_target_onset`；目标呈现时刻缺少逐试次记录。
-- `correct`：通道8的目标侧与通道9动作段中 `DataLabel` 声明的目标选择代码相同记1，不同记0；没有动作或动作方向无法由声明代码解析时记为空，不把未答混作答错。
-- `is_omission`：当前定义为本次 cue 起始至下一次 cue 起始之间没有通道9动作边沿。迟答与漏答不再区分；本数据400个区间各有一条动作边沿，因此本数据集的区间漏答数为0。
+- `cue_response_direction_consistent`：通道8线索方向与通道9动作段中按 `DataLabel` 解码的响应方向相同记1、不同记0；此值仅表示方向一致性，不表示任务正确性。Task-2 任务映射尚未核实，因此不报告任务正确率。
+- `has_channel9_action_edge_in_cue_interval`：记录 cue 起始至下一 cue 起始区间是否观测到通道9动作边沿。本数据400个区间均观测到边沿；该事件计数本身不等价于经正式截止规则核实的漏答率。
+- `response_declared_code_sample_count_in_analysis_window`：选定 cue 相对 `[-1,+5]` 秒窗内 DataLabel 声明码的样本计数。本数据400个试次均在该窗内观测到声明码；这是窗口内计数，不是及时应答判定。
+- 真实迟答情况：尚无法判定。需要逐试次真实目标呈现时刻和实验正式应答截止规则；当前自定义窗口不能代替这两项信息。
 
 ## 当前可用的时间窗
 
@@ -54,7 +56,7 @@
 
 ## 下一步
 
-1. 找到实验程序/原始行为日志或目标显示触发记录，核实 target onset 和共同时间基准；在此之前不拟合真实 RT 或 DDM。通道8/9已能给出本题定义下的正确性与 cue 区间无应答标签。
+1. 找到实验程序/原始行为日志或目标显示触发记录，核实任务映射、target onset、正式截止规则和共同时间基准；在此之前不报告任务正确率、真实迟答率，也不拟合真实 RT 或 DDM。通道8/9目前给出的是方向一致性和动作标记观测。
 2. 先建立不声称解剖定位的时间域基线：按 cue 与通道9边沿索引 F3/Fz/F4 连续轨迹，做记录级留出预测/重构；预注册窗口和误差指标。
 3. 再把 Q2 的 LGN→Wilson–Cowan→源→导联结构接入状态空间：用可观测的 cue 驱动视觉子模块，把未观测 target/memory match 明确记为潜输入；只有外部真值或模型可识别性检验通过后，才拟合 H/P 转移与额外源权重。
 4. 每次模型或处理口径变更后，重新生成同一组审计图与留出诊断图，记录数据版本、窗口、参数、单位和未知标签数。
@@ -76,6 +78,16 @@
 
 ![原始 VisCue 与通道9 事件波形](figures/event_channel_trace_example.png)
 
-![按两种候选文件分组展示的通道8/9正确率](figures/task_mapping_candidate_audit.png)
+![按候选文件分组展示的通道8/9方向一致性比例](figures/task_mapping_candidate_audit.png)
 
 图中 cue+2.0 s / cue+2.2 s 仅为敏感性参照；cue-off+约2秒是由题目附录构造的计划时刻代理。任何垂直参考线都不代表已观测的真实目标起始。
+
+
+## 选定分析窗内的动作码计数
+
+cue-1 至 cue+5 秒是本项目选择的观测窗口，仅统计 DataLabel 声明的通道9应答码；该窗口不是实验截止规则，不能据此判断及时或迟答。
+
+- 窗口内至少出现一次声明码的试次数：400/400。
+- 真实迟答情况：尚无法判定；缺少逐试次目标呈现时刻和正式截止规则。
+- Median duration of the first contiguous channel-9 nonzero bout: 1.2344 s.
+- This bout duration is not target-to-response reaction time; target onset remains unverified.

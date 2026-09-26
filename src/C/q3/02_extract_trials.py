@@ -29,8 +29,8 @@ def attach_optional_behavior_labels(
             "choice_side",
             "response_side",
             "reaction_time_s",
-            "correct",
-            "is_omission",
+            "cue_response_direction_consistent",
+            "cue_interval_action_marker_count",
             "deadline_s",
         )
         if column in behavior.columns
@@ -103,21 +103,14 @@ def main() -> None:
         if column in trial_table.columns
     ]
     write_csv(trial_table[quality_columns], output_dir / "q1_quality_mapping_reference.csv")
-    omission_labels = pd.to_numeric(
-        trial_table["is_omission"],
-        errors="coerce",
+    direction_consistency = pd.to_numeric(
+        trial_table["cue_response_direction_consistent"], errors="coerce"
     )
-    correctness_labels = pd.to_numeric(trial_table["correct"], errors="coerce")
-    external_correctness = pd.to_numeric(
-        trial_table["external_correct"]
-        if "external_correct" in trial_table
-        else pd.Series(np.nan, index=trial_table.index),
-        errors="coerce",
-    )
-    external_omissions = pd.to_numeric(
-        trial_table["external_is_omission"]
-        if "external_is_omission" in trial_table
-        else pd.Series(np.nan, index=trial_table.index),
+    action_marker_count = pd.to_numeric(
+        trial_table["cue_interval_action_marker_count"], errors="coerce"
+    ).fillna(0)
+    declared_code_count = pd.to_numeric(
+        trial_table["response_declared_code_sample_count_in_analysis_window"],
         errors="coerce",
     )
     summary = {
@@ -135,30 +128,24 @@ def main() -> None:
             ).sum()
         ),
         "channel9_no_marker_observed_count": int((~trial_table["response_marker_present"].fillna(False)).sum()),
-        "correct_count": int(correctness_labels.eq(1).sum()),
-        "incorrect_count": int(correctness_labels.eq(0).sum()),
-        "correctness_labeled_count": int(correctness_labels.notna().sum()),
-        "omission_count": int(omission_labels.eq(1).sum()),
-        "omission_labeled_count": int(omission_labels.notna().sum()),
-        "timely_count": int(pd.to_numeric(trial_table["is_timely"], errors="coerce").eq(1).sum()),
-        "late_count": int(pd.to_numeric(trial_table["is_late"], errors="coerce").eq(1).sum()),
-        "timeliness_unresolved_count": int(pd.to_numeric(trial_table["is_timely"], errors="coerce").isna().sum()),
+        "cue_response_direction_consistent_count": int(direction_consistency.eq(1).sum()),
+        "cue_response_direction_inconsistent_count": int(direction_consistency.eq(0).sum()),
+        "direction_consistency_labeled_count": int(direction_consistency.notna().sum()),
+        "cue_intervals_with_action_marker_count": int(action_marker_count.gt(0).sum()),
+        "cue_intervals_without_action_marker_count": int(action_marker_count.eq(0).sum()),
+        "trials_with_declared_code_in_analysis_window": int(declared_code_count.gt(0).sum()),
         "response_duration_labeled_count": int(pd.to_numeric(trial_table["response_duration_s"], errors="coerce").notna().sum()),
         "response_duration_median_s": float(pd.to_numeric(trial_table["response_duration_s"], errors="coerce").median()),
-        "external_correctness_disagreement_count": int(
-            (external_correctness.notna() & correctness_labels.notna() & external_correctness.ne(correctness_labels)).sum()
-        ),
-        "external_omission_disagreement_count": int(
-            (external_omissions.notna() & omission_labels.notna() & external_omissions.ne(omission_labels)).sum()
-        ),
         "q1_usage": "event timestamp mapping and quality labels only; no Q1 EEG samples are read or used as Q3 feature input",
         "channel9_usage": "t_act is the first zero-to-nonzero edge; response side is decoded using the channel-specific L/R code in DataLabel within that bout; never included in EEG predictor/features",
-        "correctness_rule": "correct=1 when the channel-9 side decoded from its DataLabel-declared code matches channel-8 VisCue target side; correct=0 otherwise; no-response or undecodable trials have correctness=null",
-        "omission_rule": "omission=1 when no channel-9 action bout occurs between this VisCue onset and the next VisCue onset",
-        "timeliness_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-        "timeliness_rule": "timely when the response code declared in the channel-9 DataLabel occurs in the cue-centered window; Task-1 Action uses +/-1 and Task-2 TgtAct uses +/-2; otherwise an action in the cue interval is late",
+        "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+        "cue_interval_action_marker_rule": "count channel-9 action edges between this VisCue onset and the next VisCue onset; do not equate marker absence with an experiment-level omission",
+        "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
+        "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timely or late",
+        "task_correctness_status": "unknown_without_verified_task_mapping_or_correct_response_truth",
+        "actual_lateness_status": "unknown_without_per_trial_target_onset_and_formal_response_deadline",
         "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sample rate; this is not target-to-response reaction time",
-        "behavior_label_caveat": "correctness, omission, timeliness, and channel-9 bout duration are operational labels from the supplied channel semantics; target-onset reaction time remains unavailable",
+        "behavior_label_caveat": "direction consistency, event-marker counts, analysis-window code counts, and channel-9 bout duration are signal-derived observations; task correctness and actual timeliness require independent truth/deadline metadata",
     }
     write_json(summary, output_dir / "trial_table_build_summary.json")
     print(
