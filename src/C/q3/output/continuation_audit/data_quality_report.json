@@ -56,7 +56,7 @@
   "assumed_2p2_rt_median_s": null,
   "assumed_2p2_rt_under_100ms": 0,
   "assumed_2p0_rt_median_s": 0.21484375,
-  "missingness_note": "Task correctness is undetermined without a verified Task-2 cue-to-target mapping or authoritative response truth. Actual lateness is undetermined without per-trial target onset and the formal deadline. The custom cue-relative window provides code counts only.",
+  "missingness_note": "Correctness and timeliness are available from the supplied same-direction and cue+3.0 s rules. Target-relative reaction time remains unknown without a per-trial target onset; the cue-relative code-count window remains separate.",
   "data_units_note": "Raw EEG unit is not independently documented in the MAT metadata.",
   "response_duration_labeled_trials": 400,
   "response_duration_median_s": 1.234375,
@@ -73,8 +73,13 @@
     -1.0,
     5.0
   ],
-  "analysis_window_rule": "Count DataLabel-declared channel-9 response-code samples in the custom cue-relative window only; the window is not an experimental deadline.",
-  "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
-  "actual_lateness_status": "undetermined_without_verified_target_onset_and_formal_deadline",
-  "formal_deadline_data_available": false
+  "analysis_window_rule": "count DataLabel-declared channel-9 code samples in cue-relative [-1,+5] s; timeliness is classified separately using cue+3.0 s",
+  "task_correctness_status": "derived_by_user_supplied_same_direction_rule",
+  "actual_lateness_status": "classified_by_user_supplied_cue_plus_3s_rule",
+  "formal_deadline_data_available": false,
+  "task_correct_count": 293,
+  "task_incorrect_count": 107,
+  "timely_response_count": 400,
+  "not_timely_response_count": 0,
+  "user_timeliness_cutoff_s_after_cue": 3.0
 }

@@ -7,7 +7,10 @@
     "n_records_included": 4,
     "split": "leave one complete record file out; participant independence unverified",
     "behavioral_labels_used": false,
-    "channel9_used_in_eeg_or_model": false
+    "t_act_definition": "unique channel-9 zero-to-nonzero edge; absolute timestamp",
+    "channel9_used_for_response_window_scoring": true,
+    "channel9_used_as_predictor_or_state_input": false,
+    "n_record_cue_groups_with_t_act_windows": 8
   },
   "primary_result": {
     "causal": {
@@ -34,14 +37,14 @@
     "total": 9
   },
   "numerical_interface_check": 5.953653570145434e-08,
-  "abstract_character_count": 895,
+  "abstract_character_count": 987,
   "compile": "XeLaTeX executed twice; PDF text extraction contains required headings and headline metrics",
   "pdf_pages": "Pages:           14",
   "limitations": [
     "four record folds only",
     "participant independence unverified",
-    "candidate event truth not observed",
-    "state parameters fixed",
-    "no behavior labels"
+    "per-trial target onset unobserved so target-relative RT unavailable",
+    "behavior labels are not inputs to the EEG dynamic model",
+    "state parameters fixed"
   ]
 }

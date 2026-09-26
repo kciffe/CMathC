@@ -5,7 +5,7 @@ from __future__ import annotations
 import pandas as pd
 
 from common import build_record_event_tables, ensure_output_dir, write_csv, write_json
-from config import RECORDS
+from config import RECORDS, RESPONSE_DEADLINE_AFTER_CUE_S
 
 
 def main() -> None:
@@ -33,7 +33,10 @@ def main() -> None:
         "target_time": "cue_time + 2.2 s (schedule assumption; not verified from an allowed event channel)",
         "response_labels": "channel 9 zero-to-nonzero edge is t_act; response side is decoded from the L/R code declared in DataLabel within the same nonzero bout; raw codes are preserved",
         "response_channel_scope": "t_act and response side metadata / endpoint definition only; excluded from EEG predictors and features",
-        "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+        "correctness_rule": "same sign of channel-8 cue and decoded channel-9 response is correct; opposite sign is incorrect, per the user-specified rule",
+        "task_correct_trials": int(pd.to_numeric(event_table["task_correct"], errors="coerce").eq(1).sum()),
+        "task_incorrect_trials": int(pd.to_numeric(event_table["task_correct"], errors="coerce").eq(0).sum()),
+        "task_correctness_unresolved_trials": int(pd.to_numeric(event_table["task_correct"], errors="coerce").isna().sum()),
         "direction_consistent_trials": int(pd.to_numeric(event_table["cue_response_direction_consistent"], errors="coerce").eq(1).sum()),
         "direction_inconsistent_trials": int(pd.to_numeric(event_table["cue_response_direction_consistent"], errors="coerce").eq(0).sum()),
         "response_bouts_with_unresolved_side": int(
@@ -46,11 +49,15 @@ def main() -> None:
         "cue_intervals_without_action_marker": int(pd.to_numeric(event_table["cue_interval_action_marker_count"], errors="coerce").eq(0).sum()),
         "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
         "trials_with_declared_code_in_analysis_window": int(pd.to_numeric(event_table["response_declared_code_sample_count_in_analysis_window"], errors="coerce").gt(0).sum()),
-        "analysis_window_rule": "count DataLabel-declared response-code samples only; not a timeliness classification",
-        "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_response_deadline",
+        "analysis_window_rule": "cue-relative [-1,+5] s is a code-count observation window only; timeliness uses the separate cue+3 s rule",
+        "timeliness_deadline_s_after_cue": RESPONSE_DEADLINE_AFTER_CUE_S,
+        "timely_response_trials": int(pd.to_numeric(event_table["timely_response"], errors="coerce").eq(1).sum()),
+        "late_or_missing_by_deadline_trials": int(pd.to_numeric(event_table["timely_response"], errors="coerce").eq(0).sum()),
+        "timeliness_unresolved_trials": int(pd.to_numeric(event_table["timely_response"], errors="coerce").isna().sum()),
+        "actual_lateness_status": "classified_by_user_supplied_channel9_deadline_cue_plus_3s; separate from target-relative reaction time",
         "response_bout_duration_status": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sampling rate; not target-to-response reaction time",
         "response_bout_duration_median_s": float(pd.to_numeric(event_table["response_duration_s"], errors="coerce").median()),
-        "reaction_time": "duration remains unknown without a verified per-trial target onset; cue+2.2s is a schedule proxy only",
+        "reaction_time": "cue-to-response latency is observed; target-to-response reaction time remains unknown without a verified per-trial target onset; cue+2.2s is a schedule proxy only",
     }
     write_json(summary, output_dir / "event_audit_summary.json")
     print(f"Wrote {len(event_table)} cue events and {len(mapping_table)} clean-trial mappings to {output_dir}")

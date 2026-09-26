@@ -1,9 +1,9 @@
 ﻿grouping_scheme,group,n_trials,cue_response_same_side_count,cue_response_same_side_fraction,interpretation
-suffix: Task-1/Task-2,Task-1,200,198,0.99,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-suffix: Task-1/Task-2,Task-2,200,95,0.475,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-prefix: VisualCogA/VisualCogB,VisualCogA,200,147,0.735,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-prefix: VisualCogA/VisualCogB,VisualCogB,200,146,0.73,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-record,VisualCogA_Task-1,100,100,1.0,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-record,VisualCogA_Task-2,100,47,0.47,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-record,VisualCogB_Task-1,100,98,0.98,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
-record,VisualCogB_Task-2,100,48,0.48,same-side/different-side direction comparison only; not task correctness because task mapping is unverified
+suffix: Task-1/Task-2,Task-1,200,198,0.99,same-side is correct and different-side is incorrect under the user-supplied rule
+suffix: Task-1/Task-2,Task-2,200,95,0.475,same-side is correct and different-side is incorrect under the user-supplied rule
+prefix: VisualCogA/VisualCogB,VisualCogA,200,147,0.735,same-side is correct and different-side is incorrect under the user-supplied rule
+prefix: VisualCogA/VisualCogB,VisualCogB,200,146,0.73,same-side is correct and different-side is incorrect under the user-supplied rule
+record,VisualCogA_Task-1,100,100,1.0,same-side is correct and different-side is incorrect under the user-supplied rule
+record,VisualCogA_Task-2,100,47,0.47,same-side is correct and different-side is incorrect under the user-supplied rule
+record,VisualCogB_Task-1,100,98,0.98,same-side is correct and different-side is incorrect under the user-supplied rule
+record,VisualCogB_Task-2,100,48,0.48,same-side is correct and different-side is incorrect under the user-supplied rule

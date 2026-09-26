@@ -1,14 +1,12 @@
 # -*- coding: utf-8 -*-
 """Whole-epoch smoothing-spline fits for condition-averaged ERP waveforms.
 
-This is a separate analysis stage from ``13erp_fit.py``:
+This stage reads the cleaned trials from stage 8 and follows the ERP
+baseline-correction and averaging convention established in stage 11. It fits
+one penalized cubic B-spline (P-spline) to each complete condition/channel ERP.
 
-* 11 supplies the cleaned trials and defines the ERP preprocessing convention.
-* 14 fits one penalized cubic B-spline (P-spline) to each complete
-  condition/channel ERP.
-* 13 remains responsible for local Gaussian summaries of eligible candidate peaks.
-
-The spline is a descriptive waveform fit, not a P300 component decomposition.
+The spline describes the full ERP waveform; it does not identify or validate a
+P300 component.
 """
 
 from pathlib import Path

@@ -18,6 +18,7 @@ from config import (
     RAW_DATA_DIR,
     RECORDS,
     RESPONSE_ANALYSIS_WINDOW_S,
+    RESPONSE_DEADLINE_AFTER_CUE_S,
     RESPONSE_CHANNEL_NAMES,
     TARGET_OFFSET_S,
     TARGET_OFFSET_SOURCE,
@@ -152,6 +153,92 @@ def standardize_response_code(raw_response: np.ndarray) -> np.ndarray:
     return standardized
 
 
+def classify_channel9_behavior(
+    *,
+    cue_side: Any,
+    response_side: Any,
+    cue_time_s: Any,
+    response_time_s: Any,
+    observation_end_time_s: Any,
+    deadline_after_cue_s: float = RESPONSE_DEADLINE_AFTER_CUE_S,
+) -> dict[str, Any]:
+    """Apply the supplied same-direction correctness and cue+3 s timing rules.
+
+    Channel-9 response time is the first zero-to-nonzero edge. For TgtAct,
+    ``decode_response_bout`` has already required the signed ±1 stage followed
+    by the same-side declared ±2 code. Missing responses are untimely only if
+    the recording covers the full cue-relative deadline.
+    """
+    def finite_number(value: Any) -> float | None:
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if np.isfinite(number) else None
+
+    cue = finite_number(cue_side)
+    response = finite_number(response_side)
+    cue_time = finite_number(cue_time_s)
+    response_time = finite_number(response_time_s)
+    observation_end = finite_number(observation_end_time_s)
+
+    if cue in (-1.0, 1.0) and response in (-1.0, 1.0):
+        task_correct = int(cue == response)
+        correctness_status = (
+            "correct_by_same_direction_rule"
+            if task_correct
+            else "incorrect_by_opposite_direction_rule"
+        )
+    else:
+        task_correct = np.nan
+        correctness_status = "unknown_cue_or_response_direction"
+
+    deadline_time = (
+        cue_time + float(deadline_after_cue_s)
+        if cue_time is not None
+        else np.nan
+    )
+    latency = (
+        response_time - cue_time
+        if response_time is not None and cue_time is not None
+        else np.nan
+    )
+    deadline_covered = bool(
+        np.isfinite(deadline_time)
+        and observation_end is not None
+        and observation_end >= deadline_time
+    )
+
+    if response_time is not None and np.isfinite(deadline_time):
+        timely = int(response_time <= deadline_time)
+        timing_status = (
+            "response_within_cue_plus_3s_deadline"
+            if timely
+            else "response_after_cue_plus_3s_deadline"
+        )
+    elif response_time is not None:
+        timely = np.nan
+        timing_status = "cue_time_unavailable"
+    elif deadline_covered:
+        timely = 0
+        timing_status = "no_response_by_cue_plus_3s_deadline"
+    else:
+        timely = np.nan
+        timing_status = "deadline_not_observed"
+
+    return {
+        "task_correct": task_correct,
+        "task_correctness_status": correctness_status,
+        "task_correctness_source": "channel8_channel9_same_direction_user_rule",
+        "response_latency_from_cue_s": latency,
+        "cue_plus_3_deadline_time_s": deadline_time,
+        "cue_plus_3_deadline_covered": deadline_covered,
+        "timely_response": timely,
+        "timeliness_status": timing_status,
+        "timeliness_source": "user_defined_channel9_onset_within_3s_after_channel8_cue",
+    }
+
+
 def detect_response_events(
     raw_response: np.ndarray, timestamps: np.ndarray
 ) -> list[dict[str, Any]]:
@@ -197,8 +284,8 @@ def measure_response_window(
 ) -> dict[str, Any]:
     """Measure the selected cue-centered observation window and action-bout duration.
 
-    The cue-relative window only supports event/code counts. It does not define
-    timely or late behavior without the experiment's formal response deadline.
+    This window is used only to count event/code samples. Timeliness is computed
+    separately by the supplied cue-relative 3 s cutoff.
     """
     signal = np.asarray(raw_response, dtype=np.float64).reshape(-1)
     time = np.asarray(timestamps, dtype=np.float64).reshape(-1)
@@ -492,12 +579,14 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
             raw["response_label"],
             int(response["response_sample_index"]) if response is not None else None,
         )
+        interval_end_index = min(trial_end, timestamps.size - 1)
         response_by_trial[trial_index] = {
             "response_events": trial_responses,
             "response_event_count": len(trial_responses),
             "response": response,
             "decoded_response": decoded_response,
             "response_timing": response_timing,
+            "cue_interval_observation_end_time_s": float(timestamps[interval_end_index]),
         }
 
     quality = load_quality_table(record)
@@ -588,6 +677,13 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
         target_side = int(event["cue_side"])
         response_side = decoded_response["choice_side"]
         direction_consistent = int(response_side == target_side) if response_side is not None else np.nan
+        behavior_labels = classify_channel9_behavior(
+            cue_side=target_side,
+            response_side=response_side,
+            cue_time_s=event["cue_time_s"],
+            response_time_s=response_time if response is not None else None,
+            observation_end_time_s=response_info["cue_interval_observation_end_time_s"],
+        )
         target_time_proxy = float(event["cue_time_s"] + TARGET_OFFSET_S)
         schedule_rt_proxy = response_time - target_time_proxy if response else np.nan
         if response is None:
@@ -638,6 +734,10 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "response_bout_code_sequence": decoded_response["bout_code_sequence"],
                 **response_info["response_timing"],
                 "cue_direction": target_side,
+                "cue_interval_observation_end_time_s": response_info[
+                    "cue_interval_observation_end_time_s"
+                ],
+                **behavior_labels,
                 "target_time_schedule_proxy_s": target_time_proxy,
                 "scheduled_rt_proxy_s": schedule_rt_proxy,
                 # RT duration needs a verified target onset, which is not
@@ -646,7 +746,7 @@ def build_record_event_tables(record: str) -> tuple[pd.DataFrame, pd.DataFrame, 
                 "rt_status": rt_status,
                 "cue_response_direction_consistent": direction_consistent,
                 "direction_consistency_status": (
-                    "channel8_channel9_same_or_different_direction_only"
+                    "same_or_opposite_direction_used_as_correctness_by_user_rule"
                     if response_side is not None
                     else "direction_unresolved"
                 ),

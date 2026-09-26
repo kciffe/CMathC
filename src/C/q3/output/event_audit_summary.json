@@ -110,7 +110,10 @@
   "target_time": "cue_time + 2.2 s (schedule assumption; not verified from an allowed event channel)",
   "response_labels": "channel 9 zero-to-nonzero edge is t_act; response side is decoded from the L/R code declared in DataLabel within the same nonzero bout; raw codes are preserved",
   "response_channel_scope": "t_act and response side metadata / endpoint definition only; excluded from EEG predictors and features",
-  "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+  "correctness_rule": "same sign of channel-8 cue and decoded channel-9 response is correct; opposite sign is incorrect, per the user-specified rule",
+  "task_correct_trials": 293,
+  "task_incorrect_trials": 107,
+  "task_correctness_unresolved_trials": 0,
   "direction_consistent_trials": 293,
   "direction_inconsistent_trials": 107,
   "response_bouts_with_unresolved_side": 0,
@@ -121,9 +124,13 @@
     5.0
   ],
   "trials_with_declared_code_in_analysis_window": 400,
-  "analysis_window_rule": "count DataLabel-declared response-code samples only; not a timeliness classification",
-  "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_response_deadline",
+  "analysis_window_rule": "cue-relative [-1,+5] s is a code-count observation window only; timeliness uses the separate cue+3 s rule",
+  "timeliness_deadline_s_after_cue": 3.0,
+  "timely_response_trials": 400,
+  "late_or_missing_by_deadline_trials": 0,
+  "timeliness_unresolved_trials": 0,
+  "actual_lateness_status": "classified_by_user_supplied_channel9_deadline_cue_plus_3s; separate from target-relative reaction time",
   "response_bout_duration_status": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sampling rate; not target-to-response reaction time",
   "response_bout_duration_median_s": 1.234375,
-  "reaction_time": "duration remains unknown without a verified per-trial target onset; cue+2.2s is a schedule proxy only"
+  "reaction_time": "cue-to-response latency is observed; target-to-response reaction time remains unknown without a verified per-trial target onset; cue+2.2s is a schedule proxy only"
 }

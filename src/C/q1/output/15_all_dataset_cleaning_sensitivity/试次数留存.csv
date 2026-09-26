@@ -1,5 +1,0 @@
-﻿dataset,total_trials,hardware_clipped,total_clipped_only,total_sqi_retained,sqi_excluded_after_clipping,left_n_clipped_only,right_n_clipped_only,left_n_sqi_retained,right_n_sqi_retained,left_retention_pct,right_retention_pct,clean_mat_exact_match,baseline_window_s
-VisualCogA_Task-1,100,17,83,54,29,42,41,29,25,69.04761904761905,60.97560975609756,True,"(-0.2, 0.0)"
-VisualCogA_Task-2,100,15,85,80,5,48,37,45,35,93.75,94.5945945945946,True,"(-0.2, 0.0)"
-VisualCogB_Task-1,100,15,85,83,2,42,43,41,42,97.61904761904762,97.67441860465117,True,"(-0.2, 0.0)"
-VisualCogB_Task-2,100,17,83,80,3,39,44,37,43,94.87179487179488,97.72727272727273,True,"(-0.2, 0.0)"

@@ -2,8 +2,9 @@
 
 Channel 8 VisCue supplies a cue direction and channel 9 supplies action direction/time.
 The target schedule remains a proxy, so conventional target-to-response reaction
-time and the experiment's formal deadline remain unavailable. The cue-1 to cue+5 s
-interval is used only to count declared response codes, not to classify timeliness.
+time remains unavailable. Correctness uses the supplied same-sign rule, and
+timeliness uses the supplied cue+3.0 s response cutoff. The cue-1 to cue+5 s
+interval is a separate window for counting declared response codes.
 """
 
 from __future__ import annotations
@@ -20,13 +21,14 @@ import numpy as np
 import pandas as pd
 
 from common import (
+    classify_channel9_behavior,
     decode_response_bout,
     detect_cues,
     detect_response_events,
     load_raw_record,
     measure_response_window,
 )
-from config import OUTPUT_DIR, RECORDS
+from config import OUTPUT_DIR, RECORDS, RESPONSE_DEADLINE_AFTER_CUE_S
 
 
 AUDIT_DIR = OUTPUT_DIR / "continuation_audit"
@@ -74,6 +76,8 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
     for i, cue in enumerate(cues):
         trial_start = int(cue["cue_sample_index"])
         trial_end = int(cues[i + 1]["cue_sample_index"]) if i + 1 < len(cues) else len(time)
+        observation_end_index = min(trial_end, len(time) - 1)
+        observation_end_time = float(time[observation_end_index])
         trial_responses = [
             event for event in responses
             if trial_start <= int(event["response_sample_index"]) < trial_end
@@ -120,6 +124,14 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
         marker_code = int(response["response_code"]) if response is not None else None
         choice_side = decoded_response["choice_side"]
         direction_consistent = int(choice_side == int(cue["cue_side"])) if choice_side is not None else None
+        behavior_labels = classify_channel9_behavior(
+            cue_side=int(cue["cue_side"]),
+            response_side=choice_side,
+            cue_time_s=float(cue["cue_time_s"]),
+            response_time_s=marker_time if response is not None else None,
+            observation_end_time_s=observation_end_time,
+            deadline_after_cue_s=RESPONSE_DEADLINE_AFTER_CUE_S,
+        )
         marker_duration = response_timing["response_duration_s"]
         cue_duration = float(cue_offset - float(cue["cue_time_s"])) if np.isfinite(cue_offset) else np.nan
 
@@ -153,7 +165,8 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
                 },
                 "target_side": int(cue["cue_side"]),
                 "cue_response_direction_consistent": direction_consistent,
-                "direction_consistency_status": "channel8_channel9_same_or_different_direction_only" if choice_side is not None else "direction_unresolved",
+                **behavior_labels,
+                "direction_consistency_status": "same_sign_correct_opposite_sign_incorrect" if choice_side is not None else "direction_unresolved",
                 "has_channel9_action_edge_in_cue_interval": int(len(trial_responses) > 0),
                 "response_marker_run_duration_s": marker_duration,
                 "response_minus_cue_onset_s": marker_time - float(cue["cue_time_s"]),
@@ -166,7 +179,7 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
                 "reaction_time_s": np.nan,
                 "reaction_time_status": "unknown_no_independent_trial_target_onset",
                 "t_act_status": "channel9_zero_to_nonzero_edge_per_reference_model",
-                "direction_consistency_interpretation": "channel8_channel9_direction_match_only_not_task_correctness" if choice_side is not None else "direction_unresolved",
+                "direction_consistency_interpretation": "same_sign_is_correct_opposite_sign_is_incorrect_by_user_rule" if choice_side is not None else "direction_unresolved",
                 "cue_interval_action_marker_status": "no_channel9_edge_in_cue_to_next_cue_interval" if len(trial_responses) == 0 else "channel9_edge_observed_in_cue_to_next_cue_interval",
             }
         )
@@ -202,15 +215,19 @@ def _build_trial_rows(record: str) -> tuple[list[dict[str, Any]], dict[str, Any]
         "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
         "trials_with_declared_code_in_analysis_window": int(sum(row["response_declared_code_sample_count_in_analysis_window"] > 0 for row in rows)),
         "declared_code_sample_count_in_analysis_window": int(sum(row["response_declared_code_sample_count_in_analysis_window"] for row in rows)),
-        "analysis_window_interpretation": "counts of DataLabel-declared channel-9 code samples only; not an experimental timeliness classification",
+        "analysis_window_interpretation": "counts of DataLabel-declared channel-9 code samples only; timeliness is separately classified by cue+3.0 s",
         "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count divided by sample rate",
         "actual_target_onsets_available": False,
         "verified_response_deadlines_available": False,
         "task_correctness_ground_truth_available": False,
         "cue_response_direction_consistent_trials": int(sum(row["cue_response_direction_consistent"] == 1 for row in rows if row["cue_response_direction_consistent"] is not None)),
         "cue_response_direction_inconsistent_trials": int(sum(row["cue_response_direction_consistent"] == 0 for row in rows if row["cue_response_direction_consistent"] is not None)),
+        "task_correct_trials": int(sum(row["task_correct"] == 1 for row in rows if pd.notna(row["task_correct"]))),
+        "task_incorrect_trials": int(sum(row["task_correct"] == 0 for row in rows if pd.notna(row["task_correct"]))),
+        "timely_by_cue_plus_3s_trials": int(sum(row["timely_response"] == 1 for row in rows if pd.notna(row["timely_response"]))),
+        "not_timely_by_cue_plus_3s_trials": int(sum(row["timely_response"] == 0 for row in rows if pd.notna(row["timely_response"]))),
         "cue_intervals_without_action_marker": int(sum(row["has_channel9_action_edge_in_cue_interval"] == 0 for row in rows)),
-        "actual_lateness_status": "undetermined; per-trial target onset and formal response deadline are unavailable",
+        "actual_lateness_status": "classified_relative_to_user_supplied_cue_plus_3s_cutoff",
         "interpretation": "The schedule proxy is cue-off plus approximately 2 s from the appendix. Marker-to-proxy differences are not reaction times.",
     }
     representative = {
@@ -350,7 +367,7 @@ def _build_mapping_summary(frame: pd.DataFrame) -> pd.DataFrame:
                     "n_trials": n,
                     "cue_response_same_side_count": same,
                     "cue_response_same_side_fraction": same / n if n else np.nan,
-                    "interpretation": "same-side/different-side direction comparison only; not task correctness because task mapping is unverified",
+                    "interpretation": "same-side is correct and different-side is incorrect under the user-supplied rule",
                 }
             )
     return pd.DataFrame(rows)
@@ -507,23 +524,24 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 2. **通道9应答时刻：按参考模型使用。** 本实现将每个 cue 区间内唯一的通道9零到非零边沿定义为绝对应答时刻 `t_act`，并用 `t_act - 100 ms` 作为应答前 EEG 截止点。该定义支持应答锁定窗口；由于没有逐试次目标 onset，`t_act - target_onset` 形式的反应时长仍未知。
 3. **试次配对：当前未见错位证据。** 按每个 cue 到下一 cue 的区间检查，所有记录都是一段一个通道9边沿；故逐试次顺序错位暂不支持为主要解释。跨通道同步偏移或记录程序对通道9的写入语义，仍需要原始实验日志/软件定义才能排除。
 
-## 逐试次线索—响应方向一致性与分组解释
+## 逐试次正确性与候选分组解释
 
 《第三.pdf》把项目1定义为位置提示、项目2定义为形状提示，但没有在文本中给四份 MAT 文件写出机器可核对的逐文件项目映射。当前 Q3 将 `Task-1/Task-2` 后缀作为候选类型；Q2 的 `revision_v3/config.py` 则把 `VisualCogA_*` 两份文件归为 Task1、`VisualCogB_*` 两份归为 Task2。两套分组给出不同的 cue-应答同侧结构：
 
 {mapping_md}
 
-上表比较通道8线索方向与通道9响应方向的同侧比例。该比例只称为“线索—响应方向一致性”，不能称为正确率：Task-2 的线索方向与正确目标位置之间的映射尚未核实，文件名候选分组也不能替代实验任务映射。Task-2 的首个动作边沿先出现 `±1`，随后同一连续动作段出现标签声明的 `±2`；程序用 `±2` 解码响应方向、用首个零到非零边沿定义 `t_act`。
+按用户给定规则，同侧比例即该候选分组下的正确率：通道8与通道9同号为正确，异号为错误。文件名候选分组只影响分组汇总，不影响逐试次标签。Task-2 的首个动作边沿先出现 `±1`，随后同一连续动作段出现标签声明的 `±2`；程序用 `±2` 解码响应方向、用首个零到非零边沿定义 `t_act`。
 
 ## 标签规则
 
 - `response_side`：按通道9的 `DataLabel` 解码动作段中的左/右代码。Task-1 `Action` 使用 ±1；Task-2 `TgtAct` 使用 ±2。Task-2 的±1起始状态和后续±2代码同属一个连续动作段，先验证整段符号一致，不把两个幅值当成两次应答。
 - `t_act_s`：通道9零到非零边沿的绝对时间；应答前分析窗口在 `t_act - 100 ms` 截止。
 - `reaction_time_s`：本轮保留为空，状态为 `unknown_no_independent_trial_target_onset`；目标呈现时刻缺少逐试次记录。
-- `cue_response_direction_consistent`：通道8线索方向与通道9动作段中按 `DataLabel` 解码的响应方向相同记1、不同记0；此值仅表示方向一致性，不表示任务正确性。Task-2 任务映射尚未核实，因此不报告任务正确率。
-- `has_channel9_action_edge_in_cue_interval`：记录 cue 起始至下一 cue 起始区间是否观测到通道9动作边沿。本数据400个区间均观测到边沿；该事件计数本身不等价于经正式截止规则核实的漏答率。
-- `response_declared_code_sample_count_in_analysis_window`：选定 cue 相对 `[-1,+5]` 秒窗内 DataLabel 声明码的样本计数。本数据400个试次均在该窗内观测到声明码；这是窗口内计数，不是及时应答判定。
-- 真实迟答情况：尚无法判定。需要逐试次真实目标呈现时刻和实验正式应答截止规则；当前自定义窗口不能代替这两项信息。
+- `cue_response_direction_consistent`：通道8提示方向与通道9动作段中按 `DataLabel` 解码的响应方向同号记1（正确）、异号记0（错误）；方向无法解码时留空。Task-2 同一动作段中的同号 ±1 起始码和后续 ±2 声明码视作一次应答。
+- `timely_response`：通道9首次零到非零边沿不晚于 cue+3.0 s 记1；晚于截止或完整观测到截止仍无应答记0；记录未覆盖截止时刻则留空。
+- `has_channel9_action_edge_in_cue_interval`：记录 cue 起始至下一 cue 起始区间是否观测到通道9动作边沿；这是事件计数，不等同于 cue+3.0 s 的及时性标签。
+- `response_declared_code_sample_count_in_analysis_window`：选定 cue 相对 `[-1,+5]` 秒窗内 DataLabel 声明码的样本计数，与及时性判定分开。
+- 目标 onset 未独立记录，因此 target-to-response RT 仍未知；这不影响按已给规则生成正确性和及时性标签。
 
 ## 当前可用的时间窗
 
@@ -540,7 +558,7 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
 
 ## 下一步
 
-1. 找到实验程序/原始行为日志或目标显示触发记录，核实任务映射、target onset、正式截止规则和共同时间基准；在此之前不报告任务正确率、真实迟答率，也不拟合真实 RT 或 DDM。通道8/9目前给出的是方向一致性和动作标记观测。
+1. 若取得实验程序/行为日志，可用于独立核验通道同号正确、异号错误及 cue+3.0 s 截止标签；逐试次 target onset 仍需单独记录，才能得到传统 RT 并评估 DDM。当前标签按已给规则计算，不等待这些外部核验。
 2. 先建立不声称解剖定位的时间域基线：按 cue 与通道9边沿索引 F3/Fz/F4 连续轨迹，做记录级留出预测/重构；预注册窗口和误差指标。
 3. 再把 Q2 的 LGN→Wilson–Cowan→源→导联结构接入状态空间：用可观测的 cue 驱动视觉子模块，把未观测 target/memory match 明确记为潜输入；只有外部真值或模型可识别性检验通过后，才拟合 H/P 转移与额外源权重。
 4. 每次模型或处理口径变更后，重新生成同一组审计图与留出诊断图，记录数据版本、窗口、参数、单位和未知标签数。
@@ -567,10 +585,11 @@ def _write_report(frame: pd.DataFrame, summaries: pd.DataFrame, report_path: Pat
     duration_median = float(pd.to_numeric(frame["response_duration_s"], errors="coerce").median())
     text += (
         "\n\n## 选定分析窗内的动作码计数\n\n"
-        "cue-1 至 cue+5 秒是本项目选择的观测窗口，仅统计 DataLabel 声明的通道9应答码；"
-        "该窗口不是实验截止规则，不能据此判断及时或迟答。\n\n"
+        "cue-1 至 cue+5 秒是本项目选择的代码计数窗口，与 cue+3.0 s 及时性截止规则分开。\n\n"
         f"- 窗口内至少出现一次声明码的试次数：{code_window_count}/{len(frame)}。\n"
-        "- 真实迟答情况：尚无法判定；缺少逐试次目标呈现时刻和正式截止规则。\n"
+        f"- 按 cue+3.0 s 规则及时的试次数：{int(pd.to_numeric(frame['timely_response'], errors='coerce').eq(1).sum())}/{len(frame)}。\n"
+        f"- 按同号正确/异号错误规则判正确：{int(pd.to_numeric(frame['task_correct'], errors='coerce').eq(1).sum())}；判错误：{int(pd.to_numeric(frame['task_correct'], errors='coerce').eq(0).sum())}。\n"
+        "- 目标 onset 未独立记录，因此 target-to-response RT 仍未知。\n"
         f"- Median duration of the first contiguous channel-9 nonzero bout: {duration_median:.4f} s.\n"
         "- This bout duration is not target-to-response reaction time; target onset remains unverified.\n"
     )
@@ -610,14 +629,21 @@ def main() -> None:
         "cue_response_direction_consistent_trials": int(pd.to_numeric(trials["cue_response_direction_consistent"], errors="coerce").eq(1).sum()),
         "cue_response_direction_inconsistent_trials": int(pd.to_numeric(trials["cue_response_direction_consistent"], errors="coerce").eq(0).sum()),
         "task_correctness_ground_truth_available": False,
-        "direction_consistency_rule": "compare channel-8 cue direction with the channel-9 response direction declared by DataLabel; same/different direction is not task correctness while task mapping is unverified",
+        "task_correctness_labels_available": True,
+        "task_correctness_source": "same-sign channel8 cue and channel9 response rule supplied by user",
+        "task_correct_trials": int(pd.to_numeric(trials["task_correct"], errors="coerce").eq(1).sum()),
+        "task_incorrect_trials": int(pd.to_numeric(trials["task_correct"], errors="coerce").eq(0).sum()),
+        "direction_consistency_rule": "same sign of channel-8 cue direction and decoded channel-9 response is correct; opposite sign is incorrect",
         "cue_interval_action_marker_rule": "count channel-9 zero-to-nonzero edges between cue onset and the next cue onset; this is an event count, not a verified omission rate",
         "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-        "analysis_window_rule": "count DataLabel-declared channel-9 code samples in cue-1 to cue+5 s; do not interpret as timely or late response",
+        "analysis_window_rule": "count DataLabel-declared channel-9 code samples in cue-1 to cue+5 s only; timeliness is classified separately",
         "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count divided by sample rate; not target-to-response reaction time",
         "target_onset_status": "unknown; no independent per-trial marker in supplied allowed channels",
-        "formal_deadline_status": "unknown; no experiment-defined response deadline available",
-        "actual_lateness_status": "undetermined",
+        "formal_deadline_status": "cue+3.0 s user-specified timeliness cutoff is applied",
+        "timely_response_deadline_s_after_cue": RESPONSE_DEADLINE_AFTER_CUE_S,
+        "timely_response_trials": int(pd.to_numeric(trials["timely_response"], errors="coerce").eq(1).sum()),
+        "not_timely_trials": int(pd.to_numeric(trials["timely_response"], errors="coerce").eq(0).sum()),
+        "actual_lateness_status": "classified_by_user_supplied_cue_plus_3s_cutoff",
         "response_marker_semantics_status": "officially described as target response/action; channel-9 edge is t_act and gives action side; target-onset timing remains approximate",
         "trial_pairing_status": "one channel-9 event edge in each VisCue-to-next-VisCue interval for all supplied records",
         "anchor_selection": "none; cue+2.0 and cue+2.2 are sensitivity references only",
@@ -651,7 +677,7 @@ def main() -> None:
             if stale_path.exists():
                 stale_path.unlink()
     _write_report(trials, summaries, AUDIT_DIR / "event_timing_semantics_report.md")
-    print(f"Audited {len(trials)} trials; exact-one-edge cue intervals: {overall['n_exactly_one_response_edge_in_cue_interval']}; direction-consistency labels: {overall['n_direction_consistency_labels']}; declared-code window count: {overall['n_trials_with_declared_code_in_analysis_window']}; actual lateness: undetermined.")
+    print(f"Audited {len(trials)} trials; correct={overall['task_correct_trials']}, incorrect={overall['task_incorrect_trials']}, timely={overall['timely_response_trials']}, target-relative RT remains unknown.")
     print(f"Wrote evidence to {AUDIT_DIR}")
 
 

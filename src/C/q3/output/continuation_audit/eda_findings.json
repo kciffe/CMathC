@@ -254,7 +254,7 @@
     "EEG_state_only": 0.4895622813290984,
     "cue_task_plus_EEG": 0.747252634568057
   },
-  "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
+  "ddm_status": "not_fitted: target-relative RT is unavailable because per-trial target onset is not independently marked",
   "ddm_gate": {
     "response_trials": 400,
     "no_response_marker_observed_trials": 0,

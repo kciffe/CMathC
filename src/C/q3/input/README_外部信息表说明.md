@@ -6,9 +6,10 @@
 
 ## trial_truth.csv
 
-必填列：`record`、`original_trial_index`、`correct_response_side`。
-正确响应侧填 `left/right` 或 `-1/+1`，由该试次真实目标和任务规则决定；
-不能直接复制 VisCue 标签。`truth_source` 填真值表/实验记录的来源。
+列：`record`、`original_trial_index`、`correct_response_side`。
+主分析依照已给规则，将通道8与通道9解码响应同号判为正确、异号判为错误；
+该列为可选外部核验真值，填 `left/right` 或 `-1/+1`，并在 `truth_source`
+注明来源。
 `authoritative_omission` 可选，只有实验日志明确标注漏答时才填 true/false。
 
 ## event_log.csv（可选）
@@ -31,7 +32,8 @@ MAT 的 DataLabel、VisCue 事件取值和当前事件解析代码中审计。�
 ## 判定口径
 
 脚本用 MAT 的 Action/TgtAct 响应事件作为实际选择，并按 MAT 通道标签中的
-L/R 数值码解码。只有真值和可解码响应均存在时才判正确/错误。没有响应事件
-时，只有日志明确标注漏答，或提供了截止时刻且 MAT 记录覆盖到截止时刻，才
-记为已核实漏答；否则记为无法判定。真实 target onset 缺失时，仍会输出基于
-Q1/Q3 排程锚点的估计反应时，但会明确标记为假设值。
+L/R 数值码解码。同号 cue/响应按既定规则判正确，异号判错误；Task-2 同一动作
+段内的同号 ±1 起始状态和后续 ±2 声明码作为一次应答。及时应答定义为首次
+通道9边沿不晚于 cue+3.0 s。没有响应标记时，只有记录完整覆盖 cue+3.0 s
+才能标记为未及时；未覆盖时保留未知。真实 target onset 缺失时，cue-to-response
+时长仍可计算，但传统 target-to-response RT 仍未知。

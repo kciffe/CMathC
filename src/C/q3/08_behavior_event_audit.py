@@ -31,8 +31,8 @@ import pandas as pd
 Q3_DIR = Path(__file__).resolve().parent
 sys.path.insert(0, str(Q3_DIR))
 
-from common import load_raw_record  # noqa: E402
-from config import INPUT_DIR, OUTPUT_DIR  # noqa: E402
+from common import classify_channel9_behavior, load_raw_record  # noqa: E402
+from config import INPUT_DIR, OUTPUT_DIR, RESPONSE_DEADLINE_AFTER_CUE_S  # noqa: E402
 
 
 KEYS = ["record", "original_trial_index"]
@@ -130,8 +130,8 @@ def _write_input_readme(path: Path) -> None:
         "## trial_truth.csv\n\n"
         "该表为可选的独立核验表，列为 `record`、`original_trial_index`、\n"
         "`correct_response_side`、`truth_source`、`authoritative_omission`。\n"
-        "题目已定义通道8 VisCue 为目标侧（-1左、+1右），主分析直接用通道8；\n"
-        "此表提供经核实的正确响应侧，缺少此真值时只报告线索—响应方向一致性，不推断任务正确/错误。\n\n"
+        "通道8 VisCue 提供方向（-1左、+1右）；按当前提供的规则，同号 cue/响应为正确、异号为错误。\n"
+        "此表可额外提供外部真值，用于核对该规则是否与原始行为日志一致。\n\n"
         "## event_log.csv\n\n"
         "真实事件日志是可选输入。没有真实 target marker 时，脚本沿用 trial_table.csv\n"
         "已有 cue+2.2 s 排程锚点，并明确标记为假设值，不称为真实 target onset。\n"
@@ -146,9 +146,9 @@ def _write_input_readme(path: Path) -> None:
         "按实验登记表填写，不能根据文件名推断被试或真实任务编号。编码信息会另从\n"
         "MAT 的 DataLabel、VisCue 事件取值和当前事件解析代码中审计。\n\n"
         "## 判定口径\n\n"
-        "脚本将通道8线索方向与通道9响应方向比较，仅生成方向一致性指标；任务正确性只在外部真值表给出正确响应侧后计算。\n"
-        "cue 到下一 cue 区间内的通道9边沿按事件计数；没有边沿不自动称为实验漏答。\n"
-        "cue-1 至 cue+5 秒仅统计声明码，不分类及时/迟答；正式截止规则可用时才审计截止前后响应。target onset 缺失时不计算传统 target-to-response RT。\n",
+        "脚本将通道8线索方向与通道9解码的响应方向比较：同号为正确、异号为错误；Task-2 同一动作段内先同号±1后同号±2作为一次应答。\n"
+        "及时应答定义为首次通道9边沿不晚于 cue+3.0 秒；记录覆盖截止但无边沿时记未及时，记录未覆盖截止时记未知。\n"
+        "cue 到下一 cue 区间内的通道9边沿仍单独计数；cue-1 至 cue+5 秒仅统计声明码，不替代 cue+3.0 秒及时判定。target onset 缺失时不计算传统 target-to-response RT。\n",
         encoding="utf-8",
     )
 
@@ -579,16 +579,6 @@ def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[
     else:
         direction_consistency_status = "direction_unresolved"
         direction_consistent = np.nan
-    if np.isfinite(external_correct_side) and np.isfinite(response_side):
-        task_correctness_status = (
-            "task_correct" if response_side == external_correct_side
-            else "task_incorrect"
-        )
-        task_correct = int(response_side == external_correct_side)
-    else:
-        task_correctness_status = "unknown_no_verified_response_truth"
-        task_correct = np.nan
-
     target_onset = pd.to_numeric(pd.Series([getattr(row, "target_onset_time_s", np.nan)]), errors="coerce").iloc[0]
     schedule_anchor = pd.to_numeric(pd.Series([getattr(row, "target_time_s", np.nan)]), errors="coerce").iloc[0]
     schedule_anchor_source = getattr(row, "target_time_source", "")
@@ -596,6 +586,25 @@ def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[
     response_time = pd.to_numeric(pd.Series([getattr(row, "response_time_s", np.nan)]), errors="coerce").iloc[0]
     event_count = pd.to_numeric(pd.Series([getattr(row, "response_event_count", np.nan)]), errors="coerce").iloc[0]
     authoritative_omission = getattr(row, "authoritative_omission_truth", np.nan)
+    cue_time = pd.to_numeric(
+        pd.Series([getattr(row, "cue_time_s", np.nan)]), errors="coerce"
+    ).iloc[0]
+    observation_end = pd.to_numeric(
+        pd.Series([
+            getattr(row, "cue_interval_observation_end_time_s", record_end)
+        ]),
+        errors="coerce",
+    ).iloc[0]
+    channel_outcomes = classify_channel9_behavior(
+        cue_side=channel_target_side,
+        response_side=response_side,
+        cue_time_s=cue_time,
+        response_time_s=response_time,
+        observation_end_time_s=observation_end,
+        deadline_after_cue_s=RESPONSE_DEADLINE_AFTER_CUE_S,
+    )
+    task_correctness_status = channel_outcomes["task_correctness_status"]
+    task_correct = channel_outcomes["task_correct"]
 
     if np.isfinite(response_time) and np.isfinite(target_onset):
         reaction_time = float(response_time - target_onset)
@@ -659,7 +668,10 @@ def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[
         "no_response_marker"
         if not has_response
         else task_correctness_status
-        if task_correctness_status in {"task_correct", "task_incorrect"}
+        if task_correctness_status in {
+            "correct_by_same_direction_rule",
+            "incorrect_by_opposite_direction_rule",
+        }
         else direction_consistency_status
     )
 
@@ -671,6 +683,14 @@ def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[
         "direction_consistent": direction_consistent,
         "task_correctness_status": task_correctness_status,
         "task_correct": task_correct,
+        "task_correctness_source": channel_outcomes["task_correctness_source"],
+        "user_rule_correctness_matches_external_truth": (
+            int(task_correct == int(response_side == external_correct_side))
+            if np.isfinite(task_correct)
+            and np.isfinite(external_correct_side)
+            and np.isfinite(response_side)
+            else np.nan
+        ),
         "cue_interval_action_marker_count": int(event_count) if np.isfinite(event_count) else 0,
         "has_channel9_action_marker_in_cue_interval": int(has_response),
         "verified_omission": verified_omission,
@@ -687,6 +707,13 @@ def _outcome_row(row: Any, code_map: dict[str, Any], record_end: float) -> dict[
         "target_time_source": target_time_source,
         "response_deadline_time_s": deadline,
         "response_time_s": response_time,
+        "cue_time_s": cue_time,
+        "cue_to_response_latency_s": channel_outcomes["response_latency_from_cue_s"],
+        "cue_plus_3_deadline_time_s": channel_outcomes["cue_plus_3_deadline_time_s"],
+        "cue_plus_3_deadline_covered": channel_outcomes["cue_plus_3_deadline_covered"],
+        "timely_response": channel_outcomes["timely_response"],
+        "timeliness_status": channel_outcomes["timeliness_status"],
+        "timeliness_source": channel_outcomes["timeliness_source"],
         "response_analysis_window_start_s": getattr(row, "response_analysis_window_start_s", np.nan),
         "response_analysis_window_end_s": getattr(row, "response_analysis_window_end_s", np.nan),
         "response_present_in_analysis_window": getattr(row, "response_present_in_analysis_window", np.nan),
@@ -828,16 +855,17 @@ def analyze(
                 "n_direction_consistency_labels": int(pd.to_numeric(part["direction_consistent"], errors="coerce").notna().sum()),
                 "n_direction_consistent": int(pd.to_numeric(part["direction_consistent"], errors="coerce").eq(1).sum()),
                 "n_direction_inconsistent": int(pd.to_numeric(part["direction_consistent"], errors="coerce").eq(0).sum()),
-                "n_verified_task_correctness_labels": int(pd.to_numeric(part["task_correct"], errors="coerce").notna().sum()),
+                "n_rule_derived_task_correctness_labels": int(pd.to_numeric(part["task_correct"], errors="coerce").notna().sum()),
                 "n_task_correct": int(pd.to_numeric(part["task_correct"], errors="coerce").eq(1).sum()),
                 "n_task_incorrect": int(pd.to_numeric(part["task_correct"], errors="coerce").eq(0).sum()),
-                "n_within_formal_deadline": int(pd.to_numeric(part["within_formal_deadline"], errors="coerce").eq(1).sum()),
-                "n_after_formal_deadline": int(pd.to_numeric(part["within_formal_deadline"], errors="coerce").eq(0).sum()),
+                "n_timely_by_cue_plus_3s": int(pd.to_numeric(part["timely_response"], errors="coerce").eq(1).sum()),
+                "n_late_or_no_response_by_cue_plus_3s": int(pd.to_numeric(part["timely_response"], errors="coerce").eq(0).sum()),
+                "n_external_formal_deadline_labels": int(pd.to_numeric(part["within_formal_deadline"], errors="coerce").notna().sum()),
                 "n_response_duration_labeled": int(pd.to_numeric(part["response_duration_s"], errors="coerce").notna().sum()),
                 "n_cue_intervals_with_action_marker": int(pd.to_numeric(part["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(1).sum()),
                 "n_cue_intervals_without_action_marker": int(pd.to_numeric(part["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(0).sum()),
                 "n_verified_omissions": int(pd.to_numeric(part["verified_omission"], errors="coerce").eq(1).sum()),
-                "task_accuracy_among_trials_with_external_truth": (
+                "task_accuracy_by_same_direction_rule": (
                     float(pd.to_numeric(part["task_correct"], errors="coerce").dropna().mean())
                     if pd.to_numeric(part["task_correct"], errors="coerce").notna().any()
                     else None
@@ -860,7 +888,10 @@ def analyze(
         ),
         "trials_with_channel8_cue_direction": int(outcomes["cue_direction_used"].notna().sum()),
         "trials_with_direction_consistency": int(pd.to_numeric(outcomes["direction_consistent"], errors="coerce").notna().sum()),
-        "trials_with_verified_task_correctness": int(pd.to_numeric(outcomes["task_correct"], errors="coerce").notna().sum()),
+        "trials_with_task_correctness_by_user_rule": int(pd.to_numeric(outcomes["task_correct"], errors="coerce").notna().sum()),
+        "trials_with_timeliness_by_cue_plus_3s_rule": int(pd.to_numeric(outcomes["timely_response"], errors="coerce").notna().sum()),
+        "trials_timely_by_cue_plus_3s": int(pd.to_numeric(outcomes["timely_response"], errors="coerce").eq(1).sum()),
+        "trials_late_or_no_response_by_cue_plus_3s": int(pd.to_numeric(outcomes["timely_response"], errors="coerce").eq(0).sum()),
         "trials_with_action_marker_in_cue_interval": int(pd.to_numeric(outcomes["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(1).sum()),
         "trials_without_action_marker_in_cue_interval": int(pd.to_numeric(outcomes["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(0).sum()),
         "trials_with_declared_code_in_analysis_window": int(pd.to_numeric(outcomes["declared_code_present_in_analysis_window"], errors="coerce").eq(1).sum()),
@@ -891,25 +922,28 @@ def analyze(
         "derived_outcome_counts": {
             "direction_consistent": int(pd.to_numeric(outcomes["direction_consistent"], errors="coerce").eq(1).sum()),
             "direction_inconsistent": int(pd.to_numeric(outcomes["direction_consistent"], errors="coerce").eq(0).sum()),
-            "verified_task_correct": int(pd.to_numeric(outcomes["task_correct"], errors="coerce").eq(1).sum()),
-            "verified_task_incorrect": int(pd.to_numeric(outcomes["task_correct"], errors="coerce").eq(0).sum()),
+            "task_correct_by_same_direction_rule": int(pd.to_numeric(outcomes["task_correct"], errors="coerce").eq(1).sum()),
+            "task_incorrect_by_opposite_direction_rule": int(pd.to_numeric(outcomes["task_correct"], errors="coerce").eq(0).sum()),
             "cue_intervals_with_action_marker": int(pd.to_numeric(outcomes["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(1).sum()),
             "cue_intervals_without_action_marker": int(pd.to_numeric(outcomes["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(0).sum()),
             "within_formal_deadline": int(pd.to_numeric(outcomes["within_formal_deadline"], errors="coerce").eq(1).sum()),
             "after_formal_deadline": int(pd.to_numeric(outcomes["within_formal_deadline"], errors="coerce").eq(0).sum()),
+            "timely_by_cue_plus_3s": int(pd.to_numeric(outcomes["timely_response"], errors="coerce").eq(1).sum()),
+            "late_or_no_response_by_cue_plus_3s": int(pd.to_numeric(outcomes["timely_response"], errors="coerce").eq(0).sum()),
         },
         "event_log_format": event_diagnostics,
         "record_metadata_complete": int(metadata_audit["identity_mapping_status"].eq("complete").sum()),
         "record_metadata_total": int(len(metadata_audit)),
-        "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while Task-2 mapping is unverified",
-        "task_correctness_rule": "compare response side with external correct_response_side only when the keyed trial_truth table supplies verified truth",
+        "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction",
+        "task_correctness_rule": "same sign means correct and opposite sign means incorrect, using decoded channel-9 response side per the user-specified rule; external truth is retained only as an optional cross-check",
         "cue_interval_action_marker_rule": "count channel-9 edges in the cue-onset-to-next-cue interval; marker absence alone is not an omission label",
         "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-        "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timeliness",
-        "formal_deadline_rule": "classify response against response_deadline_time_s only when an external formal deadline is supplied and the recording covers it",
+        "analysis_window_rule": "cue-relative [-1,+5] s counts declared channel-9 codes only; timeliness uses the separate cue+3.0 s rule",
+        "timeliness_rule": "channel-9 response onset at or before cue+3.0 s is timely; a later onset or no onset by a fully observed deadline is not timely",
+        "formal_deadline_rule": "the user-specified cue+3.0 s cutoff is used for the timely-response label; a separately supplied experiment deadline is reported as an external cross-check",
         "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout (sample count / sample rate); this is not target-to-response reaction time",
-        "actual_lateness_status": "undetermined unless an external response deadline is supplied and covered by the recording",
-        "timing_rule": "external target onset/deadline are absolute seconds on the MAT TimeStamp clock; if actual target onset is absent, the existing cue+2.2 s schedule anchor is reported separately as an assumption",
+        "actual_lateness_status": "classified relative to the user-specified cue+3.0 s cutoff",
+        "timing_rule": "cue-to-response latency and cue+3.0 s timeliness are derived from channel-8/9 timestamps; target-to-response reaction time still requires a verified target onset, while cue+2.2 s remains a schedule assumption",
         "coding_rule": "VisCue event sign is reported from raw samples; Action/TgtAct left/right codes are parsed from the MAT DataLabel",
         "response_onset_stage_code_records": metadata_audit.loc[
             metadata_audit["response_code_map_status"].eq("declared_code_in_bout_with_onset_stage_codes"), "record"

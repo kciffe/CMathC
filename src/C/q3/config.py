@@ -41,11 +41,12 @@ TF_FILTER_BAND_HZ = (1.0, 80.0)
 TARGET_OFFSET_S = 2.2
 TARGET_OFFSET_SOURCE = "0.2s_cue_plus_approx_2.0s_wait_schedule_assumption"
 MIN_DDM_RT_S = 0.10
+# The user-specified behavioral rule defines a timely response as a channel-9
+# response marker no later than 3.0 s after the channel-8 cue.
+RESPONSE_DEADLINE_AFTER_CUE_S = 3.0
 
-# User-defined behavioral trial window around the channel-8 cue.
-# The Task-specific declared channel-9 response code inside this window marks
-# a timely response; a response elsewhere in the cue-to-next-cue interval is
-# recorded separately as late.
+# Separate exploratory observation window for channel-9 response-code counts.
+# Timeliness is classified using RESPONSE_DEADLINE_AFTER_CUE_S above.
 RESPONSE_ANALYSIS_WINDOW_S = (-1.0, 5.0)
 
 # Exploratory signal window that stops about 100 ms before the action marker.

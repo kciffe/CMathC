@@ -1,5 +1,5 @@
-﻿record,n_trials,direction_consistent_count,direction_inconsistent_count,cue_intervals_with_action_marker_count,cue_intervals_without_action_marker_count,declared_response_code_in_analysis_window_count,response_duration_labeled_count,response_duration_median_s,direction_consistency_rule
-VisualCogA_Task-1,100,100,0,100,0,100,100,1.142578125,same/different channel-8 cue and channel-9 response directions; not task correctness
-VisualCogA_Task-2,100,47,53,100,0,100,100,1.396484375,same/different channel-8 cue and channel-9 response directions; not task correctness
-VisualCogB_Task-1,100,98,2,100,0,100,100,1.109375,same/different channel-8 cue and channel-9 response directions; not task correctness
-VisualCogB_Task-2,100,48,52,100,0,100,100,1.326171875,same/different channel-8 cue and channel-9 response directions; not task correctness
+﻿record,n_trials,task_correct_count,task_incorrect_count,timely_by_cue_plus_3s_count,not_timely_by_cue_plus_3s_count,direction_consistent_count,direction_inconsistent_count,cue_intervals_with_action_marker_count,cue_intervals_without_action_marker_count,declared_response_code_in_analysis_window_count,response_duration_labeled_count,response_duration_median_s,direction_consistency_rule
+VisualCogA_Task-1,100,100,0,100,0,100,0,100,0,100,100,1.142578125,legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule
+VisualCogA_Task-2,100,47,53,100,0,47,53,100,0,100,100,1.396484375,legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule
+VisualCogB_Task-1,100,98,2,100,0,98,2,100,0,100,100,1.109375,legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule
+VisualCogB_Task-2,100,48,52,100,0,48,52,100,0,100,100,1.326171875,legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule

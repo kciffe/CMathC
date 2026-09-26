@@ -30,13 +30,14 @@ for _path in (REPO_ROOT, Q3_DIR):
 
 import dynamic_cognitive_model as macro
 from common import (
+    classify_channel9_behavior,
     decode_response_bout,
     detect_cues,
     detect_response_events,
     load_raw_record,
     measure_response_window,
 )
-from config import EEG_CHANNELS, RECORDS
+from config import EEG_CHANNELS, RECORDS, RESPONSE_DEADLINE_AFTER_CUE_S
 
 
 OUTPUT_DIR = Q3_DIR / "output" / "dynamic_heldout_validation"
@@ -482,6 +483,15 @@ def _load_observed_epochs(
             )
             response_side = decoded_response["choice_side"]
             direction_consistent = int(response_side == side) if response_side is not None else np.nan
+            observation_end_time = float(timestamps[min(trial_end, len(timestamps) - 1)])
+            behavior_labels = classify_channel9_behavior(
+                cue_side=side,
+                response_side=response_side,
+                cue_time_s=cue_time,
+                response_time_s=t_act_s if first_response else None,
+                observation_end_time_s=observation_end_time,
+                deadline_after_cue_s=RESPONSE_DEADLINE_AFTER_CUE_S,
+            )
             row: dict[str, Any] = {
                 "record": record,
                 "original_trial_index": int(event["original_trial_index"]),
@@ -500,8 +510,9 @@ def _load_observed_epochs(
                     if key not in {"timeliness_status", "is_timely", "is_late"}
                 },
                 "cue_response_direction_consistent": direction_consistent,
+                **behavior_labels,
                 "has_channel9_action_marker_in_cue_interval": int(len(trial_responses) > 0),
-                "outcome_rule": "channel-8 cue direction versus channel-9 response direction; same/different direction only, not task correctness",
+                "outcome_rule": "same channel-8/channel-9 sign is correct and opposite signs are incorrect; timely if first channel-9 edge is by cue+3.0 s",
                 "pre_response_endpoint_s": endpoint_relative_s,
                 "endpoint_definition": "unique channel-9 zero-to-nonzero edge minus 0.100 s",
                 "included": False,
@@ -2096,15 +2107,20 @@ def run_validation(
         "behavioral_outcome_labels_derived": True,
         "behavioral_direction_consistent_count": int(pd.to_numeric(trial_audit["cue_response_direction_consistent"], errors="coerce").eq(1).sum()),
         "behavioral_direction_inconsistent_count": int(pd.to_numeric(trial_audit["cue_response_direction_consistent"], errors="coerce").eq(0).sum()),
+        "behavioral_task_correct_count": int(pd.to_numeric(trial_audit["task_correct"], errors="coerce").eq(1).sum()),
+        "behavioral_task_incorrect_count": int(pd.to_numeric(trial_audit["task_correct"], errors="coerce").eq(0).sum()),
+        "behavioral_timely_by_cue_plus_3s_count": int(pd.to_numeric(trial_audit["timely_response"], errors="coerce").eq(1).sum()),
+        "behavioral_not_timely_by_cue_plus_3s_count": int(pd.to_numeric(trial_audit["timely_response"], errors="coerce").eq(0).sum()),
         "cue_intervals_with_action_marker_count": int(pd.to_numeric(trial_audit["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(1).sum()),
         "cue_intervals_without_action_marker_count": int(pd.to_numeric(trial_audit["has_channel9_action_marker_in_cue_interval"], errors="coerce").eq(0).sum()),
         "declared_response_code_in_analysis_window_count": int(pd.to_numeric(trial_audit["response_declared_code_sample_count_in_analysis_window"], errors="coerce").gt(0).sum()),
         "behavioral_response_duration_labeled_count": int(pd.to_numeric(trial_audit["response_duration_s"], errors="coerce").notna().sum()),
-        "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
-        "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_deadline",
+        "task_correctness_status": "derived_by_user_supplied_same_direction_rule",
+        "actual_lateness_status": "classified_by_user_supplied_cue_plus_3s_rule",
+        "target_relative_reaction_time_status": "unknown_without_per_trial_target_onset",
         "cue_interval_action_marker_rule": "event marker count only; not a verified omission rate without the official response interval",
         "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-        "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; not a timeliness classification",
+        "analysis_window_rule": "cue-relative [-1,+5] s counts declared channel-9 response-code samples only; timeliness uses the separate cue+3.0 s rule",
         "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, sample count / sample rate; not target-to-response reaction time",
         "channel9_used_in_eeg_or_model": False,
         "channel9_used_as_predictor_or_state_input": False,

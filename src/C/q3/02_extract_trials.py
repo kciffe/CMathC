@@ -106,6 +106,8 @@ def main() -> None:
     direction_consistency = pd.to_numeric(
         trial_table["cue_response_direction_consistent"], errors="coerce"
     )
+    task_correct = pd.to_numeric(trial_table["task_correct"], errors="coerce")
+    timely_response = pd.to_numeric(trial_table["timely_response"], errors="coerce")
     action_marker_count = pd.to_numeric(
         trial_table["cue_interval_action_marker_count"], errors="coerce"
     ).fillna(0)
@@ -131,6 +133,12 @@ def main() -> None:
         "cue_response_direction_consistent_count": int(direction_consistency.eq(1).sum()),
         "cue_response_direction_inconsistent_count": int(direction_consistency.eq(0).sum()),
         "direction_consistency_labeled_count": int(direction_consistency.notna().sum()),
+        "task_correct_count": int(task_correct.eq(1).sum()),
+        "task_incorrect_count": int(task_correct.eq(0).sum()),
+        "task_correctness_unresolved_count": int(task_correct.isna().sum()),
+        "timely_response_count": int(timely_response.eq(1).sum()),
+        "late_or_missing_by_deadline_count": int(timely_response.eq(0).sum()),
+        "timeliness_unresolved_count": int(timely_response.isna().sum()),
         "cue_intervals_with_action_marker_count": int(action_marker_count.gt(0).sum()),
         "cue_intervals_without_action_marker_count": int(action_marker_count.eq(0).sum()),
         "trials_with_declared_code_in_analysis_window": int(declared_code_count.gt(0).sum()),
@@ -138,14 +146,16 @@ def main() -> None:
         "response_duration_median_s": float(pd.to_numeric(trial_table["response_duration_s"], errors="coerce").median()),
         "q1_usage": "event timestamp mapping and quality labels only; no Q1 EEG samples are read or used as Q3 feature input",
         "channel9_usage": "t_act is the first zero-to-nonzero edge; response side is decoded using the channel-specific L/R code in DataLabel within that bout; never included in EEG predictor/features",
-        "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+        "correctness_rule": "same direction sign on channel-8 cue and decoded channel-9 response is correct; opposite signs are incorrect, per the user-specified rule",
+        "timeliness_rule": "channel-9 onset by cue+3.0 s is timely; later or no response by a fully observed deadline is not timely",
         "cue_interval_action_marker_rule": "count channel-9 action edges between this VisCue onset and the next VisCue onset; do not equate marker absence with an experiment-level omission",
         "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-        "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timely or late",
-        "task_correctness_status": "unknown_without_verified_task_mapping_or_correct_response_truth",
-        "actual_lateness_status": "unknown_without_per_trial_target_onset_and_formal_response_deadline",
+        "analysis_window_rule": "cue-relative [-1,+5] s counts declared channel-9 codes only; it is separate from the cue+3.0 s timeliness rule",
+        "task_correctness_status": "derived_from_user_supplied_same_direction_rule; unresolved only when cue/response side cannot be decoded",
+        "timeliness_status": "derived_from_user_supplied_cue_plus_3s_deadline; unresolved only when the recording does not cover the deadline",
+        "target_relative_reaction_time_status": "unknown_without_per_trial_target_onset; cue-to-response latency is separately observed",
         "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sample rate; this is not target-to-response reaction time",
-        "behavior_label_caveat": "direction consistency, event-marker counts, analysis-window code counts, and channel-9 bout duration are signal-derived observations; task correctness and actual timeliness require independent truth/deadline metadata",
+        "behavior_label_caveat": "correctness and timeliness use user-specified channel-8/channel-9 and cue+3.0s rules; target-relative reaction time still requires a verified target onset",
     }
     write_json(summary, output_dir / "trial_table_build_summary.json")
     print(

@@ -10,7 +10,7 @@ from scipy.optimize import minimize
 from scipy.special import expit
 
 from common import ensure_output_dir, write_csv, write_json
-from config import MIN_DDM_RT_S
+from config import MIN_DDM_RT_S, RESPONSE_DEADLINE_AFTER_CUE_S
 
 
 STATE_FEATURES = ["V_visual_like_raw", "H_memory_like_raw", "P_control_like_raw"]
@@ -231,8 +231,9 @@ def main() -> None:
         validate="one_to_one",
     )
     model_data["choice_side"] = model_data["choice_side"].map(parse_choice)
-    # Task-2 response mapping is not verified, so model the channel-8/channel-9
-    # same-direction indicator only as direction consistency.
+    # The user-supplied rule makes the channel-8/channel-9 same-direction
+    # indicator the correct/incorrect label. Keep the legacy column name for
+    # compatibility with existing outputs.
     model_data["cue_response_direction_consistent"] = pd.to_numeric(
         model_data["cue_response_direction_consistent"], errors="coerce"
     )
@@ -265,6 +266,8 @@ def main() -> None:
         "deadline_known": bool(pd.to_numeric(trials.get("deadline_s"), errors="coerce").notna().any())
         if "deadline_s" in trials
         else False,
+        "user_timeliness_cutoff_known": True,
+        "user_timeliness_cutoff_s_after_cue": RESPONSE_DEADLINE_AFTER_CUE_S,
     }
     cue_choice_alignment = []
     for task_code, group in model_data.groupby("filename_task_code_candidate", dropna=False):
@@ -276,7 +279,7 @@ def main() -> None:
                 "cue_choice_same_side_fraction": float(
                     (group["cue_side"] == group["choice_side"]).mean()
                 ),
-                "interpretation": "channel-8 cue direction versus channel-9 response direction; same-side relation only, not task correctness",
+                "interpretation": "same-side is correct and opposite-side is incorrect under the user-specified rule",
             }
         )
     write_csv(
@@ -332,6 +335,8 @@ def main() -> None:
         errors="coerce",
     )
     duration_all = pd.to_numeric(trials.get("response_duration_s", pd.Series(np.nan, index=trials.index)), errors="coerce")
+    correctness_all = pd.to_numeric(trials.get("task_correct", pd.Series(np.nan, index=trials.index)), errors="coerce")
+    timely_all = pd.to_numeric(trials.get("timely_response", pd.Series(np.nan, index=trials.index)), errors="coerce")
     outcome_by_record = []
     for record, group in trials.groupby("record", sort=True):
         consistency_group = pd.to_numeric(group["cue_response_direction_consistent"], errors="coerce")
@@ -343,9 +348,15 @@ def main() -> None:
             errors="coerce",
         )
         duration_group = pd.to_numeric(group.get("response_duration_s", pd.Series(np.nan, index=group.index)), errors="coerce")
+        correctness_group = pd.to_numeric(group.get("task_correct", pd.Series(np.nan, index=group.index)), errors="coerce")
+        timely_group = pd.to_numeric(group.get("timely_response", pd.Series(np.nan, index=group.index)), errors="coerce")
         outcome_by_record.append({
             "record": record,
             "n_trials": int(len(group)),
+            "task_correct_count": int(correctness_group.eq(1).sum()),
+            "task_incorrect_count": int(correctness_group.eq(0).sum()),
+            "timely_by_cue_plus_3s_count": int(timely_group.eq(1).sum()),
+            "not_timely_by_cue_plus_3s_count": int(timely_group.eq(0).sum()),
             "direction_consistent_count": int(consistency_group.eq(1).sum()),
             "direction_inconsistent_count": int(consistency_group.eq(0).sum()),
             "cue_intervals_with_action_marker_count": int(marker_present_group.sum()),
@@ -353,7 +364,7 @@ def main() -> None:
             "declared_response_code_in_analysis_window_count": int(code_count_group.gt(0).sum()),
             "response_duration_labeled_count": int(duration_group.notna().sum()),
             "response_duration_median_s": float(duration_group.median()) if duration_group.notna().any() else None,
-            "direction_consistency_rule": "same/different channel-8 cue and channel-9 response directions; not task correctness",
+            "direction_consistency_rule": "legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule",
         })
     write_csv(pd.DataFrame(outcome_by_record), output_dir / "behavior_outcomes_by_record.csv")
 
@@ -433,8 +444,8 @@ def main() -> None:
         "target": "channel 9 response direction normalized to choice side -1/+1",
         "response_code_normalization": "raw negative -> -2; raw zero -> 0; raw positive -> +2; raw values retained separately",
         "rt_quality": rt_counts,
-        "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
-        "ddm_reason": "Channel 9 supplies absolute response time t_act, but verified response-time duration requires an independently verified target onset. The cue+2.2 s schedule is retained only as a timing proxy; the observed short interval is not used as DDM RT.",
+        "ddm_status": "not_fitted: target-relative RT is unavailable because target onset is not independently marked",
+        "ddm_reason": "The cue+3.0 s timeliness rule is available and applied separately. DDM still requires target-to-response RT; cue+2.2 s is only an assumed target anchor and its resulting very short interval is not used as observed RT.",
         "cross_validation": "leave-one-record-out; standardization fitted on training records only; primary set uses raw-signal QC, with Q1-retained sensitivity subset",
         "model_comparison": {
             "folds": comparison_folds,
@@ -460,23 +471,31 @@ def main() -> None:
             "direction_consistent_count": int(consistency_all.eq(1).sum()),
             "direction_inconsistent_count": int(consistency_all.eq(0).sum()),
             "direction_consistency_labeled_count": int(consistency_all.notna().sum()),
+            "task_correct_count": int(pd.to_numeric(trials["task_correct"], errors="coerce").eq(1).sum()),
+            "task_incorrect_count": int(pd.to_numeric(trials["task_correct"], errors="coerce").eq(0).sum()),
+            "timely_by_cue_plus_3s_count": int(pd.to_numeric(trials["timely_response"], errors="coerce").eq(1).sum()),
+            "not_timely_by_cue_plus_3s_count": int(pd.to_numeric(trials["timely_response"], errors="coerce").eq(0).sum()),
+            "task_correctness_labeled_count": int(correctness_all.notna().sum()),
+            "timeliness_labeled_count": int(timely_all.notna().sum()),
             "cue_intervals_with_action_marker_count": int(marker_present_all.sum()),
             "cue_intervals_without_action_marker_count": int((~marker_present_all).sum()),
             "declared_response_code_in_analysis_window_count": int(code_count_all.gt(0).sum()),
             "response_duration_labeled_count": int(duration_all.notna().sum()),
             "response_duration_median_s": float(duration_all.median()) if duration_all.notna().any() else None,
             "by_record": outcome_by_record,
-            "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while Task-2 mapping is unverified",
+            "correctness_rule": "same-sign channel-8 cue and decoded channel-9 response is correct; opposite signs are incorrect",
+            "timeliness_rule": "first channel-9 onset by cue+3.0 s is timely; no response by a fully observed cutoff is not timely",
             "cue_interval_action_marker_rule": "report presence/count of channel-9 markers within cue-to-next-cue intervals; this is not a verified omission label without the official response window",
             "analysis_window_s_relative_to_channel8_cue": [-1.0, 5.0],
-            "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timely or late response",
+            "analysis_window_rule": "cue-relative [-1,+5] s counts declared channel-9 codes only; it is separate from the cue+3.0 s timeliness decision",
             "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout; not target-to-response reaction time",
-            "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
-            "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_deadline",
+            "task_correctness_status": "derived_by_user_supplied_same_direction_rule",
+            "actual_lateness_status": "classified_by_user_supplied_cue_plus_3s_rule",
+            "target_relative_reaction_time_status": "unknown_without_per_trial_target_onset",
         },
         "direction_consistency_model": consistency_model_summary,
-        "direction_consistency": "same/different relation between channel-8 cue direction and channel-9 DataLabel-declared response direction; not a task-correctness label",
-        "action_marker_counts": "counts/presence of channel-9 edges in the cue interval and declared-code samples in the selected analysis window; neither establishes experiment-level omission or timeliness",
+        "direction_consistency": "legacy metric name for the same-sign correct/opposite-sign incorrect label under the user-specified rule",
+        "action_marker_counts": "counts/presence of channel-9 edges in the cue interval and declared-code samples in the selected analysis window; timeliness is classified separately by the cue+3.0 s rule",
         "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time",
     }
     write_json(status, status_path)

@@ -9,6 +9,12 @@
   "cue_response_direction_consistent_count": 293,
   "cue_response_direction_inconsistent_count": 107,
   "direction_consistency_labeled_count": 400,
+  "task_correct_count": 293,
+  "task_incorrect_count": 107,
+  "task_correctness_unresolved_count": 0,
+  "timely_response_count": 400,
+  "late_or_missing_by_deadline_count": 0,
+  "timeliness_unresolved_count": 0,
   "cue_intervals_with_action_marker_count": 400,
   "cue_intervals_without_action_marker_count": 0,
   "trials_with_declared_code_in_analysis_window": 400,
@@ -16,15 +22,17 @@
   "response_duration_median_s": 1.234375,
   "q1_usage": "event timestamp mapping and quality labels only; no Q1 EEG samples are read or used as Q3 feature input",
   "channel9_usage": "t_act is the first zero-to-nonzero edge; response side is decoded using the channel-specific L/R code in DataLabel within that bout; never included in EEG predictor/features",
-  "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while task mapping is unverified",
+  "correctness_rule": "same direction sign on channel-8 cue and decoded channel-9 response is correct; opposite signs are incorrect, per the user-specified rule",
+  "timeliness_rule": "channel-9 onset by cue+3.0 s is timely; later or no response by a fully observed deadline is not timely",
   "cue_interval_action_marker_rule": "count channel-9 action edges between this VisCue onset and the next VisCue onset; do not equate marker absence with an experiment-level omission",
   "analysis_window_s_relative_to_channel8_cue": [
     -1.0,
     5.0
   ],
-  "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timely or late",
-  "task_correctness_status": "unknown_without_verified_task_mapping_or_correct_response_truth",
-  "actual_lateness_status": "unknown_without_per_trial_target_onset_and_formal_response_deadline",
+  "analysis_window_rule": "cue-relative [-1,+5] s counts declared channel-9 codes only; it is separate from the cue+3.0 s timeliness rule",
+  "task_correctness_status": "derived_from_user_supplied_same_direction_rule; unresolved only when cue/response side cannot be decoded",
+  "timeliness_status": "derived_from_user_supplied_cue_plus_3s_deadline; unresolved only when the recording does not cover the deadline",
+  "target_relative_reaction_time_status": "unknown_without_per_trial_target_onset; cue-to-response latency is separately observed",
   "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout, measured as sample count / sample rate; this is not target-to-response reaction time",
-  "behavior_label_caveat": "direction consistency, event-marker counts, analysis-window code counts, and channel-9 bout duration are signal-derived observations; task correctness and actual timeliness require independent truth/deadline metadata"
+  "behavior_label_caveat": "correctness and timeliness use user-specified channel-8/channel-9 and cue+3.0s rules; target-relative reaction time still requires a verified target onset"
 }

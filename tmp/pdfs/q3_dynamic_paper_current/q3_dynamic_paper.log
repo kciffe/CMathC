@@ -1,4 +1,4 @@
-This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.4.15)  26 SEP 2026 11:08
+This is XeTeX, Version 3.141592653-2.6-0.999998 (TeX Live 2026) (preloaded format=xelatex 2026.4.15)  26 SEP 2026 21:47
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -795,7 +795,8 @@ File: umsb.fd 2013/01/14 v3.01 AMS symbols B
 \openout4 = `q3_dynamic_paper.toc'.
 
 
-[2] [1] [2]
+[2] [1]
+ignored: Infinite glue shrinkage found in box being split [2]
 File: ../output/dynamic_heldout_validation/figures/analysis_event_windows.png G
 raphic file (type bmp)
 <../output/dynamic_heldout_validation/figures/analysis_event_windows.png>
@@ -821,7 +822,11 @@ File: ../output/dynamic_heldout_validation/figures/memory_target_time_sensitivi
 ty.png Graphic file (type bmp)
 <../output/dynamic_heldout_validation/figures/memory_target_time_sensitivity.pn
 g>
- [10] [11] [12
+
+Overfull \vbox (382.47598pt too high) has occurred while \output is active []
+
+
+[10] [11] [12
 
 ]
 (D:\8\Desktop\CMathc\tmp\pdfs\q3_dynamic_paper_current/q3_dynamic_paper.aux)
@@ -833,13 +838,13 @@ Package rerunfilecheck Info: File `q3_dynamic_paper.out' has not changed.
 (rerunfilecheck)             Checksum: 4098D925824115C4C349658C324F0169;1309.
  ) 
 Here is how much of TeX's memory you used:
- 15317 strings out of 468168
- 287733 string characters out of 5435598
- 769086 words of memory out of 5000000
- 43788 multiletter control sequences out of 15000+600000
- 634833 words of font info for 118 fonts, out of 8000000 for 9000
+ 15320 strings out of 468168
+ 287797 string characters out of 5435598
+ 771086 words of memory out of 5000000
+ 43790 multiletter control sequences out of 15000+600000
+ 634841 words of font info for 119 fonts, out of 8000000 for 9000
  1351 hyphenation exceptions out of 8191
- 73i,9n,93p,1003b,427s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 73i,9n,93p,1095b,501s stack positions out of 10000i,1000n,20000p,200000b,200000s
 
 Output written on D:\8\Desktop\CMathc\tmp\pdfs\q3_dynamic_paper_current/q3_dyna
 mic_paper.pdf (14 pages).

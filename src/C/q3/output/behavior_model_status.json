@@ -165,10 +165,12 @@
     "rt_below_minimum_for_ddm": 0,
     "rt_median_s": null,
     "minimum_rt_gate_s": 0.1,
-    "deadline_known": false
+    "deadline_known": false,
+    "user_timeliness_cutoff_known": true,
+    "user_timeliness_cutoff_s_after_cue": 3.0
   },
-  "ddm_status": "not_fitted: RT quality gate fails and no verified deadline is available",
-  "ddm_reason": "Channel 9 supplies absolute response time t_act, but verified response-time duration requires an independently verified target onset. The cue+2.2 s schedule is retained only as a timing proxy; the observed short interval is not used as DDM RT.",
+  "ddm_status": "not_fitted: target-relative RT is unavailable because target onset is not independently marked",
+  "ddm_reason": "The cue+3.0 s timeliness rule is available and applied separately. DDM still requires target-to-response RT; cue+2.2 s is only an assumed target anchor and its resulting very short interval is not used as observed RT.",
   "cross_validation": "leave-one-record-out; standardization fitted on training records only; primary set uses raw-signal QC, with Q1-retained sensitivity subset",
   "model_comparison": {
     "folds": [
@@ -287,14 +289,14 @@
         "n_trials": 198,
         "n_cue_choice_same_side": 196,
         "cue_choice_same_side_fraction": 0.98989898989899,
-        "interpretation": "channel-8 cue direction versus channel-9 response direction; same-side relation only, not task correctness"
+        "interpretation": "same-side is correct and opposite-side is incorrect under the user-specified rule"
       },
       {
         "filename_task_code_candidate": 2,
         "n_trials": 189,
         "n_cue_choice_same_side": 87,
         "cue_choice_same_side_fraction": 0.4603174603174603,
-        "interpretation": "channel-8 cue direction versus channel-9 response direction; same-side relation only, not task correctness"
+        "interpretation": "same-side is correct and opposite-side is incorrect under the user-specified rule"
       }
     ],
     "mean_balanced_accuracy": {
@@ -348,6 +350,12 @@
     "direction_consistent_count": 293,
     "direction_inconsistent_count": 107,
     "direction_consistency_labeled_count": 400,
+    "task_correct_count": 293,
+    "task_incorrect_count": 107,
+    "timely_by_cue_plus_3s_count": 400,
+    "not_timely_by_cue_plus_3s_count": 0,
+    "task_correctness_labeled_count": 400,
+    "timeliness_labeled_count": 400,
     "cue_intervals_with_action_marker_count": 400,
     "cue_intervals_without_action_marker_count": 0,
     "declared_response_code_in_analysis_window_count": 400,
@@ -357,6 +365,10 @@
       {
         "record": "VisualCogA_Task-1",
         "n_trials": 100,
+        "task_correct_count": 100,
+        "task_incorrect_count": 0,
+        "timely_by_cue_plus_3s_count": 100,
+        "not_timely_by_cue_plus_3s_count": 0,
         "direction_consistent_count": 100,
         "direction_inconsistent_count": 0,
         "cue_intervals_with_action_marker_count": 100,
@@ -364,11 +376,15 @@
         "declared_response_code_in_analysis_window_count": 100,
         "response_duration_labeled_count": 100,
         "response_duration_median_s": 1.142578125,
-        "direction_consistency_rule": "same/different channel-8 cue and channel-9 response directions; not task correctness"
+        "direction_consistency_rule": "legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule"
       },
       {
         "record": "VisualCogA_Task-2",
         "n_trials": 100,
+        "task_correct_count": 47,
+        "task_incorrect_count": 53,
+        "timely_by_cue_plus_3s_count": 100,
+        "not_timely_by_cue_plus_3s_count": 0,
         "direction_consistent_count": 47,
         "direction_inconsistent_count": 53,
         "cue_intervals_with_action_marker_count": 100,
@@ -376,11 +392,15 @@
         "declared_response_code_in_analysis_window_count": 100,
         "response_duration_labeled_count": 100,
         "response_duration_median_s": 1.396484375,
-        "direction_consistency_rule": "same/different channel-8 cue and channel-9 response directions; not task correctness"
+        "direction_consistency_rule": "legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule"
       },
       {
         "record": "VisualCogB_Task-1",
         "n_trials": 100,
+        "task_correct_count": 98,
+        "task_incorrect_count": 2,
+        "timely_by_cue_plus_3s_count": 100,
+        "not_timely_by_cue_plus_3s_count": 0,
         "direction_consistent_count": 98,
         "direction_inconsistent_count": 2,
         "cue_intervals_with_action_marker_count": 100,
@@ -388,11 +408,15 @@
         "declared_response_code_in_analysis_window_count": 100,
         "response_duration_labeled_count": 100,
         "response_duration_median_s": 1.109375,
-        "direction_consistency_rule": "same/different channel-8 cue and channel-9 response directions; not task correctness"
+        "direction_consistency_rule": "legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule"
       },
       {
         "record": "VisualCogB_Task-2",
         "n_trials": 100,
+        "task_correct_count": 48,
+        "task_incorrect_count": 52,
+        "timely_by_cue_plus_3s_count": 100,
+        "not_timely_by_cue_plus_3s_count": 0,
         "direction_consistent_count": 48,
         "direction_inconsistent_count": 52,
         "cue_intervals_with_action_marker_count": 100,
@@ -400,19 +424,21 @@
         "declared_response_code_in_analysis_window_count": 100,
         "response_duration_labeled_count": 100,
         "response_duration_median_s": 1.326171875,
-        "direction_consistency_rule": "same/different channel-8 cue and channel-9 response directions; not task correctness"
+        "direction_consistency_rule": "legacy column name; same channel-8/channel-9 sign is correct and opposite signs are incorrect under the user-specified rule"
       }
     ],
-    "direction_consistency_rule": "compare channel-8 cue direction with channel-9 DataLabel-declared response direction; this is not task correctness while Task-2 mapping is unverified",
+    "correctness_rule": "same-sign channel-8 cue and decoded channel-9 response is correct; opposite signs are incorrect",
+    "timeliness_rule": "first channel-9 onset by cue+3.0 s is timely; no response by a fully observed cutoff is not timely",
     "cue_interval_action_marker_rule": "report presence/count of channel-9 markers within cue-to-next-cue intervals; this is not a verified omission label without the official response window",
     "analysis_window_s_relative_to_channel8_cue": [
       -1.0,
       5.0
     ],
-    "analysis_window_rule": "count DataLabel-declared channel-9 response-code samples; do not interpret as timely or late response",
+    "analysis_window_rule": "cue-relative [-1,+5] s counts declared channel-9 codes only; it is separate from the cue+3.0 s timeliness decision",
     "response_duration_rule": "duration of the first contiguous channel-9 nonzero bout; not target-to-response reaction time",
-    "task_correctness_status": "undetermined_without_verified_Task-2_cue_to_target_mapping",
-    "actual_lateness_status": "undetermined_without_per_trial_target_onset_and_formal_deadline"
+    "task_correctness_status": "derived_by_user_supplied_same_direction_rule",
+    "actual_lateness_status": "classified_by_user_supplied_cue_plus_3s_rule",
+    "target_relative_reaction_time_status": "unknown_without_per_trial_target_onset"
   },
   "direction_consistency_model": {
     "cue_side_only": {
@@ -598,7 +624,7 @@
       ]
     }
   },
-  "direction_consistency": "same/different relation between channel-8 cue direction and channel-9 DataLabel-declared response direction; not a task-correctness label",
-  "action_marker_counts": "counts/presence of channel-9 edges in the cue interval and declared-code samples in the selected analysis window; neither establishes experiment-level omission or timeliness",
+  "direction_consistency": "legacy metric name for the same-sign correct/opposite-sign incorrect label under the user-specified rule",
+  "action_marker_counts": "counts/presence of channel-9 edges in the cue interval and declared-code samples in the selected analysis window; timeliness is classified separately by the cue+3.0 s rule",
   "pre_response_EEG": "not used as a predictor because its endpoint depends on the response/event time"
 }

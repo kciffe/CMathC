@@ -326,7 +326,7 @@ def write_interpretation(
         f"{name} BA {result['mean_balanced_accuracy']:.3f}"
         for name, result in consistency_models.items()
         if result.get("mean_balanced_accuracy") is not None
-    ) or "no valid mixed-class held-out folds; this is not task correctness"
+    ) or "no valid mixed-class held-out folds for the same-sign correctness label"
     behavior_comparison = behavior_status.get("model_comparison", {})
     behavior_comparison_ba = behavior_comparison.get("mean_balanced_accuracy", {})
     cue_choice_alignment = behavior_comparison.get(
@@ -418,7 +418,7 @@ def write_interpretation(
         "",
         "## Interpretation boundary",
         "",
-        "Channel 9 supplies response direction, t_act, and the duration of its first contiguous nonzero bout; it is never an EEG feature or V/H/P input. Comparing channel-9 direction with channel-8 cue direction yields a direction-consistency label only; unverified Task-2 mapping prevents interpreting it as task correctness. A cue-relative [-1,+5] s window may be used to count declared channel-9 code samples, but it does not classify timely or late responses. Actual lateness cannot be determined without per-trial target onset and the formal response deadline. Cue-interval edge counts are event counts, not verified omission rates. Target onset is not independently marked, so target-to-response reaction time and DDM remain unavailable. V/H/P are anchored functional proxies, not localized brain sources.",
+        "Channel 9 supplies response direction, t_act, and the duration of its first contiguous nonzero bout; it is never an EEG feature or V/H/P input. Under the supplied task rule, matching signs of channel-8 cue direction and decoded channel-9 response mean correct, while opposite signs mean incorrect. For Task-2 TgtAct, the same-side ±1 onset stage followed by its declared ±2 code is decoded as one response; t_act is the first zero-to-nonzero edge. Timeliness is classified separately using the supplied cue+3.0 s cutoff; a missing marker is untimely only when the record covers that cutoff, otherwise the label is unknown. The cue-relative [-1,+5] s window counts declared codes and is not itself the timeliness rule. Cue-interval edge counts are event counts, not omission rates. Target onset is not independently marked, so target-to-response reaction time remains unknown and DDM is not fitted from a schedule proxy. V/H/P are anchored functional proxies, not localized brain sources.",
         "",
     ]
     (output_dir / "validation_interpretation.md").write_text("\n".join(lines), encoding="utf-8")
@@ -568,7 +568,7 @@ def main() -> None:
         "behavior_validation": behavior_status,
         "target_locking": "nominal event is fixed cue + 2.2 s by schedule assumption; sensitivity offsets span 2.0-2.4 s",
         "channel_9_scope": "used for event/response direction and endpoint metadata only; excluded from EEG feature arrays and predictors",
-        "interpretation_limit": "EEG classification estimates cue-side decodability; choice and direction-consistency models are separate, and direction consistency is not task correctness; none is a clinical diagnosis result",
+        "interpretation_limit": "EEG classification estimates cue-side decodability; behavior models separately predict choice direction or the user-rule correctness label; none is a clinical diagnosis result",
     }
     baseline = summary["legacy_q1_baseline_reference"].get("stage_results", {})
     summary["q1_matched_delta_vs_legacy"] = {
